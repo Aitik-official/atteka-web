@@ -13,7 +13,9 @@ import {
   FileSpreadsheet,
   CreditCard,
   FileCheck2,
-  DollarSign
+  DollarSign,
+  ShieldCheck,
+  Edit3
 } from "lucide-react";
 
 export default function AccountsReportsHubPage() {
@@ -101,7 +103,42 @@ export default function AccountsReportsHubPage() {
           href="/dashboard/finance/vouchers"
           icon={FileCheck2}
         />
+
+        {/* Row 4 (matching Image 1 scrolled view) */}
+        <WcvActionCard
+          title="Voucher Approval All"
+          description="Voucher Approval All"
+          href="/dashboard/finance/vouchers"
+          icon={FileCheck2}
+        />
+        <WcvActionCard
+          title="GST Report"
+          description="GST Report"
+          href="/dashboard/finance/e-invoice"
+          icon={ShieldCheck}
+        />
+        <WcvActionCard
+          title="GST OutPut Register"
+          description="GST OutPut Register"
+          href="/dashboard/finance/e-invoice"
+          icon={FileSpreadsheet}
+        />
+        <WcvActionCard
+          title="GSTR1 Report"
+          description="GSTR1 Report"
+          href="/dashboard/finance/e-invoice"
+          icon={Receipt}
+        />
+
+        {/* Row 5 */}
+        <WcvActionCard
+          title="Bill Edit Register"
+          description="Bill Edit Register"
+          href="/dashboard/finance/billing"
+          icon={Edit3}
+        />
       </div>
     </div>
   );
 }
+

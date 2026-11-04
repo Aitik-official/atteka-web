@@ -128,10 +128,10 @@ export default function DashboardHome() {
         { title: "Operation Report", code: "C084", route: "/dashboard/reports/operations" },
         { title: "Finance", code: "C085", route: "/dashboard/reports/finance" },
         { title: "Accounts", code: "C086", route: "/dashboard/reports/accounts" },
-        { title: "Purchase Report", code: "C840", route: "/dashboard/reports" },
-        { title: "ERP Tracking", code: "C088", route: "/dashboard/operations/tracking" },
-        { title: "Final Accounts", code: "C486", route: "/dashboard/reports" },
-        { title: "Company Vechicle Reports", code: "C576", route: "/dashboard/masters/vehicles" }
+        { title: "Purchase Report", code: "C840", route: "/dashboard/reports/purchase" },
+        { title: "ERP Tracking", code: "C088", route: "/dashboard/reports/erp-tracking" },
+        { title: "Final Accounts", code: "C486", route: "/dashboard/reports/final-accounts" },
+        { title: "Company Vechicle Reports", code: "C576", route: "/dashboard/reports/company-vehicles" }
       ]
     },
     {

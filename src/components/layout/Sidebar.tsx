@@ -126,10 +126,10 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
         { label: "Operation Report", route: "/dashboard/reports/operations", code: "C084" },
         { label: "Finance", route: "/dashboard/reports/finance", code: "C085" },
         { label: "Accounts", route: "/dashboard/reports/accounts", code: "C086" },
-        { label: "Purchase Report", route: "/dashboard/reports", code: "C840" },
-        { label: "ERP Tracking", route: "/dashboard/operations/tracking", code: "C088" },
-        { label: "Final Accounts", route: "/dashboard/reports", code: "C486" },
-        { label: "Company Vechicle Reports", route: "/dashboard/masters/vehicles", code: "C576" }
+        { label: "Purchase Report", route: "/dashboard/reports/purchase", code: "C840" },
+        { label: "ERP Tracking", route: "/dashboard/reports/erp-tracking", code: "C088" },
+        { label: "Final Accounts", route: "/dashboard/reports/final-accounts", code: "C486" },
+        { label: "Company Vechicle Reports", route: "/dashboard/reports/company-vehicles", code: "C576" }
       ]
     },
     {
