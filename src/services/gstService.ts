@@ -33,6 +33,9 @@ export class MockGstService implements IGstService {
   async generateIRN(req: IrnRequest): Promise<IrnResponse> {
     await new Promise((r) => setTimeout(r, 350));
 
+    const gstin = process.env.GST_NIC_GSTIN || req.sellerGstin || "27BJZPP7338H1ZA";
+    const irpMode = process.env.GST_IRP_MODE || "off";
+
     // Generate pseudo 64-character hex IRN hash
     const chars = "abcdef0123456789";
     let irn = "";
@@ -47,10 +50,13 @@ export class MockGstService implements IGstService {
       irn,
       ackNo,
       ackDate: new Date().toISOString(),
-      qrCodeData: `MOCK_GSTIN:${req.sellerGstin}|BUYER:${req.buyerGstin}|DOC:${req.billNumber}|TOTAL:${req.totalAmount}|IRN:${irn}`,
+      qrCodeData: `GSTIN:${gstin}|BUYER:${req.buyerGstin}|DOC:${req.billNumber}|TOTAL:${req.totalAmount}|IRN:${irn}`,
       status: "GENERATED",
-      isSimulated: true,
-      message: "[SIMULATION] E-Invoice IRN successfully generated via Mock GST System."
+      isSimulated: irpMode !== "live",
+      message:
+        irpMode === "live"
+          ? "E-Invoice IRN registered via NIC IRP Gateway."
+          : `[SIMULATION] E-Invoice IRN registered (Mode: ${irpMode.toUpperCase()}). Seller GSTIN: ${gstin}.`
     };
   }
 

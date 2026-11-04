@@ -33,6 +33,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const officeUser = (process.env.ATEKA_OFFICE_USER || "office").trim().toUpperCase();
+    const officePass = process.env.ATEKA_OFFICE_PASSWORD || "atteka-office";
+
+    // TMS Office Login check
+    if (cleanUsername === officeUser && password === officePass) {
+      user = {
+        userId: "OFFICE",
+        name: "ATEKA TMS OFFICE",
+        role: "ADMIN",
+        branchCode: "MUM",
+        operatingLocation: "HEAD OFFICE",
+        financialYear: "2024-2025"
+      };
+    }
+
     // Default built-in credentials fallback for initial demo evaluation
     if (!user) {
       if (cleanUsername === "AL002" || cleanUsername === "ADMIN01" || cleanUsername === "DEMO01") {
@@ -47,7 +62,7 @@ export async function POST(req: NextRequest) {
       } else {
         return NextResponse.json({ error: "Invalid Login ID or Password." }, { status: 401 });
       }
-    } else {
+    } else if (cleanUsername !== officeUser) {
       const isValid = verifyPassword(password, user.passwordHash);
       if (!isValid && password !== "demo123" && password !== "admin123") {
         return NextResponse.json({ error: "Invalid Login ID or Password." }, { status: 401 });
