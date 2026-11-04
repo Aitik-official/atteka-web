@@ -103,8 +103,8 @@ export default function DashboardHome() {
       icon: MapPin,
       image: "/images/cards/tracking.jpg",
       subcategories: [
-        { title: "Tracking Douments", code: "C111", route: "/dashboard/operations/tracking" },
-        { title: "Track Customer/Vendor", code: "C485", route: "/dashboard/operations/tracking" }
+        { title: "Tracking Douments", code: "C111", route: "/dashboard/tracking/documents" },
+        { title: "Track Customer/Vendor", code: "C485", route: "/dashboard/tracking/party" }
       ]
     },
     {
@@ -114,8 +114,8 @@ export default function DashboardHome() {
       image: "/images/cards/exceptional.jpg",
       subcategories: [
         { title: "Operation", code: "C117", route: "/dashboard/operations/dockets" },
-        { title: "Finance", code: "C132", route: "/dashboard/finance/billing" },
-        { title: "Bank Reconciliation Statment", code: "C520", route: "/dashboard/finance/bank-statement" },
+        { title: "Finance", code: "C132", route: "/dashboard/exceptional/finance" },
+        { title: "Bank Reconciliation Statment", code: "C520", route: "/dashboard/exceptional/brs" },
         { title: "Company Vechicle Exceptional", code: "C588", route: "/dashboard/masters/vehicles" }
       ]
     },

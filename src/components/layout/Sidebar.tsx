@@ -103,8 +103,8 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Tracking",
       icon: MapPin,
       submodules: [
-        { label: "Tracking Douments", route: "/dashboard/operations/tracking", code: "C111" },
-        { label: "Track Customer/Vendor", route: "/dashboard/operations/tracking", code: "C485" }
+        { label: "Tracking Douments", route: "/dashboard/tracking/documents", code: "C111" },
+        { label: "Track Customer/Vendor", route: "/dashboard/tracking/party", code: "C485" }
       ]
     },
     {
@@ -113,8 +113,8 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       icon: ClipboardCheck,
       submodules: [
         { label: "Operation", route: "/dashboard/operations/dockets", code: "C117" },
-        { label: "Finance", route: "/dashboard/finance/billing", code: "C132" },
-        { label: "Bank Reconciliation Statment", route: "/dashboard/finance/bank-statement", code: "C520" },
+        { label: "Finance", route: "/dashboard/exceptional/finance", code: "C132" },
+        { label: "Bank Reconciliation Statment", route: "/dashboard/exceptional/brs", code: "C520" },
         { label: "Company Vechicle Exceptional", route: "/dashboard/masters/vehicles", code: "C588" }
       ]
     },
