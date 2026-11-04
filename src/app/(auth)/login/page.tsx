@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Eye, EyeOff, ShieldCheck, Lock, User, RefreshCw } from "lucide-react";
 
 export default function LoginPage() {
@@ -118,8 +119,15 @@ export default function LoginPage() {
     >
       <div className="w-full max-w-[430px] bg-white rounded-lg shadow-2xl p-8 border border-slate-200">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-50 text-blue-600 rounded-full mb-3 shadow-inner">
-            <ShieldCheck className="w-8 h-8" />
+          <div className="inline-flex items-center justify-center mb-2">
+            <Image
+              src="/images/atteka_logo-removebg-preview.png"
+              alt="Ateka Logistics"
+              width={75}
+              height={55}
+              className="object-contain"
+              unoptimized
+            />
           </div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Atteka Logistics ERP</h1>
           <p className="text-xs text-slate-500 mt-1">WebCoreVision Transport Management System</p>

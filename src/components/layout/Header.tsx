@@ -82,17 +82,17 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
         </button>
 
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="relative w-8 h-7 flex items-center justify-center">
+          <div className="relative w-9 h-8 flex items-center justify-center">
             <Image
-              src="/images/ateka_logo.jpg"
+              src="/images/atteka_logo-removebg-preview.png"
               alt="Ateka Logistics"
-              width={36}
-              height={28}
+              width={40}
+              height={32}
               className="object-contain"
               unoptimized
             />
           </div>
-          <span className="font-bold text-slate-800 text-sm hidden lg:inline tracking-tight">
+          <span className="font-bold text-slate-800 text-sm hidden sm:inline tracking-tight">
             Ateka Logistics
           </span>
         </Link>
