@@ -115,7 +115,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
         { label: "Operation", route: "/dashboard/operations/dockets", code: "C117" },
         { label: "Finance", route: "/dashboard/exceptional/finance", code: "C132" },
         { label: "Bank Reconciliation Statment", route: "/dashboard/exceptional/brs", code: "C520" },
-        { label: "Company Vechicle Exceptional", route: "/dashboard/masters/vehicles", code: "C588" }
+        { label: "Company Vechicle Exceptional", route: "/dashboard/exceptional/vehicle", code: "C588" }
       ]
     },
     {
@@ -123,9 +123,9 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Reports",
       icon: BarChart2,
       submodules: [
-        { label: "Operation Report", route: "/dashboard/operations/dockets", code: "C084" },
-        { label: "Finance", route: "/dashboard/reports", code: "C085" },
-        { label: "Accounts", route: "/dashboard/reports", code: "C086" },
+        { label: "Operation Report", route: "/dashboard/reports/operations", code: "C084" },
+        { label: "Finance", route: "/dashboard/reports/finance", code: "C085" },
+        { label: "Accounts", route: "/dashboard/reports/accounts", code: "C086" },
         { label: "Purchase Report", route: "/dashboard/reports", code: "C840" },
         { label: "ERP Tracking", route: "/dashboard/operations/tracking", code: "C088" },
         { label: "Final Accounts", route: "/dashboard/reports", code: "C486" },

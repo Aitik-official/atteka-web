@@ -116,7 +116,7 @@ export default function DashboardHome() {
         { title: "Operation", code: "C117", route: "/dashboard/operations/dockets" },
         { title: "Finance", code: "C132", route: "/dashboard/exceptional/finance" },
         { title: "Bank Reconciliation Statment", code: "C520", route: "/dashboard/exceptional/brs" },
-        { title: "Company Vechicle Exceptional", code: "C588", route: "/dashboard/masters/vehicles" }
+        { title: "Company Vechicle Exceptional", code: "C588", route: "/dashboard/exceptional/vehicle" }
       ]
     },
     {
@@ -125,9 +125,9 @@ export default function DashboardHome() {
       icon: BarChart2,
       image: "/images/cards/reports.jpg",
       subcategories: [
-        { title: "Operation Report", code: "C084", route: "/dashboard/operations/dockets" },
-        { title: "Finance", code: "C085", route: "/dashboard/reports" },
-        { title: "Accounts", code: "C086", route: "/dashboard/reports" },
+        { title: "Operation Report", code: "C084", route: "/dashboard/reports/operations" },
+        { title: "Finance", code: "C085", route: "/dashboard/reports/finance" },
+        { title: "Accounts", code: "C086", route: "/dashboard/reports/accounts" },
         { title: "Purchase Report", code: "C840", route: "/dashboard/reports" },
         { title: "ERP Tracking", code: "C088", route: "/dashboard/operations/tracking" },
         { title: "Final Accounts", code: "C486", route: "/dashboard/reports" },
