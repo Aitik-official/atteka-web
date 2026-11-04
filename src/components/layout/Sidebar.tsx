@@ -61,7 +61,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
         { label: "Freight Booking (C009)", route: "/dashboard/operations/freight-booking", code: "C009" },
         { label: "CN Operations [System]", route: "/dashboard/operations/cn-operations", code: "C019" },
         { label: "TripSheet Operations", route: "/dashboard/operations/tripsheets", code: "C035" },
-        { label: "View Print Document", route: "/dashboard/operations/dockets", code: "C039" }
+        { label: "View Print Document", route: "/dashboard/operations/view-print", code: "C039" }
       ]
     },
     {
@@ -69,8 +69,8 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Finance",
       icon: Landmark,
       submodules: [
-        { label: "Vendor Billing", route: "/dashboard/finance/billing", code: "C181" },
-        { label: "Customer Billing", route: "/dashboard/finance/billing", code: "C194" },
+        { label: "Vendor Billing", route: "/dashboard/finance/vendor-billing", code: "C181" },
+        { label: "Customer Billing", route: "/dashboard/finance/customer-billing", code: "C194" },
         { label: "Genrate E-Invoice (IRN)", route: "/dashboard/finance/e-invoice", code: "C655" },
         { label: "MR Entry", route: "/dashboard/finance/mr-entry", code: "C202" },
         { label: "Vouchers", route: "/dashboard/finance/bank-payment", code: "C208" },

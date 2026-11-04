@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { QrCode, FileText, CheckCircle2, XCircle, AlertTriangle, ShieldCheck, AlertCircle } from "lucide-react";
+import { QrCode, FileText, CheckCircle2, XCircle, AlertTriangle, ShieldCheck, AlertCircle, Key, FileCheck, FileSpreadsheet } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { SimulatedBadge } from "@/components/common/SimulatedBadge";
+import { WcvActionCard, WcvRibbonHeader } from "@/components/common/WcvActionCard";
 
 export default function EInvoicePage() {
   const [bills, setBills] = useState<any[]>([]);
@@ -101,6 +102,33 @@ export default function EInvoicePage() {
         ]}
         actions={<SimulatedBadge text="GST IRP SIMULATION" />}
       />
+
+      {/* Authentic WebCoreVision Ribbon Header matching Image 1 */}
+      <WcvRibbonHeader title="Genrate E-Invoice (IRN)" />
+
+      {/* 4 Action Cards Grid matching Image 1 from ateka.webcorevision.com */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-2">
+        <WcvActionCard
+          title="Authentication Token"
+          description="Authentication Token"
+          icon={Key}
+        />
+        <WcvActionCard
+          title="Genrate IRN"
+          description="Genrate IRN"
+          icon={QrCode}
+        />
+        <WcvActionCard
+          title="Cancel IRN"
+          description="Cancel IRN"
+          icon={XCircle}
+        />
+        <WcvActionCard
+          title="Genrate Credit Note IRN"
+          description="Genrate Credit Note IRN"
+          icon={FileSpreadsheet}
+        />
+      </div>
 
       {/* Generation Form */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

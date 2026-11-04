@@ -57,7 +57,7 @@ export default function DashboardHome() {
         { title: "Freight Booking", code: "C009", route: "/dashboard/operations/freight-booking" },
         { title: "CN Operations [System]", code: "C019", route: "/dashboard/operations/cn-operations" },
         { title: "TripSheet Operations", code: "C035", route: "/dashboard/operations/tripsheets" },
-        { title: "View Print Document", code: "C039", route: "/dashboard/operations/dockets" }
+        { title: "View Print Document", code: "C039", route: "/dashboard/operations/view-print" }
       ]
     },
     {
@@ -66,8 +66,8 @@ export default function DashboardHome() {
       icon: Landmark,
       image: "/images/cards/finance.jpg",
       subcategories: [
-        { title: "Vendor Billing", code: "C181", route: "/dashboard/finance/billing" },
-        { title: "Customer Billing", code: "C194", route: "/dashboard/finance/billing" },
+        { title: "Vendor Billing", code: "C181", route: "/dashboard/finance/vendor-billing" },
+        { title: "Customer Billing", code: "C194", route: "/dashboard/finance/customer-billing" },
         { title: "Genrate E-Invoice (IRN)", code: "C655", route: "/dashboard/finance/e-invoice" },
         { title: "MR Entry", code: "C202", route: "/dashboard/finance/mr-entry" },
         { title: "Vouchers", code: "C208", route: "/dashboard/finance/bank-payment" },

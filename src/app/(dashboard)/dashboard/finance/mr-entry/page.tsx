@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Receipt, CheckCircle2, AlertCircle } from "lucide-react";
+import { Receipt, CheckCircle2, AlertCircle, Printer, FileText, FileSpreadsheet, PlusCircle } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
+import { WcvActionCard, WcvRibbonHeader } from "@/components/common/WcvActionCard";
 
 export default function MREntryPage() {
   const [bills, setBills] = useState<any[]>([]);
@@ -74,16 +75,67 @@ export default function MREntryPage() {
 
   return (
     <div className="space-y-4 pb-10">
+      {/* Authentic WebCoreVision Ribbon Header */}
+      <WcvRibbonHeader title="MR Entry" />
+
+      {/* 7 Action Cards matching exact screenshot */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <WcvActionCard
+          title="Generate Bill MR With Rebate"
+          description="Generate Bill MR With Rebate"
+          href="#mr-entry-form"
+          icon={Receipt}
+        />
+        <WcvActionCard
+          title="Generate Bill MR."
+          description="Generate Bill MR."
+          href="#mr-entry-form"
+          icon={Receipt}
+        />
+        <WcvActionCard
+          title="Generate Paid/Topay MR."
+          description="Generate Paid/Topay MR."
+          href="#mr-entry-form"
+          icon={Receipt}
+        />
+        <WcvActionCard
+          title="View Print MR"
+          description="View Print MR"
+          href="#mr-history"
+          icon={Printer}
+        />
+        <WcvActionCard
+          title="Credit Note"
+          description="Credit Note"
+          href="#mr-entry-form"
+          icon={FileSpreadsheet}
+        />
+        <WcvActionCard
+          title="View Print Credit Note"
+          description="View Print Credit Note"
+          href="#mr-history"
+          icon={Printer}
+        />
+        <WcvActionCard
+          title="Credit Note New"
+          description="Credit Note New"
+          href="#mr-entry-form"
+          icon={PlusCircle}
+        />
+      </div>
+
       {/* Reusable Header */}
-      <PageHeader
-        moduleCode="C202"
-        title="Money Receipt (MR) Entry & Collection"
-        subtitle="Finance • BillMR_RebateNew.aspx • Customer Bill Collections, Rebates & Ledger Credits"
-        breadcrumbs={[
-          { label: "Finance", href: "/dashboard" },
-          { label: "Money Receipt (MR)" }
-        ]}
-      />
+      <div id="mr-entry-form" className="pt-2">
+        <PageHeader
+          moduleCode="C202"
+          title="Money Receipt (MR) Entry & Collection"
+          subtitle="Finance • BillMR_RebateNew.aspx • Customer Bill Collections, Rebates & Ledger Credits"
+          breadcrumbs={[
+            { label: "Finance", href: "/dashboard" },
+            { label: "Money Receipt (MR)" }
+          ]}
+        />
+      </div>
 
       {success && (
         <div className="p-3.5 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold rounded-xl flex items-center gap-2 animate-in fade-in">
