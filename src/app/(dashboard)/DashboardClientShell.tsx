@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MapPin, Calendar, Clock } from "lucide-react";
@@ -12,8 +13,35 @@ export function DashboardClientShell({
   user: any;
   children: React.ReactNode;
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
+
+  // Manage initial closed state on home, and persistent open state once a module is opened
+  useEffect(() => {
+    const isModulePage = pathname !== "/dashboard" && pathname !== "/";
+    const userPref = typeof window !== "undefined" ? localStorage.getItem("sidebar_user_pref") : null;
+
+    if (userPref === "closed") {
+      setSidebarOpen(false);
+    } else if (userPref === "open") {
+      setSidebarOpen(true);
+    } else if (isModulePage) {
+      // First time entering any module: open the sidebar and keep it on
+      setSidebarOpen(true);
+      localStorage.setItem("sidebar_user_pref", "open");
+    } else {
+      // Initially keep sidebar closed on the root dashboard
+      setSidebarOpen(false);
+    }
+  }, [pathname]);
+
+  const handleToggleSidebar = (open: boolean) => {
+    setSidebarOpen(open);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sidebar_user_pref", open ? "open" : "closed");
+    }
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -36,7 +64,11 @@ export function DashboardClientShell({
   return (
     <div className="min-h-screen bg-[#f3f4f6] flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
       {/* Top Header */}
-      <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} user={user} />
+      <Header
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={handleToggleSidebar}
+        user={user}
+      />
 
       {/* Center Layout: Sidebar + Main Area */}
       <div className="flex flex-1 relative mb-8">

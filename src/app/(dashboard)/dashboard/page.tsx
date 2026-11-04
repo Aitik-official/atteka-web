@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,7 +12,8 @@ import {
   ClipboardCheck,
   BarChart2,
   Settings,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
 
 interface SubCategory {
@@ -30,6 +31,15 @@ interface ModuleCard {
 }
 
 export default function DashboardHome() {
+  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
+
+  const toggleDropdown = (id: string) => {
+    setOpenDropdowns((prev) => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
   const modules: ModuleCard[] = [
     {
       id: "C001",
@@ -134,52 +144,77 @@ export default function DashboardHome() {
 
   return (
     <div className="max-w-7xl mx-auto pb-10">
-      {/* 3-Column Grid Exactly Matching Home.aspx Cards */}
+      {/* 3-Column Grid Matching Home.aspx Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
         {modules.map((mod) => {
           const Icon = mod.icon;
+          const isOpen = !!openDropdowns[mod.id];
+
           return (
             <div
               key={mod.id}
-              className="bg-white rounded-xl overflow-hidden border border-slate-200/90 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              className="bg-white rounded-xl overflow-hidden border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col"
             >
-              {/* Dark Brown / Charcoal Top Header Bar */}
-              <div className="bg-[#2e2621] px-4 py-2.5 flex items-center justify-between text-white select-none">
+              {/* Clickable Header Bar: Click to Dropdown */}
+              <div
+                onClick={() => toggleDropdown(mod.id)}
+                className="bg-[#2e2621] hover:bg-[#3d332c] px-4 py-2.5 flex items-center justify-between text-white select-none cursor-pointer transition-colors"
+                title={`Click to ${isOpen ? "collapse" : "expand"} subcategories`}
+              >
                 <div className="flex items-center gap-2 font-bold text-sm tracking-wide">
                   <Icon className="w-4 h-4 text-slate-300" />
                   <span>{mod.name}</span>
                 </div>
-                <span className="text-[10px] font-mono font-semibold text-slate-400">
-                  {mod.id}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-semibold text-slate-400">
+                    {mod.id}
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-slate-300 transition-transform duration-300 ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </div>
               </div>
 
-              {/* Photographic Banner Image */}
-              <div className="relative w-full h-44 bg-slate-900 overflow-hidden">
+              {/* Clickable Photographic Banner Image */}
+              <div
+                onClick={() => toggleDropdown(mod.id)}
+                className="relative w-full h-44 bg-slate-900 overflow-hidden cursor-pointer group"
+                title={`Click to ${isOpen ? "collapse" : "expand"} ${mod.name} subcategories`}
+              >
                 <Image
                   src={mod.image}
                   alt={mod.name}
                   fill
-                  className="object-cover"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                   unoptimized
                 />
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/25 transition-colors flex items-end p-2.5">
+                  <span className="text-[11px] font-semibold text-white/95 bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 shadow-xs">
+                    {isOpen ? "Click to close" : "Click to view subcategories"}
+                    <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  </span>
+                </div>
               </div>
 
-              {/* Subcategories List Below Image (Identical to reference screenshot) */}
-              <div className="p-4 space-y-2 bg-white">
-                {mod.subcategories.map((sub, idx) => (
-                  <Link
-                    key={idx}
-                    href={sub.route}
-                    className="group flex items-center justify-between text-[13px] text-slate-700 hover:text-blue-700 transition-colors py-1 px-1.5 rounded hover:bg-slate-50"
-                  >
-                    <span className="font-medium group-hover:translate-x-0.5 transition-transform">
-                      {sub.title}
-                    </span>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </Link>
-                ))}
-              </div>
+              {/* Subcategories Dropdown Area: Toggled by clicking above banner */}
+              {isOpen && (
+                <div className="p-4 space-y-2 bg-white border-t border-slate-100 animate-in slide-in-from-top-2 fade-in duration-200">
+                  {mod.subcategories.map((sub, idx) => (
+                    <Link
+                      key={idx}
+                      href={sub.route}
+                      className="group flex items-center justify-between text-[13px] text-slate-700 hover:text-blue-700 transition-colors py-1.5 px-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-100"
+                    >
+                      <span className="font-medium group-hover:translate-x-0.5 transition-transform">
+                        {sub.title}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5" />
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
