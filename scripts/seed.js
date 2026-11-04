@@ -1,5 +1,23 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const path = require("path");
+
+const envPath = path.join(__dirname, "..", ".env.local");
+if (fs.existsSync(envPath)) {
+  const lines = fs.readFileSync(envPath, "utf8").split("\n");
+  lines.forEach((l) => {
+    const trimmed = l.trim();
+    if (trimmed && !trimmed.startsWith("#")) {
+      const idx = trimmed.indexOf("=");
+      if (idx > -1) {
+        const k = trimmed.substring(0, idx).trim();
+        const v = trimmed.substring(idx + 1).trim();
+        process.env[k] = v;
+      }
+    }
+  });
+}
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/atteka_replica";
 
