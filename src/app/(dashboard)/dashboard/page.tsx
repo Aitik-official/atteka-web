@@ -54,8 +54,8 @@ export default function DashboardHome() {
       icon: Users2,
       image: "/images/cards/operations.jpg",
       subcategories: [
-        { title: "Freight Booking", code: "C009", route: "/dashboard/operations/new-cn" },
-        { title: "CN Operations [System]", code: "C019", route: "/dashboard/operations/dockets" },
+        { title: "Freight Booking", code: "C009", route: "/dashboard/operations/freight-booking" },
+        { title: "CN Operations [System]", code: "C019", route: "/dashboard/operations/cn-operations" },
         { title: "TripSheet Operations", code: "C035", route: "/dashboard/operations/tripsheets" },
         { title: "View Print Document", code: "C039", route: "/dashboard/operations/dockets" }
       ]

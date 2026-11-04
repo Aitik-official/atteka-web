@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Truck, FileCheck, MapPin, Plus, CheckCircle2, ArrowRight, X } from "lucide-react";
+import { Truck, FileCheck, MapPin, Plus, CheckCircle2, ArrowRight, X, FileText, ClipboardList } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ResponsiveTableWrapper } from "@/components/common/ResponsiveTableWrapper";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { WcvActionCard, WcvRibbonHeader } from "@/components/common/WcvActionCard";
 
 export default function TripSheetsPage() {
   const [activeTab, setActiveTab] = useState<"PICKUP" | "DELIVERY" | "MANIFEST">("PICKUP");
@@ -107,25 +108,42 @@ export default function TripSheetsPage() {
 
   return (
     <div className="space-y-4 pb-10">
-      {/* Reusable PageHeader */}
-      <PageHeader
-        moduleCode="C035"
-        title="TripSheet & PDC Operations"
-        subtitle="Operations • PickupPDC.aspx & DLYPDC.aspx • Local Dispatch & Trip Management"
-        breadcrumbs={[
-          { label: "Operations", href: "/dashboard" },
-          { label: "TripSheet & PDC" }
-        ]}
-        actions={
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Create {activeTab} PDC</span>
-          </button>
-        }
-      />
+      {/* Authentic WebCoreVision Ribbon Header matching Image 3 */}
+      <WcvRibbonHeader title="TripSheet Operations" />
+
+      {/* 4 Action Cards Grid matching Image 3 from ateka.webcorevision.com */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-2">
+        <WcvActionCard
+          title="Prepare Pickup PDC"
+          description="Prepare Pickup PDC"
+          onClick={() => {
+            setActiveTab("PICKUP");
+            setShowCreateModal(true);
+          }}
+          icon={Truck}
+        />
+        <WcvActionCard
+          title="Prepare Delivery PDC"
+          description="Prepare Delivery PDC"
+          onClick={() => {
+            setActiveTab("DELIVERY");
+            setShowCreateModal(true);
+          }}
+          icon={FileCheck}
+        />
+        <WcvActionCard
+          title="Prepare Loading Slip"
+          description="Prepare Loading Slip"
+          onClick={() => setActiveTab("MANIFEST")}
+          icon={ClipboardList}
+        />
+        <WcvActionCard
+          title="Update Delivery PDC"
+          description="Update Delivery PDC"
+          onClick={() => setActiveTab("DELIVERY")}
+          icon={FileText}
+        />
+      </div>
 
       {successMsg && (
         <div className="p-3.5 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold rounded-xl flex items-center gap-2 animate-in fade-in">
@@ -135,36 +153,46 @@ export default function TripSheetsPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none items-center justify-between">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab("PICKUP")}
+            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+              activeTab === "PICKUP"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+            }`}
+          >
+            Pickup PDCs (C036)
+          </button>
+          <button
+            onClick={() => setActiveTab("DELIVERY")}
+            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+              activeTab === "DELIVERY"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+            }`}
+          >
+            Delivery PDCs (C037)
+          </button>
+          <button
+            onClick={() => setActiveTab("MANIFEST")}
+            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+              activeTab === "MANIFEST"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+            }`}
+          >
+            Loading Slip & Manifest (C709)
+          </button>
+        </div>
+
         <button
-          onClick={() => setActiveTab("PICKUP")}
-          className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
-            activeTab === "PICKUP"
-              ? "bg-blue-600 text-white shadow-sm"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
-          }`}
+          onClick={() => setShowCreateModal(true)}
+          className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
         >
-          Pickup PDCs (C036)
-        </button>
-        <button
-          onClick={() => setActiveTab("DELIVERY")}
-          className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
-            activeTab === "DELIVERY"
-              ? "bg-blue-600 text-white shadow-sm"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
-          }`}
-        >
-          Delivery PDCs (C037)
-        </button>
-        <button
-          onClick={() => setActiveTab("MANIFEST")}
-          className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
-            activeTab === "MANIFEST"
-              ? "bg-blue-600 text-white shadow-sm"
-              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
-          }`}
-        >
-          Loading Slip & Manifest (C709)
+          <Plus className="w-3.5 h-3.5" />
+          <span>Create {activeTab} PDC</span>
         </button>
       </div>
 
@@ -216,7 +244,7 @@ export default function TripSheetsPage() {
         </table>
       </ResponsiveTableWrapper>
 
-      {/* Real Create PDC Modal Dialog (Replaces dummy alert) */}
+      {/* Real Create PDC Modal Dialog */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-4 sm:p-6 border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
@@ -231,7 +259,7 @@ export default function TripSheetsPage() {
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center"
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>

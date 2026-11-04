@@ -58,8 +58,8 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Operations",
       icon: Users2,
       submodules: [
-        { label: "Freight Booking (C009)", route: "/dashboard/operations/new-cn", code: "C009" },
-        { label: "CN Operations [System]", route: "/dashboard/operations/dockets", code: "C019" },
+        { label: "Freight Booking (C009)", route: "/dashboard/operations/freight-booking", code: "C009" },
+        { label: "CN Operations [System]", route: "/dashboard/operations/cn-operations", code: "C019" },
         { label: "TripSheet Operations", route: "/dashboard/operations/tripsheets", code: "C035" },
         { label: "View Print Document", route: "/dashboard/operations/dockets", code: "C039" }
       ]

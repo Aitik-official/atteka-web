@@ -72,7 +72,8 @@ export class CloudinaryStorageService implements IStorageService {
     this.cloudName = process.env.CLOUDINARY_CLOUD_NAME || "";
     this.apiKey = process.env.CLOUDINARY_API_KEY || "";
     this.apiSecret = process.env.CLOUDINARY_API_SECRET || "";
-    this.folder = process.env.CLOUDINARY_FOLDER || "barcode-inventory";
+    // Clean folder: remove spaces to prevent broken Cloudinary URLs
+    this.folder = (process.env.CLOUDINARY_FOLDER || "barcode-inventory").trim().replace(/\s+/g, "-");
     this.localFallback = new LocalStorageService();
   }
 
@@ -86,11 +87,22 @@ export class CloudinaryStorageService implements IStorageService {
     }
 
     try {
+      const isPdf =
+        mimeType === "application/pdf" ||
+        originalName.toLowerCase().endsWith(".pdf");
+
       const timestamp = Math.round(Date.now() / 1000);
+      
+      // Determine Cloudinary resource type:
+      // Note: Cloudinary restricts viewing PDFs when uploaded under 'image'.
+      // Uploading as 'raw' guarantees clean delivery with status 200 and Content-Type: application/pdf.
+      const resourceType = isPdf ? "raw" : "auto";
+
       const toSign = `folder=${this.folder}&timestamp=${timestamp}${this.apiSecret}`;
       const signature = crypto.createHash("sha1").update(toSign).digest("hex");
 
-      const base64Data = `data:${mimeType};base64,${fileBuffer.toString("base64")}`;
+      const base64Prefix = isPdf ? "data:application/pdf;base64," : `data:${mimeType};base64,`;
+      const base64Data = `${base64Prefix}${fileBuffer.toString("base64")}`;
 
       const formData = new URLSearchParams();
       formData.append("file", base64Data);
@@ -99,7 +111,7 @@ export class CloudinaryStorageService implements IStorageService {
       formData.append("signature", signature);
       formData.append("folder", this.folder);
 
-      const endpoint = `https://api.cloudinary.com/v1_1/${this.cloudName}/auto/upload`;
+      const endpoint = `https://api.cloudinary.com/v1_1/${this.cloudName}/${resourceType}/upload`;
       const res = await fetch(endpoint, {
         method: "POST",
         body: formData
@@ -115,7 +127,7 @@ export class CloudinaryStorageService implements IStorageService {
         fileUrl: data.secure_url,
         fileName: originalName,
         fileSize: data.bytes || fileBuffer.length,
-        mimeType: data.format ? `image/${data.format}` : mimeType,
+        mimeType: isPdf ? "application/pdf" : data.format ? `image/${data.format}` : mimeType,
         provider: "cloudinary"
       };
     } catch (err: any) {
