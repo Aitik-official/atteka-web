@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Filter, Plus, Truck, Download, Eye, Upload, CheckCircle, RefreshCw } from "lucide-react";
+import { Search, Filter, Plus, Truck, Download, Eye, Upload, CheckCircle, RefreshCw, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ResponsiveTableWrapper } from "@/components/common/ResponsiveTableWrapper";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -16,6 +16,7 @@ export default function DocketsListPage() {
   const [uploadDocket, setUploadDocket] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [toastMsg, setToastMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchDockets = () => {
     setLoading(true);
@@ -53,15 +54,22 @@ export default function DocketsListPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert("POD uploaded successfully! Docket status updated to DELIVERED.");
+        setToastMsg({
+          type: "success",
+          text: `POD for docket ${uploadDocket} uploaded successfully! Status updated to DELIVERED.`
+        });
         setUploadDocket(null);
         setUploadFile(null);
         fetchDockets();
+        setTimeout(() => setToastMsg(null), 5000);
       } else {
-        alert(data.error || "Upload failed");
+        setToastMsg({
+          type: "error",
+          text: data.error || "Upload failed. Please try again."
+        });
       }
     } catch {
-      alert("Error uploading file");
+      setToastMsg({ type: "error", text: "Error uploading POD file." });
     } finally {
       setUploading(false);
     }
@@ -87,6 +95,23 @@ export default function DocketsListPage() {
           </Link>
         }
       />
+
+      {toastMsg && (
+        <div
+          className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in ${
+            toastMsg.type === "success"
+              ? "bg-green-50 border border-green-200 text-green-700"
+              : "bg-red-50 border border-red-200 text-red-700"
+          }`}
+        >
+          {toastMsg.type === "success" ? (
+            <CheckCircle className="w-4 h-4 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0" />
+          )}
+          <span>{toastMsg.text}</span>
+        </div>
+      )}
 
       {/* Filter / Search Bar */}
       <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row gap-3 items-center justify-between">

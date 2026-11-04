@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Receipt, CheckSquare, Square, FileText, ArrowRight, CheckCircle2, DollarSign } from "lucide-react";
+import { Receipt, CheckSquare, Square, FileText, ArrowRight, CheckCircle2, DollarSign, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ResponsiveTableWrapper } from "@/components/common/ResponsiveTableWrapper";
 import { SectionCard } from "@/components/common/SectionCard";
@@ -16,6 +16,7 @@ export default function CustomerBillingPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const loadData = () => {
     setLoading(true);
@@ -60,8 +61,9 @@ export default function CustomerBillingPage() {
   };
 
   const handleGenerateBill = async () => {
+    setErrorMsg("");
     if (selectedDockets.length === 0) {
-      alert("Please select at least one consignment docket to bill.");
+      setErrorMsg("Please select at least one consignment docket to bill.");
       return;
     }
 
@@ -81,11 +83,12 @@ export default function CustomerBillingPage() {
         setSuccessMsg(`Customer Transport Bill ${data.data?.billNumber} generated successfully!`);
         setSelectedDockets([]);
         loadData();
+        setTimeout(() => setSuccessMsg(""), 5000);
       } else {
-        alert(data.error || "Bill generation failed");
+        setErrorMsg(data.error || "Bill generation failed.");
       }
     } catch {
-      alert("Error generating bill");
+      setErrorMsg("Error generating customer bill.");
     } finally {
       setGenerating(false);
     }
@@ -115,6 +118,13 @@ export default function CustomerBillingPage() {
         <div className="p-3.5 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold rounded-xl flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{successMsg}</span>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl flex items-center gap-2 animate-in fade-in">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMsg}</span>
         </div>
       )}
 

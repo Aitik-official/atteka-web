@@ -14,3 +14,4 @@ export function MobileActionFooter({ children, className = "" }: MobileActionFoo
     </div>
   );
 }
+

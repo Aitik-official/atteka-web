@@ -1,20 +1,23 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Receipt, CheckCircle2, Plus, RefreshCw } from "lucide-react";
+import { Receipt, CheckCircle2, AlertCircle } from "lucide-react";
+import { PageHeader } from "@/components/common/PageHeader";
+import { SectionCard } from "@/components/common/SectionCard";
 
-export default function MoneyReceiptPage() {
+export default function MREntryPage() {
   const [bills, setBills] = useState<any[]>([]);
   const [receipts, setReceipts] = useState<any[]>([]);
   const [customerName, setCustomerName] = useState("TATA MOTORS LTD");
   const [selectedBill, setSelectedBill] = useState("");
+  const [receivedAmount, setReceivedAmount] = useState("46200");
   const [paymentMode, setPaymentMode] = useState("NEFT");
-  const [refNo, setRefNo] = useState("NEFT998822");
-  const [receivedAmount, setReceivedAmount] = useState("44625");
+  const [refNo, setRefNo] = useState("UTR-2026-98124");
   const [tdsAmount, setTdsAmount] = useState("0");
   const [rebateAmount, setRebateAmount] = useState("0");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const loadData = () => {
     fetch("/api/billing")
@@ -22,6 +25,7 @@ export default function MoneyReceiptPage() {
       .then((d) => {
         if (d.success) setBills(d.data);
       });
+
     fetch("/api/mr")
       .then((r) => r.json())
       .then((d) => {
@@ -37,6 +41,7 @@ export default function MoneyReceiptPage() {
     e.preventDefault();
     setLoading(true);
     setSuccess("");
+    setErrorMsg("");
 
     try {
       const res = await fetch("/api/mr", {
@@ -58,43 +63,49 @@ export default function MoneyReceiptPage() {
         setSuccess(`Money Receipt ${data.data?.mrNumber} generated & ledger credited!`);
         loadData();
       } else {
-        alert(data.error || "Failed to record MR");
+        setErrorMsg(data.error || "Failed to record MR");
       }
     } catch {
-      alert("Error recording receipt");
+      setErrorMsg("Error recording receipt");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-bold rounded">C202</span>
-            <h1 className="text-lg font-bold text-slate-800">Money Receipt (MR) Entry & Collection</h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            PAGES/ACCOUNTS.PAGES/MR/BillMR_RebateNew.aspx • Customer Bill Collections & Rebates
-          </p>
-        </div>
-      </div>
+    <div className="space-y-4 pb-10">
+      {/* Reusable Header */}
+      <PageHeader
+        moduleCode="C202"
+        title="Money Receipt (MR) Entry & Collection"
+        subtitle="Finance • BillMR_RebateNew.aspx • Customer Bill Collections, Rebates & Ledger Credits"
+        breadcrumbs={[
+          { label: "Finance", href: "/dashboard" },
+          { label: "Money Receipt (MR)" }
+        ]}
+      />
 
       {success && (
-        <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold rounded flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" /> {success}
+        <div className="p-3.5 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold rounded-xl flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2 animate-in fade-in">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMsg}</span>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Form */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-3">
-          <h2 className="text-xs font-bold text-blue-700 uppercase tracking-wider border-b pb-2">
-            Record New Money Receipt
-          </h2>
-
+        <SectionCard
+          title="Record New Money Receipt"
+          icon={Receipt}
+          badge="ENTRY"
+        >
           <form onSubmit={handleCreateMR} className="space-y-3 text-xs">
             <div>
               <label className="block font-medium text-slate-600 mb-1">Customer</label>
@@ -102,7 +113,7 @@ export default function MoneyReceiptPage() {
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full h-8 px-2 border rounded font-semibold text-slate-700"
+                className="w-full h-8.5 px-3 border border-slate-200 bg-slate-50 focus:bg-white rounded-lg font-semibold text-slate-700"
                 required
               />
             </div>
@@ -116,24 +127,24 @@ export default function MoneyReceiptPage() {
                   const b = bills.find((x) => x.billNumber === e.target.value);
                   if (b) setReceivedAmount(b.grandTotal.toString());
                 }}
-                className="w-full h-9 px-2 border border-slate-300 rounded bg-white font-medium"
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white font-medium"
               >
                 <option value="">-- Direct On-Account Advance --</option>
                 {bills.map((b) => (
                   <option key={b.billNumber} value={b.billNumber}>
-                    {b.billNumber} - &#8377;{b.grandTotal?.toLocaleString()} ({b.status})
+                    {b.billNumber} - ₹{b.grandTotal?.toLocaleString()} ({b.status})
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-medium text-slate-600 mb-1">Payment Mode</label>
                 <select
                   value={paymentMode}
                   onChange={(e) => setPaymentMode(e.target.value)}
-                  className="w-full h-8 px-2 border rounded bg-white"
+                  className="w-full h-8.5 px-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white"
                 >
                   <option value="NEFT">NEFT Transfer</option>
                   <option value="RTGS">RTGS Transfer</option>
@@ -148,39 +159,39 @@ export default function MoneyReceiptPage() {
                   type="text"
                   value={refNo}
                   onChange={(e) => setRefNo(e.target.value)}
-                  className="w-full h-8 px-2 border rounded font-mono"
+                  className="w-full h-8.5 px-3 border border-slate-200 rounded-lg font-mono focus:ring-1 focus:ring-blue-500"
                   required
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2.5">
               <div>
-                <label className="block font-medium text-slate-600 mb-1">Received (&#8377;)</label>
+                <label className="block font-medium text-slate-600 mb-1">Received (₹)</label>
                 <input
                   type="number"
                   value={receivedAmount}
                   onChange={(e) => setReceivedAmount(e.target.value)}
-                  className="w-full h-8 px-2 border rounded font-bold text-blue-700"
+                  className="w-full h-8.5 px-2.5 border border-slate-200 rounded-lg font-bold text-blue-700"
                   required
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-600 mb-1">TDS (&#8377;)</label>
+                <label className="block font-medium text-slate-600 mb-1">TDS (₹)</label>
                 <input
                   type="number"
                   value={tdsAmount}
                   onChange={(e) => setTdsAmount(e.target.value)}
-                  className="w-full h-8 px-2 border rounded"
+                  className="w-full h-8.5 px-2.5 border border-slate-200 rounded-lg"
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-600 mb-1">Rebate (&#8377;)</label>
+                <label className="block font-medium text-slate-600 mb-1">Rebate (₹)</label>
                 <input
                   type="number"
                   value={rebateAmount}
                   onChange={(e) => setRebateAmount(e.target.value)}
-                  className="w-full h-8 px-2 border rounded"
+                  className="w-full h-8.5 px-2.5 border border-slate-200 rounded-lg"
                 />
               </div>
             </div>
@@ -188,41 +199,41 @@ export default function MoneyReceiptPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded shadow transition-colors flex items-center justify-center gap-1.5"
+              className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <Receipt className="w-3.5 h-3.5" />
-              {loading ? "Recording..." : "Save Money Receipt (MR)"}
+              <span>{loading ? "Recording..." : "Save Money Receipt (MR)"}</span>
             </button>
           </form>
-        </div>
+        </SectionCard>
 
         {/* Existing Receipts */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-3">
-          <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b pb-2">
-            Recent Money Receipts
-          </h2>
+        <SectionCard
+          title="Recent Money Receipts"
+          icon={Receipt}
+          badge="LEDGER"
+        >
           <div className="overflow-y-auto max-h-[380px] space-y-2 text-xs">
             {receipts.length === 0 ? (
               <p className="text-slate-400 text-center py-8">No Money Receipts recorded yet.</p>
             ) : (
               receipts.map((r) => (
-                <div key={r._id} className="p-3 bg-slate-50 border rounded flex justify-between items-center">
+                <div key={r._id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center hover:bg-slate-100/70 transition-colors">
                   <div>
-                    <span className="font-bold text-blue-700 block">{r.mrNumber}</span>
-                    <span className="text-slate-700">{r.customerName}</span>
+                    <span className="font-bold text-blue-700 font-mono block">{r.mrNumber}</span>
+                    <span className="text-slate-700 font-medium">{r.customerName}</span>
                     <span className="text-[11px] text-slate-400 block">Ref: {r.referenceNumber} • {r.paymentMode}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold text-emerald-700 block">&#8377;{r.totalReceived?.toLocaleString()}</span>
+                    <span className="font-bold text-emerald-700 font-mono block">₹{r.totalReceived?.toLocaleString()}</span>
                     <span className="text-[10px] text-slate-500">{new Date(r.mrDate).toLocaleDateString()}</span>
                   </div>
                 </div>
               ))
             )}
           </div>
-        </div>
+        </SectionCard>
       </div>
     </div>
   );
 }
-

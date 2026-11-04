@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { QrCode, FileText, CheckCircle2, XCircle, AlertTriangle, ShieldCheck } from "lucide-react";
+import { QrCode, FileText, CheckCircle2, XCircle, AlertTriangle, ShieldCheck, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { SimulatedBadge } from "@/components/common/SimulatedBadge";
@@ -14,6 +14,8 @@ export default function EInvoicePage() {
   const [cancelIrn, setCancelIrn] = useState("");
   const [cancelReason, setCancelReason] = useState("Data entry typo");
   const [cancelMsg, setCancelMsg] = useState("");
+  const [genError, setGenError] = useState("");
+  const [cancelError, setCancelError] = useState("");
 
   const loadBills = () => {
     fetch("/api/billing")
@@ -33,6 +35,7 @@ export default function EInvoicePage() {
 
     setLoading(true);
     setResult(null);
+    setGenError("");
 
     const billObj = bills.find((b) => b.billNumber === selectedBill);
 
@@ -53,10 +56,10 @@ export default function EInvoicePage() {
         setResult(data.data?.responsePayload);
         loadBills();
       } else {
-        alert(data.error || "Generation failed");
+        setGenError(data.error || "IRN Generation failed");
       }
     } catch {
-      alert("Error contacting GST Mock Adapter");
+      setGenError("Error contacting GST Mock Adapter");
     } finally {
       setLoading(false);
     }
@@ -65,6 +68,8 @@ export default function EInvoicePage() {
   const handleCancelIRN = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cancelIrn) return;
+    setCancelMsg("");
+    setCancelError("");
 
     try {
       const res = await fetch(`/api/gst/irn?irn=${encodeURIComponent(cancelIrn)}&reason=${encodeURIComponent(cancelReason)}`, {
@@ -76,10 +81,10 @@ export default function EInvoicePage() {
         setCancelIrn("");
         loadBills();
       } else {
-        alert(data.error || "Cancel failed");
+        setCancelError(data.error || "Cancel failed");
       }
     } catch {
-      alert("Error during IRN cancellation");
+      setCancelError("Error during IRN cancellation");
     }
   };
 
@@ -152,6 +157,13 @@ export default function EInvoicePage() {
             </button>
           </form>
 
+          {genError && (
+            <div className="mt-3.5 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{genError}</span>
+            </div>
+          )}
+
           {result && (
             <div className="mt-3.5 p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-xs space-y-2 animate-in fade-in">
               <div className="flex items-center gap-1.5 text-blue-800 font-bold">
@@ -217,6 +229,13 @@ export default function EInvoicePage() {
           {cancelMsg && (
             <div className="mt-3.5 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl animate-in fade-in">
               {cancelMsg}
+            </div>
+          )}
+
+          {cancelError && (
+            <div className="mt-3.5 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{cancelError}</span>
             </div>
           )}
         </SectionCard>

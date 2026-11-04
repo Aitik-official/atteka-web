@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Building2, Plus, MapPin } from "lucide-react";
+import { Building2, MapPin } from "lucide-react";
+import { PageHeader } from "@/components/common/PageHeader";
+import { ResponsiveTableWrapper } from "@/components/common/ResponsiveTableWrapper";
+import { StatusBadge } from "@/components/common/StatusBadge";
 
 export default function BranchMasterPage() {
   const [branches, setBranches] = useState<any[]>([]);
@@ -15,52 +18,59 @@ export default function BranchMasterPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white p-4 rounded-lg border shadow-sm flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-bold rounded">C054</span>
-            <h1 className="text-lg font-bold text-slate-800">Branch & Operating Location Master</h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">PAGES/MASTERS.PAGES/BranchListMaster.aspx</p>
-        </div>
-      </div>
+    <div className="space-y-4 pb-10">
+      <PageHeader
+        moduleCode="C054"
+        title="Branch & Operating Location Master"
+        subtitle="Masters • BranchListMaster.aspx • Ateka regional hubs, branches, and transhipment stations"
+        breadcrumbs={[
+          { label: "Masters", href: "/dashboard" },
+          { label: "Branch Master" }
+        ]}
+      />
 
-      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-slate-50 text-slate-600 font-semibold uppercase border-b">
+      <ResponsiveTableWrapper
+        title="Operational Branches & Hub Stations"
+        totalCount={branches.length}
+        showSwipeHint={true}
+      >
+        <table className="w-full text-left text-xs whitespace-nowrap min-w-[650px]">
+          <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
             <tr>
-              <th className="py-2.5 px-3">Branch Code</th>
-              <th className="py-2.5 px-3">Branch Name</th>
-              <th className="py-2.5 px-3">City</th>
-              <th className="py-2.5 px-3">Hub Status</th>
-              <th className="py-2.5 px-3">State</th>
-              <th className="py-2.5 px-3">Status</th>
+              <th className="py-3 px-3.5">Branch Code</th>
+              <th className="py-3 px-3.5">Branch Name</th>
+              <th className="py-3 px-3.5">City</th>
+              <th className="py-3 px-3.5">Hub Classification</th>
+              <th className="py-3 px-3.5">State Jurisdiction</th>
+              <th className="py-3 px-3.5">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium">
             {branches.map((b) => (
-              <tr key={b.branchCode} className="hover:bg-slate-50">
-                <td className="py-2.5 px-3 font-bold text-blue-700">{b.branchCode}</td>
-                <td className="py-2.5 px-3 text-slate-800 font-semibold">{b.branchName}</td>
-                <td className="py-2.5 px-3 text-slate-600">{b.city}</td>
-                <td className="py-2.5 px-3">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${b.isHub ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-600"}`}>
+              <tr key={b.branchCode} className="hover:bg-slate-50/80 transition-colors">
+                <td className="py-2.5 px-3.5 font-bold text-blue-700 font-mono">{b.branchCode}</td>
+                <td className="py-2.5 px-3.5 text-slate-900 font-semibold">{b.branchName}</td>
+                <td className="py-2.5 px-3.5 text-slate-600">{b.city}</td>
+                <td className="py-2.5 px-3.5">
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      b.isHub
+                        ? "bg-purple-100 text-purple-700 border border-purple-200"
+                        : "bg-slate-100 text-slate-600 border border-slate-200"
+                    }`}
+                  >
                     {b.isHub ? "TRANS-HUB" : "BRANCH"}
                   </span>
                 </td>
-                <td className="py-2.5 px-3 text-slate-600">{b.state || "Maharashtra"}</td>
-                <td className="py-2.5 px-3">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
-                    ACTIVE
-                  </span>
+                <td className="py-2.5 px-3.5 text-slate-600">{b.state || "Maharashtra"}</td>
+                <td className="py-2.5 px-3.5">
+                  <StatusBadge status="ACTIVE" size="sm" />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </ResponsiveTableWrapper>
     </div>
   );
 }
-
