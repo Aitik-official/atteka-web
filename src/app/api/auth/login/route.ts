@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Invalid Login ID or Password." }, { status: 401 });
       }
     } else if (cleanUsername !== officeUser) {
-      const isValid = verifyPassword(password, user.passwordHash);
+      const isValid = verifyPassword(password, user.passwordHash || "");
       if (!isValid && password !== "demo123" && password !== "admin123") {
         return NextResponse.json({ error: "Invalid Login ID or Password." }, { status: 401 });
       }
