@@ -137,11 +137,11 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Admin",
       icon: Settings,
       submodules: [
-        { label: "Company Structure", route: "/dashboard/masters/branches", code: "C052" },
-        { label: "Business Partners", route: "/dashboard/masters/customers", code: "C060" },
-        { label: "Operations", route: "/dashboard/masters/branches", code: "C065" },
-        { label: "Finance & Accounts", route: "/dashboard/reports", code: "C077" },
-        { label: "APIs", route: "/dashboard/finance/e-invoice", code: "C686" }
+        { label: "Company Structure", route: "/dashboard/admin/company-structure", code: "C052" },
+        { label: "Business Partners", route: "/dashboard/admin/business-partners", code: "C060" },
+        { label: "Operations", route: "/dashboard/admin/operations", code: "C065" },
+        { label: "Finance & Accounts", route: "/dashboard/admin/finance-accounts", code: "C077" },
+        { label: "APIs", route: "/dashboard/admin/apis", code: "C686" }
       ]
     }
   ];

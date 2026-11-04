@@ -140,11 +140,11 @@ export default function DashboardHome() {
       icon: Settings,
       image: "/images/cards/admin.jpg",
       subcategories: [
-        { title: "Company Structure", code: "C052", route: "/dashboard/masters/branches" },
-        { title: "Business Partners", code: "C060", route: "/dashboard/masters/customers" },
-        { title: "Operations", code: "C065", route: "/dashboard/masters/branches" },
-        { title: "Finance & Accounts", code: "C077", route: "/dashboard/reports" },
-        { title: "APIs", code: "C686", route: "/dashboard/finance/e-invoice" }
+        { title: "Company Structure", code: "C052", route: "/dashboard/admin/company-structure" },
+        { title: "Business Partners", code: "C060", route: "/dashboard/admin/business-partners" },
+        { title: "Operations", code: "C065", route: "/dashboard/admin/operations" },
+        { title: "Finance & Accounts", code: "C077", route: "/dashboard/admin/finance-accounts" },
+        { title: "APIs", code: "C686", route: "/dashboard/admin/apis" }
       ]
     }
   ];
