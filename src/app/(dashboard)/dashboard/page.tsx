@@ -82,9 +82,9 @@ export default function DashboardHome() {
       icon: UserCheck,
       image: "/images/cards/crm.jpg",
       subcategories: [
-        { title: "Lead Details", code: "C504", route: "/dashboard/masters/customers" },
-        { title: "Vist Details", code: "C505", route: "/dashboard/masters/customers" },
-        { title: "Activity", code: "C916", route: "/dashboard/masters/customers" }
+        { title: "Lead Details", code: "C504", route: "/dashboard/crm/lead-details" },
+        { title: "Vist Details", code: "C505", route: "/dashboard/crm/visit-details" },
+        { title: "Activity", code: "C916", route: "/dashboard/crm/activity" }
       ]
     },
     {
@@ -93,8 +93,8 @@ export default function DashboardHome() {
       icon: Truck,
       image: "/images/cards/fleet.jpg",
       subcategories: [
-        { title: "Trip Management", code: "C749", route: "/dashboard/masters/vehicles" },
-        { title: "Fuel and Toll Management", code: "C750", route: "/dashboard/masters/vehicles" }
+        { title: "Trip Management", code: "C749", route: "/dashboard/fleet/trip-management" },
+        { title: "Fuel and Toll Management", code: "C750", route: "/dashboard/fleet/fuel-toll" }
       ]
     },
     {

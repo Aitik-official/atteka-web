@@ -59,3 +59,4 @@ export default function CashBankStatementHubPage() {
     </div>
   );
 }
+

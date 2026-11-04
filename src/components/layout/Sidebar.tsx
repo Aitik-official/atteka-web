@@ -73,10 +73,10 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
         { label: "Customer Billing", route: "/dashboard/finance/customer-billing", code: "C194" },
         { label: "Genrate E-Invoice (IRN)", route: "/dashboard/finance/e-invoice", code: "C655" },
         { label: "MR Entry", route: "/dashboard/finance/mr-entry", code: "C202" },
-        { label: "Vouchers", route: "/dashboard/finance/bank-payment", code: "C208" },
-        { label: "Cheque Management", route: "/dashboard/finance/bank-statement", code: "C215" },
-        { label: "Cash & Bank Statement", route: "/dashboard/finance/bank-statement", code: "C223" },
-        { label: "Print Document [Dot-Matrix ]", route: "/dashboard/finance/billing", code: "C225" }
+        { label: "Vouchers", route: "/dashboard/finance/vouchers", code: "C208" },
+        { label: "Cheque Management", route: "/dashboard/finance/cheque-management", code: "C215" },
+        { label: "Cash & Bank Statement", route: "/dashboard/finance/cash-bank-statement", code: "C223" },
+        { label: "Print Document [Dot-Matrix ]", route: "/dashboard/finance/print-dot-matrix", code: "C225" }
       ]
     },
     {
@@ -84,9 +84,9 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "CRM",
       icon: UserCheck,
       submodules: [
-        { label: "Lead Details", route: "/dashboard/masters/customers", code: "C504" },
-        { label: "Vist Details", route: "/dashboard/masters/customers", code: "C505" },
-        { label: "Activity", route: "/dashboard/masters/customers", code: "C916" }
+        { label: "Lead Details", route: "/dashboard/crm/lead-details", code: "C504" },
+        { label: "Vist Details", route: "/dashboard/crm/visit-details", code: "C505" },
+        { label: "Activity", route: "/dashboard/crm/activity", code: "C916" }
       ]
     },
     {
@@ -94,8 +94,8 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Fleet",
       icon: Truck,
       submodules: [
-        { label: "Trip Management", route: "/dashboard/masters/vehicles", code: "C749" },
-        { label: "Fuel and Toll Management", route: "/dashboard/masters/vehicles", code: "C750" }
+        { label: "Trip Management", route: "/dashboard/fleet/trip-management", code: "C749" },
+        { label: "Fuel and Toll Management", route: "/dashboard/fleet/fuel-toll", code: "C750" }
       ]
     },
     {
