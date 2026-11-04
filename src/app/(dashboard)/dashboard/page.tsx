@@ -70,10 +70,10 @@ export default function DashboardHome() {
         { title: "Customer Billing", code: "C194", route: "/dashboard/finance/customer-billing" },
         { title: "Genrate E-Invoice (IRN)", code: "C655", route: "/dashboard/finance/e-invoice" },
         { title: "MR Entry", code: "C202", route: "/dashboard/finance/mr-entry" },
-        { title: "Vouchers", code: "C208", route: "/dashboard/finance/bank-payment" },
-        { title: "Cheque Management", code: "C215", route: "/dashboard/finance/bank-statement" },
-        { title: "Cash & Bank Statement", code: "C223", route: "/dashboard/finance/bank-statement" },
-        { title: "Print Document [Dot-Matrix ]", code: "C225", route: "/dashboard/finance/billing" }
+        { title: "Vouchers", code: "C208", route: "/dashboard/finance/vouchers" },
+        { title: "Cheque Management", code: "C215", route: "/dashboard/finance/cheque-management" },
+        { title: "Cash & Bank Statement", code: "C223", route: "/dashboard/finance/cash-bank-statement" },
+        { title: "Print Document [Dot-Matrix ]", code: "C225", route: "/dashboard/finance/print-dot-matrix" }
       ]
     },
     {

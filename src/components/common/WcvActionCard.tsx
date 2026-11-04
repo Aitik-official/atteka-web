@@ -67,3 +67,4 @@ export function WcvRibbonHeader({ title }: { title: string }) {
     </div>
   );
 }
+
