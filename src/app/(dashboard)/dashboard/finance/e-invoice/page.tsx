@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { QrCode, FileText, CheckCircle2, XCircle, AlertTriangle, ShieldCheck } from "lucide-react";
+import { PageHeader } from "@/components/common/PageHeader";
+import { SectionCard } from "@/components/common/SectionCard";
 import { SimulatedBadge } from "@/components/common/SimulatedBadge";
 
 export default function EInvoicePage() {
@@ -82,40 +84,39 @@ export default function EInvoicePage() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-bold rounded">C655</span>
-            <h1 className="text-lg font-bold text-slate-800">Generate E-Invoice (IRN Engine)</h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            PAGES/ACCOUNTS.PAGES/Bill/GenrateIRN.aspx • Government E-Invoice System Interface
-          </p>
-        </div>
-        <SimulatedBadge text="GST MOCK ADAPTER ENABLED" />
-      </div>
+    <div className="space-y-4 pb-10">
+      {/* Reusable Header */}
+      <PageHeader
+        moduleCode="C655"
+        title="Generate E-Invoice (IRN Engine)"
+        subtitle="Finance • GenrateIRN.aspx • Government GST / NIC E-Invoice System Interface"
+        breadcrumbs={[
+          { label: "Finance", href: "/dashboard" },
+          { label: "E-Invoice Engine" }
+        ]}
+        actions={<SimulatedBadge text="GST IRP SIMULATION" />}
+      />
 
       {/* Generation Form */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-xs font-bold text-blue-700 uppercase tracking-wider border-b pb-2">
-            Generate E-Invoice & IRN
-          </h2>
+        <SectionCard
+          title="Generate E-Invoice & IRN"
+          icon={QrCode}
+          badge="NIC PORTAL"
+        >
           <form onSubmit={handleGenerateIRN} className="space-y-3 text-xs">
             <div>
               <label className="block font-medium text-slate-600 mb-1">Select Customer Transport Bill</label>
               <select
                 value={selectedBill}
                 onChange={(e) => setSelectedBill(e.target.value)}
-                className="w-full h-9 px-3 border border-slate-300 rounded font-semibold text-blue-700 bg-white"
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg font-semibold text-blue-700 bg-slate-50 focus:bg-white"
                 required
               >
                 <option value="">-- Choose Bill --</option>
                 {bills.map((b) => (
                   <option key={b.billNumber} value={b.billNumber}>
-                    {b.billNumber} - {b.customerName} (&#8377;{b.grandTotal?.toLocaleString()})
+                    {b.billNumber} - {b.customerName} (₹{b.grandTotal?.toLocaleString()})
                   </option>
                 ))}
               </select>
@@ -128,7 +129,7 @@ export default function EInvoicePage() {
                   type="text"
                   readOnly
                   value="27AABCA1234F1Z5"
-                  className="w-full h-8 px-2 border rounded bg-slate-50 font-mono"
+                  className="w-full h-8 px-2.5 border border-slate-200 rounded-lg bg-slate-100 font-mono text-[11px]"
                 />
               </div>
               <div>
@@ -137,7 +138,7 @@ export default function EInvoicePage() {
                   type="text"
                   readOnly
                   value="27AABCB9876G1Z2"
-                  className="w-full h-8 px-2 border rounded bg-slate-50 font-mono"
+                  className="w-full h-8 px-2.5 border border-slate-200 rounded-lg bg-slate-100 font-mono text-[11px]"
                 />
               </div>
             </div>
@@ -145,38 +146,39 @@ export default function EInvoicePage() {
             <button
               type="submit"
               disabled={loading || !selectedBill}
-              className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded shadow transition-colors disabled:opacity-50"
+              className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Generating IRN..." : "Generate Official E-Invoice (IRN)"}
             </button>
           </form>
 
           {result && (
-            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-xs space-y-2">
+            <div className="mt-3.5 p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-xs space-y-2 animate-in fade-in">
               <div className="flex items-center gap-1.5 text-blue-800 font-bold">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>IRN Generated Successfully</span>
               </div>
-              <p className="font-mono text-[11px] break-all bg-white p-2 border rounded text-slate-700">
+              <p className="font-mono text-[11px] break-all bg-white p-2.5 border border-blue-100 rounded-lg text-slate-700 select-all">
                 <strong className="text-slate-900 block mb-0.5">IRN Hash (64 chars):</strong>
                 {result.irn}
               </p>
-              <div className="flex justify-between text-slate-600">
-                <span>Ack Number: <strong>{result.ackNo}</strong></span>
+              <div className="flex justify-between text-slate-600 text-[11px]">
+                <span>Ack Number: <strong className="font-mono">{result.ackNo}</strong></span>
                 <span>Status: <strong className="text-emerald-700">{result.status}</strong></span>
               </div>
               <p className="text-[10px] text-amber-700 italic">
-                * Note: Operation completed via Mock GST Integration Adapter. No live portal charges incurred.
+                * Note: Operation completed via GST Integration Adapter.
               </p>
             </div>
           )}
-        </div>
+        </SectionCard>
 
         {/* Cancellation Section */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-xs font-bold text-red-700 uppercase tracking-wider border-b pb-2">
-            Cancel E-Invoice (IRN)
-          </h2>
+        <SectionCard
+          title="Cancel E-Invoice (IRN)"
+          icon={XCircle}
+          badge="REVOCATION"
+        >
           <form onSubmit={handleCancelIRN} className="space-y-3 text-xs">
             <div>
               <label className="block font-medium text-slate-600 mb-1">Enter 64-character IRN Number</label>
@@ -185,7 +187,7 @@ export default function EInvoicePage() {
                 value={cancelIrn}
                 onChange={(e) => setCancelIrn(e.target.value)}
                 placeholder="Paste full IRN hash here..."
-                className="w-full h-9 px-3 border border-slate-300 rounded font-mono text-[11px]"
+                className="w-full h-9 px-3 border border-slate-200 bg-slate-50 focus:bg-white rounded-lg font-mono text-[11px]"
                 required
               />
             </div>
@@ -195,7 +197,7 @@ export default function EInvoicePage() {
               <select
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                className="w-full h-9 px-2 border border-slate-300 rounded bg-white"
+                className="w-full h-9 px-2.5 border border-slate-200 bg-slate-50 focus:bg-white rounded-lg"
               >
                 <option value="Duplicate entry">1. Duplicate Entry</option>
                 <option value="Data entry typo">2. Data Entry Typo / Miscalculation</option>
@@ -206,20 +208,19 @@ export default function EInvoicePage() {
             <button
               type="submit"
               disabled={!cancelIrn}
-              className="w-full h-9 bg-red-600 hover:bg-red-700 text-white font-semibold rounded shadow transition-colors disabled:opacity-50"
+              className="w-full h-9 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
             >
               Cancel E-Invoice
             </button>
           </form>
 
           {cancelMsg && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded">
+            <div className="mt-3.5 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl animate-in fade-in">
               {cancelMsg}
             </div>
           )}
-        </div>
+        </SectionCard>
       </div>
     </div>
   );
 }
-

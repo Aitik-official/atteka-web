@@ -12,9 +12,14 @@ import {
   ClipboardCheck,
   BarChart2,
   Settings,
+  ChevronDown,
   ChevronRight,
-  ChevronDown
+  TrendingUp,
+  FileText,
+  DollarSign,
+  ShieldCheck
 } from "lucide-react";
+import { StatCard } from "@/components/common/StatCard";
 
 interface SubCategory {
   title: string;
@@ -31,7 +36,9 @@ interface ModuleCard {
 }
 
 export default function DashboardHome() {
-  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
+  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({
+    C001: true // Operations open by default for immediate usability
+  });
 
   const toggleDropdown = (id: string) => {
     setOpenDropdowns((prev) => ({
@@ -81,7 +88,7 @@ export default function DashboardHome() {
       ]
     },
     {
-      id: "C748",
+      id: "C158",
       name: "Fleet",
       icon: Truck,
       image: "/images/cards/fleet.jpg",
@@ -101,7 +108,7 @@ export default function DashboardHome() {
       ]
     },
     {
-      id: "C116",
+      id: "C136",
       name: "Exceptional",
       icon: ClipboardCheck,
       image: "/images/cards/exceptional.jpg",
@@ -109,7 +116,7 @@ export default function DashboardHome() {
         { title: "Operation", code: "C117", route: "/dashboard/operations/dockets" },
         { title: "Finance", code: "C132", route: "/dashboard/finance/billing" },
         { title: "Bank Reconciliation Statment", code: "C520", route: "/dashboard/finance/bank-statement" },
-        { title: "Company Vehicle Exceptional", code: "C588", route: "/dashboard/masters/vehicles" }
+        { title: "Company Vechicle Exceptional", code: "C588", route: "/dashboard/masters/vehicles" }
       ]
     },
     {
@@ -143,9 +150,46 @@ export default function DashboardHome() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto pb-10">
-      {/* 3-Column Grid Matching Home.aspx Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+    <div className="max-w-7xl mx-auto space-y-5 pb-10">
+      {/* Top Quick KPI Row (Modular & Responsive) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <StatCard
+          title="Active Consignments"
+          value="1,428"
+          subtitle="All corridors active"
+          icon={FileText}
+          trend="+8.4%"
+          trendDirection="up"
+          color="blue"
+        />
+        <StatCard
+          title="Fleet in Transit"
+          value="42"
+          subtitle="GPS tracking live"
+          icon={Truck}
+          trend="+3 new"
+          trendDirection="up"
+          color="emerald"
+        />
+        <StatCard
+          title="Pending Billing"
+          value="₹ 14.8 L"
+          subtitle="24 dockets to bill"
+          icon={DollarSign}
+          color="amber"
+        />
+        <StatCard
+          title="IRP / NIC Engine"
+          value="Online"
+          subtitle="Sandbox connected"
+          icon={ShieldCheck}
+          trend="99.9%"
+          color="indigo"
+        />
+      </div>
+
+      {/* Main 3-Column / Responsive Card Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 items-start">
         {modules.map((mod) => {
           const Icon = mod.icon;
           const isOpen = !!openDropdowns[mod.id];
@@ -153,20 +197,20 @@ export default function DashboardHome() {
           return (
             <div
               key={mod.id}
-              className="bg-white rounded-xl overflow-hidden border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col"
+              className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-2xs hover:shadow-md transition-all flex flex-col"
             >
-              {/* Clickable Header Bar: Click to Dropdown */}
+              {/* Clickable Header Bar: Dark umber matching authentic Home.aspx */}
               <div
                 onClick={() => toggleDropdown(mod.id)}
-                className="bg-[#2e2621] hover:bg-[#3d332c] px-4 py-2.5 flex items-center justify-between text-white select-none cursor-pointer transition-colors"
+                className="bg-[#383028] hover:bg-[#453c33] px-4 py-2.5 flex items-center justify-between text-white select-none cursor-pointer transition-colors active:scale-[0.99]"
                 title={`Click to ${isOpen ? "collapse" : "expand"} subcategories`}
               >
                 <div className="flex items-center gap-2 font-bold text-sm tracking-wide">
-                  <Icon className="w-4 h-4 text-slate-300" />
+                  <Icon className="w-4 h-4 text-slate-300 shrink-0" />
                   <span>{mod.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono font-semibold text-slate-400">
+                  <span className="text-[10px] font-mono font-semibold text-slate-300/80">
                     {mod.id}
                   </span>
                   <ChevronDown
@@ -180,7 +224,7 @@ export default function DashboardHome() {
               {/* Clickable Photographic Banner Image */}
               <div
                 onClick={() => toggleDropdown(mod.id)}
-                className="relative w-full h-44 bg-slate-900 overflow-hidden cursor-pointer group"
+                className="relative w-full h-40 sm:h-44 bg-slate-900 overflow-hidden cursor-pointer group select-none"
                 title={`Click to ${isOpen ? "collapse" : "expand"} ${mod.name} subcategories`}
               >
                 <Image
@@ -191,29 +235,37 @@ export default function DashboardHome() {
                   unoptimized
                 />
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/25 transition-colors flex items-end p-2.5">
-                  <span className="text-[11px] font-semibold text-white/95 bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 shadow-xs">
+                  <span className="text-[11px] font-semibold text-white/95 bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 shadow-2xs">
                     {isOpen ? "Click to close" : "Click to view subcategories"}
                     <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                   </span>
                 </div>
               </div>
 
-              {/* Subcategories Dropdown Area: Toggled by clicking above banner */}
-              {isOpen && (
-                <div className="p-4 space-y-2 bg-white border-t border-slate-100 animate-in slide-in-from-top-2 fade-in duration-200">
+              {/* Subcategories Dropdown Area: Toggled by clicking banner or image */}
+              {isOpen ? (
+                <div className="p-3 sm:p-4 space-y-1.5 bg-white border-t border-slate-100 animate-in slide-in-from-top-2 fade-in duration-200">
                   {mod.subcategories.map((sub, idx) => (
                     <Link
                       key={idx}
                       href={sub.route}
-                      className="group flex items-center justify-between text-[13px] text-slate-700 hover:text-blue-700 transition-colors py-1.5 px-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-100"
+                      className="group flex items-center justify-between text-xs sm:text-[13px] text-slate-700 hover:text-blue-700 transition-colors py-2 px-2.5 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 active:bg-slate-100"
                     >
-                      <span className="font-medium group-hover:translate-x-0.5 transition-transform">
+                      <span className="font-medium group-hover:translate-x-0.5 transition-transform truncate pr-2">
                         {sub.title}
                       </span>
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5" />
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5 shrink-0" />
                     </Link>
                   ))}
                 </div>
+              ) : (
+                <button
+                  onClick={() => toggleDropdown(mod.id)}
+                  className="py-2.5 px-4 text-center text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 border-t border-slate-100 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <span>View {mod.subcategories.length} submodules</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
           );

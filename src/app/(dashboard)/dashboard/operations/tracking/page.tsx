@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, MapPin, Truck, CheckCircle2, Clock, FileText, Eye, AlertCircle } from "lucide-react";
+import { Search, MapPin, Truck, CheckCircle2, Clock, FileText, Eye, AlertCircle, Calendar } from "lucide-react";
+import { PageHeader } from "@/components/common/PageHeader";
+import { SectionCard } from "@/components/common/SectionCard";
+import { StatusBadge } from "@/components/common/StatusBadge";
 
 export default function TrackingPage() {
   const [query, setQuery] = useState("");
@@ -52,22 +55,20 @@ export default function TrackingPage() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-bold rounded">C111</span>
-            <h1 className="text-lg font-bold text-slate-800">Live Multi-Document Tracking</h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            PAGES/OPERATIONS.PAGES/Reports/TrackDocument.aspx • Real-time status pipeline
-          </p>
-        </div>
-      </div>
+    <div className="space-y-4 pb-10">
+      {/* Reusable PageHeader */}
+      <PageHeader
+        moduleCode="C111"
+        title="Live Multi-Document Tracking"
+        subtitle="Operations • Reports/TrackDocument.aspx • Real-time status pipeline across all corridors"
+        breadcrumbs={[
+          { label: "Operations", href: "/dashboard" },
+          { label: "Document Tracking" }
+        ]}
+      />
 
       {/* Query Bar */}
-      <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+      <SectionCard title="Search & Trace Query" icon={Search} badge="LOOKUP">
         <form onSubmit={handleTrack} className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="w-full sm:w-48">
@@ -75,7 +76,7 @@ export default function TrackingPage() {
               <select
                 value={docType}
                 onChange={(e) => setDocType(e.target.value)}
-                className="w-full h-10 px-3 text-xs border border-slate-300 rounded bg-white font-medium"
+                className="w-full h-10 px-3 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white font-medium"
               >
                 <option value="CN">CN / Docket Number</option>
                 <option value="THC">THC Number</option>
@@ -92,7 +93,7 @@ export default function TrackingPage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value.toUpperCase())}
                   placeholder="e.g. ALC126001 or paste docket code"
-                  className="w-full h-10 pl-9 pr-3 text-xs border border-slate-300 rounded uppercase font-semibold text-blue-800"
+                  className="w-full h-10 pl-9 pr-3 text-xs border border-slate-200 bg-slate-50 focus:bg-white rounded-lg uppercase font-semibold text-blue-800 focus:ring-1 focus:ring-blue-500"
                   required
                 />
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -103,7 +104,7 @@ export default function TrackingPage() {
               <button
                 type="submit"
                 disabled={searching}
-                className="w-full sm:w-auto h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded shadow flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
+                className="w-full sm:w-auto h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60 cursor-pointer"
               >
                 <Search className="w-3.5 h-3.5" />
                 {searching ? "Searching..." : "Track Document"}
@@ -113,108 +114,111 @@ export default function TrackingPage() {
         </form>
 
         {error && (
-          <div className="mt-3 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded flex items-center gap-2">
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2 animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
-      </div>
+      </SectionCard>
 
       {/* Tracking Result View */}
       {result && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in">
           {/* Status Pipeline Progress Bar */}
-          <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div>
-                <span className="text-xs text-slate-500 uppercase font-semibold">Docket Number</span>
-                <h2 className="text-xl font-bold text-blue-700">{result.docketNo}</h2>
-              </div>
-              <div className="text-right">
-                <span className="text-xs text-slate-500 block">Current Status</span>
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
-                  {result.status}
-                </span>
-              </div>
-            </div>
-
-            {/* Pipeline Steps */}
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-2">
-              {steps.map((st, idx) => {
+          <SectionCard
+            title={`Docket: ${result.docketNo}`}
+            badge={result.status}
+            icon={Truck}
+            headerAction={<StatusBadge status={result.status} />}
+          >
+            {/* Responsive Pipeline Steps (Vertical on mobile, horizontal grid on desktop) */}
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 sm:gap-3">
+              {steps.map((st) => {
                 const status = getStepStatus(st.key, result.status);
                 const isDone = status === "COMPLETED";
 
                 return (
                   <div
                     key={st.key}
-                    className={`p-3 rounded-lg border text-xs transition-colors ${
+                    className={`p-3 rounded-xl border text-xs transition-all flex sm:flex-col items-center sm:items-start justify-between sm:justify-start gap-2 ${
                       isDone
-                        ? "bg-blue-50 border-blue-300 text-blue-900"
-                        : "bg-slate-50 border-slate-200 text-slate-400 opacity-60"
+                        ? "bg-blue-50 border-blue-200 text-blue-900 shadow-2xs"
+                        : "bg-slate-50/60 border-slate-200 text-slate-400 opacity-60"
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 mb-1">
+                    <div className="flex items-center gap-2">
                       {isDone ? (
-                        <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                        <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        </div>
                       ) : (
-                        <Clock className="w-4 h-4 text-slate-400 shrink-0" />
+                        <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center shrink-0">
+                          <Clock className="w-3.5 h-3.5" />
+                        </div>
                       )}
-                      <span className="font-bold">{st.label}</span>
+                      <div>
+                        <span className="font-bold block text-slate-800">{st.label}</span>
+                        <p className="text-[11px] text-slate-500 hidden sm:block mt-0.5">{st.desc}</p>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-slate-600 mt-1">{st.desc}</p>
+                    <span className="sm:hidden text-[10px] font-mono font-bold text-slate-500">
+                      {isDone ? "Done" : "Pending"}
+                    </span>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </SectionCard>
 
-          {/* Details Summary Card */}
+          {/* Details Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-lg border border-slate-200 text-xs space-y-2">
-              <h3 className="font-bold text-slate-700 border-b pb-1">Route & Carrier</h3>
-              <p><span className="text-slate-500">Origin:</span> {result.fromLocation}</p>
-              <p><span className="text-slate-500">Destination:</span> {result.toLocation}</p>
-              <p><span className="text-slate-500">Booking Branch:</span> {result.bookingBranch}</p>
-              <p><span className="text-slate-500">Vehicle No:</span> {result.vehicleNo || "N/A"}</p>
-              <p><span className="text-slate-500">Driver Contact:</span> {result.driverPhone || "N/A"}</p>
-            </div>
+            <SectionCard title="Route & Carrier" icon={MapPin} badge="TRANSIT">
+              <div className="space-y-1.5 text-xs">
+                <p><span className="text-slate-500 font-medium">Origin:</span> <span className="font-bold text-slate-800">{result.fromLocation}</span></p>
+                <p><span className="text-slate-500 font-medium">Destination:</span> <span className="font-bold text-slate-800">{result.toLocation}</span></p>
+                <p><span className="text-slate-500 font-medium">Booking Branch:</span> <span className="text-slate-700">{result.bookingBranch}</span></p>
+                <p><span className="text-slate-500 font-medium">Vehicle No:</span> <span className="font-mono font-bold text-blue-700">{result.vehicleNo || "N/A"}</span></p>
+                <p><span className="text-slate-500 font-medium">Driver Contact:</span> <span className="text-slate-700">{result.driverPhone || "N/A"}</span></p>
+              </div>
+            </SectionCard>
 
-            <div className="bg-white p-4 rounded-lg border border-slate-200 text-xs space-y-2">
-              <h3 className="font-bold text-slate-700 border-b pb-1">Parties & Goods</h3>
-              <p><span className="text-slate-500">Billing Party:</span> {result.billingParty}</p>
-              <p><span className="text-slate-500">Consignor:</span> {result.consignor?.name}</p>
-              <p><span className="text-slate-500">Consignee:</span> {result.consignee?.name}</p>
-              <p><span className="text-slate-500">Goods:</span> {result.packageDetails?.productDescription} ({result.packageDetails?.packageType})</p>
-              <p><span className="text-slate-500">Weight:</span> {result.packageDetails?.chargedWeight} kg ({result.packageDetails?.packagesCount} pkgs)</p>
-            </div>
+            <SectionCard title="Parties & Cargo" icon={FileText} badge="GOODS">
+              <div className="space-y-1.5 text-xs">
+                <p><span className="text-slate-500 font-medium">Billing Party:</span> <span className="font-bold text-slate-800">{result.billingParty}</span></p>
+                <p><span className="text-slate-500 font-medium">Consignor:</span> <span className="text-slate-700">{result.consignor?.name}</span></p>
+                <p><span className="text-slate-500 font-medium">Consignee:</span> <span className="text-slate-700">{result.consignee?.name}</span></p>
+                <p><span className="text-slate-500 font-medium">Goods:</span> <span className="text-slate-700">{result.packageDetails?.productDescription}</span></p>
+                <p><span className="text-slate-500 font-medium">Charged Weight:</span> <span className="font-bold text-slate-800">{result.packageDetails?.chargedWeight} kg</span> ({result.packageDetails?.packagesCount} pkgs)</p>
+              </div>
+            </SectionCard>
 
-            <div className="bg-white p-4 rounded-lg border border-slate-200 text-xs space-y-2">
-              <h3 className="font-bold text-slate-700 border-b pb-1">Financial & POD Verification</h3>
-              <p><span className="text-slate-500">Freight Total:</span> &#8377;{result.financials?.grandTotal?.toLocaleString()}</p>
-              <p><span className="text-slate-500">Payment Basis:</span> {result.paymentBasis}</p>
-              <p><span className="text-slate-500">E-Way Bill:</span> {result.ewayBillNo || "N/A"}</p>
+            <SectionCard title="Financials & POD" icon={CheckCircle2} badge="POD">
+              <div className="space-y-1.5 text-xs">
+                <p><span className="text-slate-500 font-medium">Freight Total:</span> <span className="font-mono font-bold text-emerald-700 text-sm">₹{result.financials?.grandTotal?.toLocaleString()}</span></p>
+                <p><span className="text-slate-500 font-medium">Payment Basis:</span> <span className="font-semibold text-slate-700">{result.paymentBasis}</span></p>
+                <p><span className="text-slate-500 font-medium">E-Way Bill:</span> <span className="font-mono text-slate-600">{result.ewayBillNo || "N/A"}</span></p>
 
-              {result.podUrl ? (
-                <div className="mt-2 pt-2 border-t">
-                  <a
-                    href={result.podUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline"
-                  >
-                    <Eye className="w-3.5 h-3.5" /> View Scanned POD Document
-                  </a>
-                </div>
-              ) : (
-                <p className="text-amber-600 text-[11px] mt-2 font-medium">
-                  &bull; Proof of Delivery (POD) not yet uploaded
-                </p>
-              )}
-            </div>
+                {result.podUrl ? (
+                  <div className="mt-2.5 pt-2 border-t border-slate-100">
+                    <a
+                      href={result.podUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> View Scanned POD Document
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-amber-600 text-[11px] mt-2 font-medium">
+                    • Proof of Delivery (POD) not yet uploaded
+                  </p>
+                )}
+              </div>
+            </SectionCard>
           </div>
         </div>
       )}
     </div>
   );
 }
-

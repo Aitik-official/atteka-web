@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
   Users2,
   Landmark,
@@ -15,29 +16,26 @@ import {
   ChevronDown,
   ChevronRight,
   Search,
-  FileText,
-  Printer,
-  CreditCard,
-  Building,
-  ShieldCheck,
-  RotateCcw
+  X
 } from "lucide-react";
 
 interface SidebarProps {
   isOpen: boolean;
+  onClose?: () => void;
   user: {
     userId: string;
     name: string;
     branchCode?: string;
     operatingLocation?: string;
   };
+  isMobile?: boolean;
 }
 
-export function Sidebar({ isOpen, user }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    C001: true, // Operations open by default
-    C002: true  // Finance open by default
+    C001: true,
+    C002: true
   });
   const [filterQuery, setFilterQuery] = useState("");
 
@@ -48,16 +46,22 @@ export function Sidebar({ isOpen, user }: SidebarProps) {
     }));
   };
 
+  const handleLinkClick = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      onClose?.();
+    }
+  };
+
   const menuModules = [
     {
       id: "C001",
       name: "Operations",
       icon: Users2,
       submodules: [
-        { label: "New Consignment Note", route: "/dashboard/operations/new-cn", code: "C010" },
-        { label: "Consignments Register & Edit", route: "/dashboard/operations/dockets", code: "C011" },
-        { label: "TripSheet & PDCs Dispatch", route: "/dashboard/operations/tripsheets", code: "C035" },
-        { label: "Live Multi-Doc Tracking", route: "/dashboard/operations/tracking", code: "C111" }
+        { label: "Freight Booking (C009)", route: "/dashboard/operations/new-cn", code: "C009" },
+        { label: "CN Operations [System]", route: "/dashboard/operations/dockets", code: "C019" },
+        { label: "TripSheet Operations", route: "/dashboard/operations/tripsheets", code: "C035" },
+        { label: "View Print Document", route: "/dashboard/operations/dockets", code: "C039" }
       ]
     },
     {
@@ -65,60 +69,79 @@ export function Sidebar({ isOpen, user }: SidebarProps) {
       name: "Finance",
       icon: Landmark,
       submodules: [
-        { label: "Customer Transport Billing", route: "/dashboard/finance/billing", code: "C194" },
-        { label: "E-Invoice (IRN) Engine", route: "/dashboard/finance/e-invoice", code: "C655" },
-        { label: "IndusInd Bank Online Payment", route: "/dashboard/finance/bank-payment", code: "C782" },
-        { label: "Bank Statement & BRS", route: "/dashboard/finance/bank-statement", code: "C850" },
-        { label: "Money Receipt (MR) Entry", route: "/dashboard/finance/mr-entry", code: "C202" }
+        { label: "Vendor Billing", route: "/dashboard/finance/billing", code: "C181" },
+        { label: "Customer Billing", route: "/dashboard/finance/billing", code: "C194" },
+        { label: "Genrate E-Invoice (IRN)", route: "/dashboard/finance/e-invoice", code: "C655" },
+        { label: "MR Entry", route: "/dashboard/finance/mr-entry", code: "C202" },
+        { label: "Vouchers", route: "/dashboard/finance/bank-payment", code: "C208" },
+        { label: "Cheque Management", route: "/dashboard/finance/bank-statement", code: "C215" },
+        { label: "Cash & Bank Statement", route: "/dashboard/finance/bank-statement", code: "C223" },
+        { label: "Print Document [Dot-Matrix ]", route: "/dashboard/finance/billing", code: "C225" }
       ]
     },
     {
       id: "C003",
-      name: "CRM & Parties",
+      name: "CRM",
       icon: UserCheck,
       submodules: [
-        { label: "Customer Master", route: "/dashboard/masters/customers", code: "C061" },
-        { label: "Vendor Master & TDS", route: "/dashboard/masters/vendors", code: "C063" }
+        { label: "Lead Details", route: "/dashboard/masters/customers", code: "C504" },
+        { label: "Vist Details", route: "/dashboard/masters/customers", code: "C505" },
+        { label: "Activity", route: "/dashboard/masters/customers", code: "C916" }
       ]
     },
     {
-      id: "C748",
-      name: "Fleet & Vehicles",
+      id: "C158",
+      name: "Fleet",
       icon: Truck,
       submodules: [
-        { label: "Vehicle Registry & Spec", route: "/dashboard/masters/vehicles", code: "C648" }
+        { label: "Trip Management", route: "/dashboard/masters/vehicles", code: "C749" },
+        { label: "Fuel and Toll Management", route: "/dashboard/masters/vehicles", code: "C750" }
       ]
     },
     {
       id: "C004",
-      name: "Tracking & POD",
+      name: "Tracking",
       icon: MapPin,
       submodules: [
-        { label: "Multi-Document Tracking", route: "/dashboard/operations/tracking", code: "C111" }
+        { label: "Tracking Douments", route: "/dashboard/operations/tracking", code: "C111" },
+        { label: "Track Customer/Vendor", route: "/dashboard/operations/tracking", code: "C485" }
       ]
     },
     {
-      id: "C116",
-      name: "Exceptional Dockets",
+      id: "C136",
+      name: "Exceptional",
       icon: ClipboardCheck,
       submodules: [
-        { label: "Claim & Damage Audit", route: "/dashboard/operations/dockets", code: "C117" }
+        { label: "Operation", route: "/dashboard/operations/dockets", code: "C117" },
+        { label: "Finance", route: "/dashboard/finance/billing", code: "C132" },
+        { label: "Bank Reconciliation Statment", route: "/dashboard/finance/bank-statement", code: "C520" },
+        { label: "Company Vechicle Exceptional", route: "/dashboard/masters/vehicles", code: "C588" }
       ]
     },
     {
       id: "C006",
-      name: "Reports & Accounts",
+      name: "Reports",
       icon: BarChart2,
       submodules: [
-        { label: "General Ledger Trial Balance", route: "/dashboard/reports", code: "C086" }
+        { label: "Operation Report", route: "/dashboard/operations/dockets", code: "C084" },
+        { label: "Finance", route: "/dashboard/reports", code: "C085" },
+        { label: "Accounts", route: "/dashboard/reports", code: "C086" },
+        { label: "Purchase Report", route: "/dashboard/reports", code: "C840" },
+        { label: "ERP Tracking", route: "/dashboard/operations/tracking", code: "C088" },
+        { label: "Final Accounts", route: "/dashboard/reports", code: "C486" },
+        { label: "Company Vechicle Reports", route: "/dashboard/masters/vehicles", code: "C576" }
       ]
     },
     {
       id: "C007",
-      name: "Admin & Masters",
+      name: "Admin",
       icon: Settings,
       submodules: [
-        { label: "Branch Master Setup", route: "/dashboard/masters/branches", code: "C054" }
+        { label: "Company Structure", route: "/dashboard/masters/branches", code: "C052" },
+        { label: "Business Partners", route: "/dashboard/masters/customers", code: "C060" },
+        { label: "Operations", route: "/dashboard/masters/branches", code: "C065" },
+        { label: "Finance & Accounts", route: "/dashboard/reports", code: "C077" },
+        { label: "APIs", route: "/dashboard/finance/e-invoice", code: "C686" }
       ]
     }
   ];
@@ -142,24 +165,53 @@ export function Sidebar({ isOpen, user }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed top-14 left-0 h-[calc(100vh-3.5rem-2rem)] bg-white border-r border-slate-200 transition-all duration-300 z-20 flex flex-col justify-between select-none shadow-sm ${
-        isOpen ? "w-64" : "w-16"
+      className={`fixed z-50 bg-white border-r border-slate-200 transition-all duration-300 flex flex-col justify-between select-none shadow-md ${
+        /* Mobile: off-canvas drawer */
+        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      } ${
+        /* On mobile: full height drawer with top-0; On desktop: top-14 under header */
+        "top-0 md:top-14 bottom-0 md:bottom-8 h-full md:h-[calc(100vh-3.5rem-2rem)]"
+      } ${
+        /* Mobile width is 72 (288px) max 85vw. Desktop width toggles between w-64 and w-16 */
+        isOpen ? "w-72 max-w-[85vw] md:w-64" : "w-72 max-w-[85vw] md:w-16"
       }`}
     >
-      {/* Top Header / Profile / Search */}
+      {/* Mobile Top Header with Brand & Close Button */}
+      <div className="md:hidden flex items-center justify-between p-3.5 border-b border-slate-200 bg-slate-50/90">
+        <div className="flex items-center gap-2">
+          <Image
+            src="/images/atteka_logo-removebg-preview.png"
+            alt="Ateka"
+            width={32}
+            height={26}
+            className="object-contain"
+            unoptimized
+          />
+          <span className="font-bold text-slate-800 text-sm">Ateka Logistics</span>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
+          title="Close Navigation"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Top Profile / Filter Section */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {isOpen ? (
           <div className="p-3 border-b border-slate-100 bg-slate-50/70 space-y-2.5">
             {/* User Brief */}
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#10b981] text-white font-bold flex items-center justify-center text-xs shadow-xs">
+              <div className="w-8 h-8 rounded-full bg-[#10b981] text-white font-bold flex items-center justify-center text-xs shadow-xs shrink-0">
                 {user?.name?.charAt(0) || "A"}
               </div>
               <div className="truncate flex-1">
                 <p className="text-xs font-bold text-slate-800 truncate leading-tight">
                   {user?.name || "ANISHA OZARKAR"}
                 </p>
-                <p className="text-[10px] text-slate-500 font-mono mt-0.5">
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
                   {user?.userId || "AL002"} • {user?.operatingLocation || "MUMBAI CENTRAL"}
                 </p>
               </div>
@@ -172,7 +224,7 @@ export function Sidebar({ isOpen, user }: SidebarProps) {
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
                 placeholder="Filter menu & codes (e.g. C010)..."
-                className="w-full h-8 pl-8 pr-3 text-xs bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-700 placeholder-slate-400 font-medium"
+                className="w-full h-8 pl-8 pr-7 text-xs bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-700 placeholder-slate-400 font-medium"
               />
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
               {filterQuery && (
@@ -186,7 +238,7 @@ export function Sidebar({ isOpen, user }: SidebarProps) {
             </div>
           </div>
         ) : (
-          <div className="py-3 flex justify-center border-b border-slate-100">
+          <div className="py-3 hidden md:flex justify-center border-b border-slate-100">
             <div className="w-8 h-8 rounded-full bg-[#10b981] text-white font-bold flex items-center justify-center text-xs shadow-xs">
               {user?.name?.charAt(0) || "A"}
             </div>
@@ -201,14 +253,15 @@ export function Sidebar({ isOpen, user }: SidebarProps) {
             const hasActiveChild = mod.submodules.some((s) => pathname === s.route);
 
             if (!isOpen) {
-              // Collapsed state: icon only
+              // Collapsed state (desktop only)
               return (
                 <div key={mod.id} className="relative group flex justify-center py-1">
                   <Link
                     href={mod.submodules[0]?.route || "/dashboard"}
+                    onClick={handleLinkClick}
                     className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
                       hasActiveChild
-                        ? "bg-emerald-50 text-emerald-700"
+                        ? "bg-emerald-50 text-emerald-700 font-bold"
                         : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
                     }`}
                     title={mod.name}
@@ -219,7 +272,7 @@ export function Sidebar({ isOpen, user }: SidebarProps) {
               );
             }
 
-            // Expanded state: full module name, accordion dropdown & submodule links
+            // Expanded state
             return (
               <div key={mod.id} className="rounded-lg overflow-hidden">
                 <button
@@ -230,15 +283,15 @@ export function Sidebar({ isOpen, user }: SidebarProps) {
                       : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 truncate">
                     <Icon
-                      className={`w-4 h-4 ${
+                      className={`w-4 h-4 shrink-0 ${
                         hasActiveChild ? "text-emerald-600" : "text-slate-400"
                       }`}
                     />
-                    <span>{mod.name}</span>
+                    <span className="truncate">{mod.name}</span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0 ml-1">
                     <span className="text-[10px] font-mono text-slate-400 font-normal">
                       {mod.id}
                     </span>
@@ -259,6 +312,7 @@ export function Sidebar({ isOpen, user }: SidebarProps) {
                         <Link
                           key={idx}
                           href={sub.route}
+                          onClick={handleLinkClick}
                           className={`flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
                             isSubActive
                               ? "bg-emerald-100/60 text-emerald-900 font-semibold shadow-2xs"
@@ -267,7 +321,7 @@ export function Sidebar({ isOpen, user }: SidebarProps) {
                         >
                           <span className="truncate">{sub.label}</span>
                           <span
-                            className={`text-[9px] font-mono px-1 py-0.5 rounded ${
+                            className={`text-[9px] font-mono px-1 py-0.5 rounded shrink-0 ml-1.5 ${
                               isSubActive
                                 ? "bg-emerald-200 text-emerald-800 font-bold"
                                 : "text-slate-400 bg-slate-100"
