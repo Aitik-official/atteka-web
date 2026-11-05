@@ -10,15 +10,24 @@ import {
   CheckSquare,
   Copy,
   LayoutGrid,
+  Plus,
   Receipt,
   Search,
   Square,
   Table2,
-  Upload
+  Trash2,
+  Upload,
+  X
 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 
 type Step = 1 | 2 | 3;
+
+interface CustomChargeColumn {
+  id: string;
+  particular: string;
+  defaultAmount: number;
+}
 
 interface ChargeRow {
   docketNo: string;
@@ -44,6 +53,8 @@ interface ChargeRow {
   codDodCharges: number;
   xtraWtCharges: number;
   serviceCharges: number;
+  /** Values keyed by custom column id */
+  customCharges: Record<string, number>;
 }
 
 const emptyCharges = (base: Partial<ChargeRow> = {}): ChargeRow => ({
@@ -70,7 +81,8 @@ const emptyCharges = (base: Partial<ChargeRow> = {}): ChargeRow => ({
   codDodCharges: 0,
   xtraWtCharges: 0,
   serviceCharges: 0,
-  ...base
+  ...base,
+  customCharges: { ...(base.customCharges || {}) }
 });
 
 function formatDisplayDate(value?: string | Date) {
@@ -126,6 +138,11 @@ export default function TransportBillPage() {
   const [partyAddress, setPartyAddress] = useState("");
   const [remark, setRemark] = useState("");
   const [chargeRows, setChargeRows] = useState<ChargeRow[]>([]);
+  const [customColumns, setCustomColumns] = useState<CustomChargeColumn[]>([]);
+  const [showCustomColModal, setShowCustomColModal] = useState(false);
+  const [draftCustomCols, setDraftCustomCols] = useState<CustomChargeColumn[]>([]);
+  const [particularInput, setParticularInput] = useState("Extra Charges");
+  const [amountInput, setAmountInput] = useState(0);
   const [osAmount] = useState(7881374);
   const [creditLimit, setCreditLimit] = useState(0);
 
@@ -243,7 +260,11 @@ export default function TransportBillPage() {
     );
   };
 
-  const hasPod = (c: any) => !!(c?.podUrl) || c?.status === "DELIVERED";
+  /** Each docket must have its own non-empty podUrl (status alone is not enough). */
+  const hasPod = (c: any) => !!(c?.podUrl && String(c.podUrl).trim());
+
+  const resolveDocket = (dn: string) =>
+    filteredDockets.find((x) => x.docketNo === dn) || allConsignments.find((x) => x.docketNo === dn);
 
   const handleUploadPod = async () => {
     if (!uploadingPodFor || !podFile) return;
@@ -255,14 +276,30 @@ export default function TransportBillPage() {
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok && data.success) {
-        const podUrl = data.data?.fileUrl || data.data?.url || `local://${uploadingPodFor}`;
+        const podUrl = data.data?.fileUrl || data.data?.url || "";
+        if (!podUrl) {
+          setFeedback({ type: "error", message: "Upload succeeded but no POD URL returned." });
+          return;
+        }
+        const target = String(uploadingPodFor).toUpperCase();
         const patch = (list: any[]) =>
           list.map((c) =>
-            c.docketNo === uploadingPodFor ? { ...c, podUrl, status: "DELIVERED" } : c
+            String(c.docketNo || "").toUpperCase() === target
+              ? {
+                  ...c,
+                  podUrl,
+                  podFileName: data.data?.fileName || "",
+                  podUploadedAt: new Date().toISOString(),
+                  status: "DELIVERED"
+                }
+              : c
           );
         setAllConsignments(patch);
         setFilteredDockets(patch);
-        setFeedback({ type: "success", message: `POD uploaded for ${uploadingPodFor}. You can now proceed.` });
+        setFeedback({
+          type: "success",
+          message: `POD uploaded for ${uploadingPodFor} only. Other dockets still need their own POD.`
+        });
         setUploadingPodFor(null);
         setPodFile(null);
       } else {
@@ -280,17 +317,35 @@ export default function TransportBillPage() {
       setFeedback({ type: "error", message: "Select at least one docket to generate the transport bill." });
       return;
     }
-    const missingPod = selectedDockets.filter((dn) => {
-      const c = filteredDockets.find((x) => x.docketNo === dn) || allConsignments.find((x) => x.docketNo === dn);
-      return !hasPod(c);
-    });
+    const missingPod = selectedDockets.filter((dn) => !hasPod(resolveDocket(dn)));
     if (missingPod.length > 0) {
       setFeedback({
         type: "error",
-        message: `POD not found for: ${missingPod.join(", ")}. Upload POD before continuing to bill generation.`
+        message: `POD not found for: ${missingPod.join(", ")}. Upload a separate POD for each docket before bill generation.`
       });
       return;
     }
+
+    // Reject shared / duplicated POD URLs across selected dockets
+    const podByDocket = selectedDockets.map((dn) => {
+      const c = resolveDocket(dn);
+      return { docketNo: dn, podUrl: String(c?.podUrl || "").trim() };
+    });
+    const seen = new Map<string, string>();
+    const duplicates: string[] = [];
+    for (const row of podByDocket) {
+      const prev = seen.get(row.podUrl);
+      if (prev) duplicates.push(`${row.docketNo} shares POD with ${prev}`);
+      else seen.set(row.podUrl, row.docketNo);
+    }
+    if (duplicates.length > 0) {
+      setFeedback({
+        type: "error",
+        message: `Each docket needs a different POD. ${duplicates.join("; ")}. Re-upload unique POD files.`
+      });
+      return;
+    }
+
     setFeedback(null);
     setGeneratedBillNo(null);
 
@@ -300,6 +355,10 @@ export default function TransportBillPage() {
       const loading = Number(c?.financials?.loadingCharge) || 0;
       const pkgs = Number(c?.packageDetails?.packagesCount) || 0;
       const wt = Number(c?.packageDetails?.chargedWeight) || 0;
+      const customCharges: Record<string, number> = {};
+      for (const col of customColumns) {
+        customCharges[col.id] = Number(col.defaultAmount) || 0;
+      }
       return emptyCharges({
         docketNo,
         bookingDate: formatDisplayDate(c?.bookingDate),
@@ -312,7 +371,8 @@ export default function TransportBillPage() {
         totalWt: wt,
         rate: wt > 0 ? Math.round(freight / wt) : freight,
         freight,
-        loadingCharges: loading
+        loadingCharges: loading,
+        customCharges
       });
     });
 
@@ -334,20 +394,94 @@ export default function TransportBillPage() {
     });
   };
 
-  const rowTotal = (row: ChargeRow) =>
-    Number(row.freight || 0) +
-    Number(row.statisticalCharges || 0) +
-    Number(row.detentionCharges || 0) +
-    Number(row.collectionCharges || 0) +
-    Number(row.deliveryCharges || 0) +
-    Number(row.otherCharges || 0) +
-    Number(row.loadingCharges || 0) +
-    Number(row.unloadingCharges || 0) +
-    Number(row.escortCharges || 0) +
-    Number(row.diplomatCharges || 0) +
-    Number(row.codDodCharges || 0) +
-    Number(row.xtraWtCharges || 0) +
-    Number(row.serviceCharges || 0);
+  const updateCustomCharge = (rowIndex: number, columnId: string, value: number) => {
+    setChargeRows((prev) => {
+      const next = [...prev];
+      const row = next[rowIndex];
+      next[rowIndex] = {
+        ...row,
+        customCharges: { ...(row.customCharges || {}), [columnId]: value }
+      };
+      return next;
+    });
+  };
+
+  const openCustomColumnModal = () => {
+    setDraftCustomCols(customColumns.map((c) => ({ ...c })));
+    setParticularInput("Extra Charges");
+    setAmountInput(0);
+    setShowCustomColModal(true);
+  };
+
+  const addDraftCustomColumn = () => {
+    const name = particularInput.trim();
+    if (!name) {
+      setFeedback({ type: "error", message: "Particular is required for the custom column." });
+      return;
+    }
+    if (draftCustomCols.some((c) => c.particular.toLowerCase() === name.toLowerCase())) {
+      setFeedback({ type: "error", message: `Column "${name}" already exists in the list.` });
+      return;
+    }
+    setDraftCustomCols((prev) => [
+      ...prev,
+      {
+        id: `cc-${Date.now()}-${prev.length}`,
+        particular: name,
+        defaultAmount: Number(amountInput) || 0
+      }
+    ]);
+    setParticularInput("");
+    setAmountInput(0);
+    setFeedback(null);
+  };
+
+  const removeDraftCustomColumn = (id: string) => {
+    setDraftCustomCols((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const saveCustomColumns = () => {
+    setCustomColumns(draftCustomCols);
+    setChargeRows((prev) =>
+      prev.map((row) => {
+        const nextCustom: Record<string, number> = {};
+        for (const col of draftCustomCols) {
+          nextCustom[col.id] =
+            row.customCharges?.[col.id] !== undefined
+              ? Number(row.customCharges[col.id]) || 0
+              : Number(col.defaultAmount) || 0;
+        }
+        return { ...row, customCharges: nextCustom };
+      })
+    );
+    setShowCustomColModal(false);
+    setFeedback({
+      type: "success",
+      message:
+        draftCustomCols.length > 0
+          ? `Saved ${draftCustomCols.length} custom charge column(s) on the bill grid.`
+          : "Custom charge columns cleared."
+    });
+  };
+
+  const rowTotal = (row: ChargeRow) => {
+    const fixed =
+      Number(row.freight || 0) +
+      Number(row.statisticalCharges || 0) +
+      Number(row.detentionCharges || 0) +
+      Number(row.collectionCharges || 0) +
+      Number(row.deliveryCharges || 0) +
+      Number(row.otherCharges || 0) +
+      Number(row.loadingCharges || 0) +
+      Number(row.unloadingCharges || 0) +
+      Number(row.escortCharges || 0) +
+      Number(row.diplomatCharges || 0) +
+      Number(row.codDodCharges || 0) +
+      Number(row.xtraWtCharges || 0) +
+      Number(row.serviceCharges || 0);
+    const customSum = Object.values(row.customCharges || {}).reduce((acc, v) => acc + (Number(v) || 0), 0);
+    return fixed + customSum;
+  };
 
   const subTotal = chargeRows.reduce((acc, r) => acc + rowTotal(r), 0);
   const isInterState = useMemo(() => {
@@ -391,6 +525,7 @@ export default function TransportBillPage() {
           dateTo,
           consignmentIds: chargeRows.map((r) => r.docketNo),
           lineItems: chargeRows,
+          customChargeColumns: customColumns,
           totalFreight: subTotal,
           taxAmount,
           igst,
@@ -766,10 +901,33 @@ export default function TransportBillPage() {
                         <td className="py-2.5 px-3 font-mono font-bold text-blue-700 align-top">{c.docketNo}</td>
                         <td className="py-2.5 px-3 align-top" onClick={(e) => e.stopPropagation()}>
                           {podOk ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              POD uploaded
-                            </span>
+                            <div className="space-y-0.5">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                POD uploaded
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={c.podUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] text-blue-600 hover:underline font-medium"
+                                >
+                                  View
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setUploadingPodFor(c.docketNo);
+                                    setPodFile(null);
+                                    setFeedback(null);
+                                  }}
+                                  className="text-[10px] text-slate-500 hover:text-blue-700 hover:underline font-medium"
+                                >
+                                  Replace
+                                </button>
+                              </div>
+                            </div>
                           ) : (
                             <div className="space-y-1">
                               <div className="text-[11px] font-bold text-red-600">POD not found</div>
@@ -938,7 +1096,20 @@ export default function TransportBillPage() {
 
           {/* CN charge lines */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-100 flex justify-end">
+            <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={openCustomColumnModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Custom Column
+                {customColumns.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px]">
+                    {customColumns.length}
+                  </span>
+                )}
+              </button>
               <div className="relative w-full sm:w-56">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                 <input placeholder="Search:" className="w-full h-8 pl-8 pr-3 border border-slate-200 rounded-md text-xs" readOnly value="" />
@@ -973,6 +1144,7 @@ export default function TransportBillPage() {
                       "COD/DOD Charges",
                       "Xtra Wt Charges",
                       "Service Charges",
+                      ...customColumns.map((c) => c.particular),
                       "IGST",
                       "CGST/SGST",
                       "Total"
@@ -1061,6 +1233,17 @@ export default function TransportBillPage() {
                             />
                           </td>
                         ))}
+                        {customColumns.map((col) => (
+                          <td key={col.id} className="py-1.5 px-2">
+                            <input
+                              type="number"
+                              value={row.customCharges?.[col.id] ?? 0}
+                              onChange={(e) => updateCustomCharge(idx, col.id, Number(e.target.value) || 0)}
+                              className="w-16 h-7 px-1 border border-blue-200 rounded font-mono bg-blue-50/40"
+                              title={col.particular}
+                            />
+                          </td>
+                        ))}
                         <td className="py-1.5 px-2 font-mono">{isInterState ? rowTax : 0}</td>
                         <td className="py-1.5 px-2 font-mono">{isInterState ? 0 : rowTax}</td>
                         <td className="py-1.5 px-2 font-mono font-bold text-slate-900">{total.toLocaleString()}</td>
@@ -1086,9 +1269,10 @@ export default function TransportBillPage() {
               </div>
               <button
                 type="button"
+                onClick={openCustomColumnModal}
                 className="px-3 py-1.5 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg font-semibold"
               >
-                View Exp Details
+                View Exp Details / Custom Columns
               </button>
               <p className="text-slate-600">
                 Current O.S Amt./ Credit Limit :{" "}
@@ -1192,6 +1376,121 @@ export default function TransportBillPage() {
               <CheckCircle2 className="w-4 h-4" />
               {generating ? "Confirming..." : "Confirm Bill Generation"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Custom Column modal — Particular / Amount / ADD */}
+      {showCustomColModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden">
+            <div className="bg-[#0070d2] px-4 py-3 text-white flex items-center justify-between">
+              <h3 className="text-xs font-bold tracking-wide">Add Custom Column / Extra Charges</h3>
+              <button
+                type="button"
+                onClick={() => setShowCustomColModal(false)}
+                className="w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <div className="grid grid-cols-12 gap-3 items-end border border-slate-200 rounded-xl p-3 bg-slate-50/60">
+                <div className="col-span-2">
+                  <label className="block font-semibold text-slate-700 mb-1">Sr.no</label>
+                  <div className="h-9 flex items-center font-mono font-bold text-slate-600">
+                    {draftCustomCols.length + 1}
+                  </div>
+                </div>
+                <div className="col-span-5">
+                  <label className="block font-semibold text-slate-700 mb-1">Particular</label>
+                  <input
+                    type="text"
+                    value={particularInput}
+                    onChange={(e) => setParticularInput(e.target.value)}
+                    placeholder="e.g. Extra Charges"
+                    className="w-full h-9 px-2.5 border border-[#0070d2] rounded focus:outline-none bg-white"
+                  />
+                </div>
+                <div className="col-span-3">
+                  <label className="block font-semibold text-slate-700 mb-1">Amount</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={amountInput}
+                    onChange={(e) => setAmountInput(Number(e.target.value) || 0)}
+                    className="w-full h-9 px-2.5 border border-[#0070d2] rounded focus:outline-none bg-white font-mono"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <button
+                    type="button"
+                    onClick={addDraftCustomColumn}
+                    className="w-full h-9 rounded-full border-2 border-[#0070d2] text-[#0070d2] font-bold hover:bg-blue-50"
+                  >
+                    ADD
+                  </button>
+                </div>
+              </div>
+
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                    <tr>
+                      <th className="py-2 px-3 w-16">Sr.no</th>
+                      <th className="py-2 px-3">Particular</th>
+                      <th className="py-2 px-3 text-right">Amount</th>
+                      <th className="py-2 px-3 w-12" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {draftCustomCols.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-6 text-center text-slate-400">
+                          No custom columns yet. Enter Particular &amp; Amount, then ADD.
+                        </td>
+                      </tr>
+                    ) : (
+                      draftCustomCols.map((col, i) => (
+                        <tr key={col.id}>
+                          <td className="py-2 px-3 font-mono text-slate-600">{i + 1}</td>
+                          <td className="py-2 px-3 font-semibold text-slate-800">{col.particular}</td>
+                          <td className="py-2 px-3 text-right font-mono">{col.defaultAmount}</td>
+                          <td className="py-2 px-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => removeDraftCustomColumn(col.id)}
+                              className="text-slate-400 hover:text-red-600"
+                              title="Remove"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex items-center justify-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={saveCustomColumns}
+                  className="min-w-[100px] px-6 py-2 bg-[#0070d2] hover:bg-blue-700 text-white font-bold rounded-lg"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCustomColModal(false)}
+                  className="min-w-[100px] px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

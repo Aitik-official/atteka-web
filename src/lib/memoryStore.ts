@@ -24,6 +24,8 @@ export interface MockConsignment {
   ewayBillNo?: string;
   status: string;
   podUrl?: string;
+  podFileName?: string;
+  podUploadedAt?: string;
   tripSheetNo?: string;
 }
 

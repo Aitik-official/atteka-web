@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
       dateTo,
       consignmentIds,
       lineItems,
+      customChargeColumns,
       totalFreight,
       taxAmount,
       igst,
@@ -106,6 +107,61 @@ export async function POST(req: NextRequest) {
     }
     if (!Array.isArray(consignmentIds) || consignmentIds.length === 0) {
       return NextResponse.json({ error: "Select at least one CN / docket" }, { status: 400 });
+    }
+
+    const docketNos = consignmentIds.map((d: string) => String(d).trim().toUpperCase()).filter(Boolean);
+
+    // Resolve POD per docket — each must have its own unique POD before billing
+    const memCns = memoryStore.getConsignments();
+    let mongoCns: any[] = [];
+    try {
+      await connectToDatabase();
+      mongoCns = await Consignment.find({ docketNo: { $in: docketNos } });
+    } catch {
+      mongoCns = [];
+    }
+
+    const podAttachments: { docketNo: string; podUrl: string; podFileName?: string }[] = [];
+    const missingPod: string[] = [];
+    const seenPod = new Map<string, string>();
+    const duplicatePod: string[] = [];
+
+    for (const dn of docketNos) {
+      const mongo = mongoCns.find((c) => String(c.docketNo || "").toUpperCase() === dn);
+      const mem = memCns.find((c) => String(c.docketNo || "").toUpperCase() === dn);
+      // Prefer memory when it explicitly has podUrl (including cleared "")
+      const podUrl = mem && Object.prototype.hasOwnProperty.call(mem, "podUrl")
+        ? String(mem.podUrl || "").trim()
+        : String(mongo?.podUrl || mem?.podUrl || "").trim();
+      if (!podUrl) {
+        missingPod.push(dn);
+        continue;
+      }
+      const prev = seenPod.get(podUrl);
+      if (prev) duplicatePod.push(`${dn} shares POD with ${prev}`);
+      else seenPod.set(podUrl, dn);
+      podAttachments.push({
+        docketNo: dn,
+        podUrl,
+        podFileName: mem?.podFileName || mongo?.podFileName || ""
+      });
+    }
+
+    if (missingPod.length > 0) {
+      return NextResponse.json(
+        {
+          error: `POD required for each docket. Missing: ${missingPod.join(", ")}`
+        },
+        { status: 400 }
+      );
+    }
+    if (duplicatePod.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Each docket must use a different POD. ${duplicatePod.join("; ")}`
+        },
+        { status: 400 }
+      );
     }
 
     const billNumber = (manualBillNo && String(manualBillNo).trim()) || `TBILL-${Date.now().toString().slice(-6)}`;
@@ -127,8 +183,10 @@ export async function POST(req: NextRequest) {
       remark: remark || "",
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
-      consignments: consignmentIds,
+      consignments: docketNos,
+      podAttachments,
       lineItems: lineItems || [],
+      customChargeColumns: Array.isArray(customChargeColumns) ? customChargeColumns : [],
       billType: "Freight Bill",
       totalFreight: Number(totalFreight) || 0,
       taxAmount: Number(taxAmount) || 0,
@@ -145,7 +203,7 @@ export async function POST(req: NextRequest) {
 
       // Mark linked consignments as BILLED
       await Consignment.updateMany(
-        { docketNo: { $in: consignmentIds.map((d: string) => String(d).toUpperCase()) } },
+        { docketNo: { $in: docketNos } },
         { $set: { status: "BILLED" } }
       );
 
@@ -160,8 +218,8 @@ export async function POST(req: NextRequest) {
 
       // Update memory consignments status
       const cns = memoryStore.getConsignments();
-      consignmentIds.forEach((docketNo: string) => {
-        const idx = cns.findIndex((c) => c.docketNo?.toUpperCase() === String(docketNo).toUpperCase());
+      docketNos.forEach((docketNo: string) => {
+        const idx = cns.findIndex((c) => c.docketNo?.toUpperCase() === docketNo);
         if (idx !== -1) cns[idx].status = "BILLED";
       });
 

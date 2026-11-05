@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,14 +11,19 @@ import {
   Settings,
   ChevronDown,
   LogOut,
-  ShieldCheck,
-  FileText,
+  Moon,
+  Sun,
   X,
   Bell,
-  Smartphone,
-  AlertTriangle
+  AlertTriangle,
+  User,
+  Home,
+  MapPin,
+  Calendar,
+  Crosshair
 } from "lucide-react";
 import { computeVehicleCompliance, generateWhatsAppExpiryMessage } from "@/lib/complianceEngine";
+import { searchModules, type ModuleSearchItem } from "@/lib/moduleCatalog";
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -32,14 +37,34 @@ interface HeaderProps {
   };
 }
 
+const FY_OPTIONS = ["2024-2025", "2025-2026", "2026-2027", "2027-2028"];
+const LOCATION_OPTIONS = [
+  { code: "ALC1", label: "Atteka Logistics - ALC1" },
+  { code: "MUM", label: "Mumbai Central - MUM" },
+  { code: "PUN", label: "Pune Hub - PUN" },
+  { code: "DEL", label: "Delhi Regional - DEL" },
+  { code: "BLR", label: "Bengaluru - BLR" }
+];
+
 export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
   const router = useRouter();
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<ModuleSearchItem[]>([]);
+  const [activeResult, setActiveResult] = useState(0);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [alertsDropdown, setAlertsDropdown] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [financialYear, setFinancialYear] = useState(user.financialYear || "2026-2027");
+  const [operatingLocation, setOperatingLocation] = useState(
+    user.operatingLocation || "Atteka Logistics - ALC1"
+  );
+  const [fyModal, setFyModal] = useState(false);
+  const [locModal, setLocModal] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
-  // Mock fleet compliance items for notification watchdog
   const fleetAlerts = [
     computeVehicleCompliance({
       registrationNumber: "MH-04-GP-1928",
@@ -53,7 +78,7 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
     computeVehicleCompliance({
       registrationNumber: "MH-04-AB-3841",
       vehicleType: "20 FT Container",
-      fitnessExpiryDate: "2026-10-30", // Expired
+      fitnessExpiryDate: "2026-10-30",
       insuranceExpiryDate: "2027-01-15",
       nationalPermitExpiryDate: "2027-02-28",
       driverName: "Dilip Kumar",
@@ -65,6 +90,42 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
     (acc, v) => acc + v.items.filter((i) => i.status === "EXPIRED" || i.status === "EXPIRING_SOON").length,
     0
   );
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileDropdown(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  useEffect(() => {
+    const results = searchModules(searchQuery, 14);
+    setSearchResults(results);
+    setActiveResult(0);
+    setSearchOpen(searchQuery.trim().length > 0 && results.length > 0);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    try {
+      const storedFy = localStorage.getItem("atteka_fy");
+      const storedLoc = localStorage.getItem("atteka_location");
+      const storedDark = localStorage.getItem("atteka_dark");
+      if (storedFy) setFinancialYear(storedFy);
+      if (storedLoc) setOperatingLocation(storedLoc);
+      if (storedDark === "1") {
+        setDarkMode(true);
+        document.documentElement.classList.add("dark");
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -79,36 +140,107 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
     }
   };
 
+  const toggleDarkMode = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    try {
+      localStorage.setItem("atteka_dark", next ? "1" : "0");
+    } catch {
+      // ignore
+    }
+    document.documentElement.classList.toggle("dark", next);
+  };
+
+  const saveFy = (fy: string) => {
+    setFinancialYear(fy);
+    try {
+      localStorage.setItem("atteka_fy", fy);
+    } catch {
+      // ignore
+    }
+    setFyModal(false);
+    setProfileDropdown(false);
+  };
+
+  const saveLocation = (label: string) => {
+    setOperatingLocation(label);
+    try {
+      localStorage.setItem("atteka_location", label);
+    } catch {
+      // ignore
+    }
+    setLocModal(false);
+    setProfileDropdown(false);
+  };
+
+  const goToResult = (item: ModuleSearchItem) => {
+    setSearchQuery("");
+    setSearchOpen(false);
+    setMobileSearchOpen(false);
+    setSearchResults([]);
+    router.push(item.route);
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return;
-    setMobileSearchOpen(false);
-
-    if (q.includes("cn") || q.includes("docket") || q.includes("c010") || q.includes("c009")) {
-      router.push("/dashboard/operations/new-cn");
-    } else if (q.includes("track") || q.includes("c111") || q.includes("c004")) {
-      router.push("/dashboard/operations/tracking");
-    } else if (q.includes("bill") || q.includes("c194") || q.includes("c181")) {
-      router.push("/dashboard/finance/billing");
-    } else if (q.includes("bank") || q.includes("indus") || q.includes("c782") || q.includes("c208")) {
-      router.push("/dashboard/finance/bank-payment");
-    } else if (q.includes("irn") || q.includes("einvoice") || q.includes("c655")) {
-      router.push("/dashboard/finance/e-invoice");
-    } else if (q.includes("cust") || q.includes("c061") || q.includes("c003")) {
-      router.push("/dashboard/masters/customers");
-    } else if (q.includes("fleet") || q.includes("veh") || q.includes("c158") || q.includes("c749")) {
-      router.push("/dashboard/masters/vehicles");
-    } else if (q.includes("trial") || q.includes("report") || q.includes("c086") || q.includes("c006")) {
-      router.push("/dashboard/reports");
-    } else {
-      router.push("/dashboard/operations/dockets");
+    if (searchResults[activeResult]) {
+      goToResult(searchResults[activeResult]);
+      return;
     }
+    const fallback = searchModules(searchQuery, 1)[0];
+    if (fallback) goToResult(fallback);
+  };
+
+  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!searchOpen || searchResults.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveResult((i) => Math.min(i + 1, searchResults.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveResult((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Escape") {
+      setSearchOpen(false);
+    }
+  };
+
+  const renderSearchDropdown = (compact = false) => {
+    if (!searchOpen || searchResults.length === 0) return null;
+    return (
+      <div
+        className={`absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50 ${
+          compact ? "max-h-64" : "max-h-80"
+        }`}
+      >
+        <ul className={`overflow-y-auto py-1 text-xs ${compact ? "max-h-60" : "max-h-72"}`}>
+          {searchResults.map((item, idx) => {
+            const active = idx === activeResult;
+            return (
+              <li key={`${item.id}-${item.route}-${idx}`}>
+                <button
+                  type="button"
+                  onMouseEnter={() => setActiveResult(idx)}
+                  onClick={() => goToResult(item)}
+                  className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-3 transition-colors ${
+                    active ? "bg-[#0070d2] text-white" : "text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="truncate font-medium">{item.label}</span>
+                  <span className={`shrink-0 text-[10px] font-mono ${active ? "text-blue-100" : "text-slate-400"}`}>
+                    {item.group}
+                    {item.code ? ` · ${item.code}` : ""}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
   };
 
   return (
     <header className="h-14 bg-white border-b border-slate-200 sticky top-0 z-40 px-2.5 sm:px-4 md:px-5 flex items-center justify-between shadow-2xs">
-      {/* Left: Hamburger & Brand */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -136,46 +268,73 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
         </Link>
       </div>
 
-      {/* Center: Search Bar (Desktop) */}
-      <div className="hidden sm:flex flex-1 max-w-md md:max-w-xl mx-3 md:mx-6">
+      <div className="hidden sm:flex flex-1 max-w-md md:max-w-xl mx-3 md:mx-6" ref={searchRef}>
         <form onSubmit={handleSearch} className="relative w-full">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-blue-500 absolute left-3 top-2.5" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search modules, dockets, reports (e.g. C010)..."
-            className="w-full h-9 pl-9 pr-4 text-xs bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-700 placeholder-slate-400 transition-colors"
+            onFocus={() => {
+              if (searchQuery.trim() && searchResults.length > 0) setSearchOpen(true);
+            }}
+            onKeyDown={onSearchKeyDown}
+            placeholder="Search modules, reports, masters..."
+            className="w-full h-9 pl-9 pr-4 text-xs bg-white border border-slate-200 rounded-full focus:outline-none focus:border-[#0070d2] focus:ring-2 focus:ring-blue-100 text-slate-700 placeholder-slate-400 transition-colors"
+            autoComplete="off"
+            role="combobox"
+            aria-expanded={searchOpen}
+            aria-autocomplete="list"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setSearchOpen(false);
+              }}
+              className="absolute right-2.5 top-2 p-0.5 text-slate-400 hover:text-slate-600"
+              title="Clear"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {renderSearchDropdown()}
         </form>
       </div>
 
-      {/* Mobile Search Overlay */}
       {mobileSearchOpen && (
-        <div className="sm:hidden absolute inset-x-0 top-0 h-14 bg-white z-50 px-3 flex items-center gap-2 border-b border-slate-200 shadow-sm animate-in slide-in-from-top-1">
-          <form onSubmit={handleSearch} className="flex-1 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              autoFocus
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search dockets, modules..."
-              className="w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800"
-            />
-          </form>
-          <button
-            onClick={() => setMobileSearchOpen(false)}
-            className="p-1.5 text-slate-500 hover:text-slate-800 rounded"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        <div className="sm:hidden absolute inset-x-0 top-0 min-h-14 bg-white z-50 px-3 pt-2.5 pb-3 border-b border-slate-200 shadow-sm animate-in slide-in-from-top-1">
+          <div className="flex items-center gap-2">
+            <form onSubmit={handleSearch} className="flex-1 relative">
+              <Search className="w-4 h-4 text-blue-500 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={onSearchKeyDown}
+                placeholder="Search modules..."
+                className="w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:border-[#0070d2] focus:ring-2 focus:ring-blue-100 text-slate-800"
+                autoComplete="off"
+              />
+              {renderSearchDropdown(true)}
+            </form>
+            <button
+              onClick={() => {
+                setMobileSearchOpen(false);
+                setSearchOpen(false);
+                setSearchQuery("");
+              }}
+              className="p-1.5 text-slate-500 hover:text-slate-800 rounded"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Right Controls: Mobile Search Toggle, Fullscreen, Settings, Active Badge, Profile */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        {/* Mobile Search Icon Button */}
         <button
           onClick={() => setMobileSearchOpen(true)}
           className="sm:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
@@ -184,7 +343,6 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
           <Search className="w-4 h-4" />
         </button>
 
-        {/* Fullscreen Button (Desktop) */}
         <button
           onClick={toggleFullscreen}
           className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors hidden md:flex items-center justify-center"
@@ -193,7 +351,14 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
           <Maximize2 className="w-4 h-4" />
         </button>
 
-        {/* Settings Gear (Desktop) */}
+        <button
+          onClick={toggleDarkMode}
+          className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors hidden md:flex items-center justify-center"
+          title={darkMode ? "Light Mode" : "Dark Mode"}
+        >
+          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+
         <button
           onClick={() => router.push("/dashboard/reports")}
           className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors hidden md:flex items-center justify-center"
@@ -202,7 +367,6 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
           <Settings className="w-4 h-4" />
         </button>
 
-        {/* Fleet Compliance Expiry Alert Watchdog */}
         <div className="relative">
           <button
             onClick={() => setAlertsDropdown(!alertsDropdown)}
@@ -248,7 +412,11 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
                       {v.items.map((i) => (
                         <div key={i.name} className="flex justify-between">
                           <span className="text-slate-500">{i.name}:</span>
-                          <span className={`font-mono font-bold ${i.status === "EXPIRED" ? "text-red-600" : "text-amber-600"}`}>
+                          <span
+                            className={`font-mono font-bold ${
+                              i.status === "EXPIRED" ? "text-red-600" : "text-amber-600"
+                            }`}
+                          >
                             {i.status === "EXPIRED" ? "EXPIRED" : `${i.daysRemaining} days left`} ({i.expiryDate})
                           </span>
                         </div>
@@ -267,10 +435,7 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
                 >
                   View Vehicle Master
                 </button>
-                <button
-                  onClick={() => setAlertsDropdown(false)}
-                  className="text-slate-400 hover:text-slate-600"
-                >
+                <button onClick={() => setAlertsDropdown(false)} className="text-slate-400 hover:text-slate-600">
                   Dismiss
                 </button>
               </div>
@@ -278,7 +443,6 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
           )}
         </div>
 
-        {/* Green Circular Badge: '04' */}
         <div
           title="Active Sessions: 04"
           className="w-6 sm:w-7 h-6 sm:h-7 rounded-full bg-[#10b981] text-white font-bold text-[11px] sm:text-xs flex items-center justify-center shadow-xs select-none"
@@ -286,63 +450,159 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
           04
         </div>
 
-        {/* Green Profile Pill Dropdown: 'A ANISHA OZARKAR v' */}
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileDropdown(!profileDropdown)}
             className="flex items-center gap-1.5 sm:gap-2 bg-[#10b981] hover:bg-[#059669] text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-full transition-colors shadow-xs text-xs font-semibold tracking-wide select-none"
           >
             <div className="w-5 h-5 rounded-full bg-white/25 text-white font-bold text-[11px] flex items-center justify-center">
-              {user.name?.charAt(0) || "A"}
+              <User className="w-3 h-3" />
             </div>
-            <span className="hidden sm:inline uppercase text-[11px]">
-              {user.name || "ANISHA OZARKAR"}
-            </span>
+            <span className="hidden sm:inline uppercase text-[11px]">{user.name || "ANISHA OZARKAR"}</span>
             <ChevronDown className="w-3 h-3 text-white/80" />
           </button>
 
           {profileDropdown && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs animate-in fade-in slide-in-from-top-1">
-              <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/50 rounded-t-xl">
-                <p className="font-bold text-slate-800 truncate">{user.name || "ANISHA OZARKAR"}</p>
-                <p className="text-slate-500 text-[10px] font-mono">{user.userId || "AL002"} • Operator</p>
-                <p className="text-[10px] text-emerald-600 font-medium mt-0.5">Location: Ateka Logistics - ALC1</p>
-              </div>
-              <div className="py-1">
-                <button
-                  onClick={() => {
-                    setProfileDropdown(false);
-                    router.push("/dashboard/operations/new-cn");
-                  }}
-                  className="w-full text-left px-3 py-2 text-slate-700 hover:bg-emerald-50 flex items-center gap-2 transition-colors"
-                >
-                  <FileText className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>New CN Booking (C009/C010)</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setProfileDropdown(false);
-                    router.push("/dashboard/finance/bank-payment");
-                  }}
-                  className="w-full text-left px-3 py-2 text-slate-700 hover:bg-emerald-50 flex items-center gap-2 transition-colors"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Bank & IRN Operations</span>
-                </button>
-              </div>
-              <div className="border-t border-slate-100 pt-1">
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium transition-colors"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
+            <div className="absolute right-0 mt-2 w-56 bg-[#2f3542] rounded-md shadow-2xl border border-slate-700/60 py-1.5 z-50 text-[12px] animate-in fade-in slide-in-from-top-1 text-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileDropdown(false);
+                  router.push("/dashboard/profile");
+                }}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-slate-700/60 flex items-center gap-2.5 transition-colors"
+              >
+                <User className="w-4 h-4 text-slate-300" />
+                <span>My Profile</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileDropdown(false);
+                  router.push("/dashboard");
+                }}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-slate-700/60 flex items-center gap-2.5 transition-colors"
+              >
+                <Home className="w-4 h-4 text-slate-300" />
+                <span>Home</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileDropdown(false);
+                  router.push("/dashboard/operations/tracking");
+                }}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-slate-700/60 flex items-center gap-2.5 transition-colors"
+              >
+                <MapPin className="w-4 h-4 text-slate-300" />
+                <span>Live Tracking</span>
+              </button>
+
+              <div className="my-1 border-t border-slate-600/70" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileDropdown(false);
+                  setFyModal(true);
+                }}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-slate-700/60 flex items-center gap-2.5 transition-colors"
+              >
+                <Calendar className="w-4 h-4 text-sky-400" />
+                <span>Change Financial Year</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileDropdown(false);
+                  setLocModal(true);
+                }}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-slate-700/60 flex items-center gap-2.5 transition-colors"
+              >
+                <Crosshair className="w-4 h-4 text-emerald-400" />
+                <span>Change Operating Location</span>
+              </button>
+
+              <div className="my-1 border-t border-slate-600/70" />
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-slate-700/60 flex items-center gap-2.5 transition-colors text-[#f07178]"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Change Financial Year */}
+      {fyModal && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full border border-slate-200 overflow-hidden">
+            <div className="bg-[#0070d2] px-4 py-3 text-white flex items-center justify-between">
+              <h3 className="text-xs font-bold">Change Financial Year</h3>
+              <button type="button" onClick={() => setFyModal(false)} className="text-white/80 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-2 text-xs">
+              <p className="text-slate-500 mb-2">
+                Current: <span className="font-mono font-bold text-slate-800">{financialYear}</span>
+              </p>
+              {FY_OPTIONS.map((fy) => (
+                <button
+                  key={fy}
+                  type="button"
+                  onClick={() => saveFy(fy)}
+                  className={`w-full text-left px-3 py-2 rounded-lg border font-semibold ${
+                    fy === financialYear
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  {fy}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Operating Location */}
+      {locModal && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full border border-slate-200 overflow-hidden">
+            <div className="bg-[#0070d2] px-4 py-3 text-white flex items-center justify-between">
+              <h3 className="text-xs font-bold">Change Operating Location</h3>
+              <button type="button" onClick={() => setLocModal(false)} className="text-white/80 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-2 text-xs">
+              <p className="text-slate-500 mb-2">
+                Current: <span className="font-semibold text-slate-800">{operatingLocation}</span>
+              </p>
+              {LOCATION_OPTIONS.map((loc) => (
+                <button
+                  key={loc.code}
+                  type="button"
+                  onClick={() => saveLocation(loc.label)}
+                  className={`w-full text-left px-3 py-2 rounded-lg border font-semibold ${
+                    loc.label === operatingLocation
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                      : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  {loc.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

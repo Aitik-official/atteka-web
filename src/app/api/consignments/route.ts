@@ -37,13 +37,17 @@ function mergeWithMemory(mongoDocs: any[]) {
       byDocket.set(key, { ...mem });
       continue;
     }
+    // Memory wins for trip/POD lifecycle so a new trip can clear prior POD
+    const memHasTrip = Object.prototype.hasOwnProperty.call(mem, "tripSheetNo");
+    const memHasPod = Object.prototype.hasOwnProperty.call(mem, "podUrl");
     byDocket.set(key, {
       ...existing,
       ...mem,
-      // Prefer memory for trip/POD lifecycle fields when set
-      tripSheetNo: mem.tripSheetNo || existing.tripSheetNo,
-      podUrl: mem.podUrl || existing.podUrl,
-      status: mem.tripSheetNo || mem.podUrl ? mem.status : existing.status,
+      tripSheetNo: memHasTrip ? mem.tripSheetNo || "" : existing.tripSheetNo,
+      podUrl: memHasPod ? mem.podUrl || "" : existing.podUrl || "",
+      podFileName: mem.podFileName ?? existing.podFileName ?? "",
+      podUploadedAt: mem.podUploadedAt ?? existing.podUploadedAt ?? "",
+      status: mem.tripSheetNo || memHasPod ? (mem.status || existing.status) : existing.status,
       billingParty: mem.billingParty || existing.billingParty,
       consignor: { ...(existing.consignor || {}), ...(mem.consignor || {}) },
       consignee: { ...(existing.consignee || {}), ...(mem.consignee || {}) }

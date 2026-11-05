@@ -17,6 +17,8 @@ export function DashboardClientShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [footerFy, setFooterFy] = useState("2026-2027");
+  const [footerLocation, setFooterLocation] = useState("Ateka Logistics - ALC1");
 
   // Detect mobile screen width on client
   useEffect(() => {
@@ -79,6 +81,29 @@ export function DashboardClientShell({
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const syncSessionPrefs = () => {
+      try {
+        const fy = localStorage.getItem("atteka_fy");
+        const loc = localStorage.getItem("atteka_location");
+        if (fy) setFooterFy(fy);
+        if (loc) setFooterLocation(loc);
+      } catch {
+        // ignore
+      }
+    };
+    syncSessionPrefs();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "atteka_fy" || e.key === "atteka_location") syncSessionPrefs();
+    };
+    window.addEventListener("storage", onStorage);
+    const poll = setInterval(syncSessionPrefs, 1500);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      clearInterval(poll);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f4f5f7] flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
       {/* Top Header */}
@@ -123,7 +148,7 @@ export function DashboardClientShell({
         <div className="flex items-center gap-1.5 text-slate-700 shrink-0">
           <MapPin className="w-3.5 h-3.5 text-slate-500" />
           <span className="font-medium text-[10px] sm:text-xs">
-            Location: <span className="hidden sm:inline">Ateka Logistics - </span>ALC1
+            Location: {footerLocation}
           </span>
         </div>
 
@@ -136,7 +161,7 @@ export function DashboardClientShell({
 
           <div className="flex items-center gap-1 font-medium hidden xs:flex">
             <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span>F.Y: 2026-27</span>
+            <span>F.Y: {footerFy}</span>
           </div>
 
           <div className="flex items-center gap-1 font-medium font-mono text-[10px] sm:text-[11px]">

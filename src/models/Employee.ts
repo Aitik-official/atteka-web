@@ -24,6 +24,9 @@ export interface IEmployee extends Document {
   residentPhoneNo?: string;
   mobileNo?: string;
   additionalMobileNo?: string;
+  companyEmailId?: string;
+  emailPassword?: string;
+  defaultPage?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,7 +55,10 @@ const EmployeeSchema = new Schema<IEmployee>(
     email: { type: String, uppercase: true },
     residentPhoneNo: { type: String },
     mobileNo: { type: String },
-    additionalMobileNo: { type: String }
+    additionalMobileNo: { type: String },
+    companyEmailId: { type: String, uppercase: true },
+    emailPassword: { type: String },
+    defaultPage: { type: String, default: "Accounts" }
   },
   { timestamps: true }
 );

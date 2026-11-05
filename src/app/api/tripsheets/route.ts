@@ -10,6 +10,10 @@ function buildCnPatch(payload: any, docketLine?: any) {
   const consigneeName = String(docketLine?.consigneeName || party).trim() || party;
   return {
     status: "IN_TRANSIT",
+    // New trip always needs a fresh POD before billing — clear any previous upload
+    podUrl: "",
+    podFileName: "",
+    podUploadedAt: "",
     tripSheetNo: payload.tripSheetNo,
     vehicleNo: payload.vehicleNo,
     driverPhone: payload.driverMobile || undefined,
@@ -76,7 +80,10 @@ function applyMemoryUpdates(payload: any, dockets: any[], docketNos: string[]) {
         },
         ewayBillNo: line?.ewayBillNo || "",
         status: patch.status,
-        tripSheetNo: patch.tripSheetNo
+        tripSheetNo: patch.tripSheetNo,
+        podUrl: "",
+        podFileName: "",
+        podUploadedAt: ""
       });
     }
   }
@@ -184,7 +191,11 @@ export async function POST(req: NextRequest) {
               toLocation: patch.toLocation,
               "consignor.name": patch.consignor.name,
               "consignee.name": patch.consignee.name,
-              ...(patch.consignee.address ? { "consignee.address": patch.consignee.address } : {})
+              ...(patch.consignee.address ? { "consignee.address": patch.consignee.address } : {}),
+              // Force a fresh POD for this trip before bill generation
+              podUrl: "",
+              podFileName: "",
+              podUploadedAt: ""
             }
           }
         );

@@ -7,11 +7,13 @@ const FALLBACK_EMPLOYEES = [
   {
     _id: "emp-al002",
     employeeCode: "AL002",
-    employeePref: "Ms",
+    employeePref: "Miss",
     employeeName: "ANISHA OZARKAR",
-    gender: "Female",
+    password: "********",
+    gender: "FeMale",
     dateOfBirth: "2003-02-03",
-    empStatus: "ACTIVE",
+    empStatus: "",
+    qualification: "graduate",
     designation: "ACCOUNT",
     isActive: true,
     languageKnown: "English",
@@ -20,8 +22,14 @@ const FALLBACK_EMPLOYEES = [
     currentLocationCode: "ALC1",
     accessLocationCodes: ["ALC1"],
     dateOfJoining: "2022-04-01",
+    residentialAddress: "",
     email: "ANISHAOZARKAR@GMAIL.COM",
-    mobileNo: ""
+    residentPhoneNo: "",
+    mobileNo: "",
+    additionalMobileNo: "",
+    companyEmailId: "",
+    emailPassword: "",
+    defaultPage: "Accounts"
   },
   {
     _id: "emp-al003",
@@ -158,10 +166,13 @@ function normalizePayload(body: any) {
     dateOfJoining: body.dateOfJoining ? new Date(body.dateOfJoining) : undefined,
     dateOfLeaving: body.dateOfLeaving ? new Date(body.dateOfLeaving) : undefined,
     residentialAddress: body.residentialAddress || "",
-    email: String(body.email || body.emailId || "").trim().toUpperCase(),
+    email: String(body.email || body.emailId || body.personalEmailId || "").trim().toUpperCase(),
     residentPhoneNo: body.residentPhoneNo || "",
     mobileNo: body.mobileNo || "",
-    additionalMobileNo: body.additionalMobileNo || ""
+    additionalMobileNo: body.additionalMobileNo || "",
+    companyEmailId: String(body.companyEmailId || "").trim().toUpperCase(),
+    emailPassword: body.emailPassword || undefined,
+    defaultPage: body.defaultPage || "Accounts"
   };
 }
 
