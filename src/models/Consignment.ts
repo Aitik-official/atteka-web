@@ -76,6 +76,7 @@ export interface IConsignment extends Document {
   specialInstructions?: string;
   status: "DRAFT" | "DOCKET_ALLOCATED" | "BOOKED" | "IN_TRANSIT" | "ARRIVED" | "DELIVERED" | "BILLED" | "CANCELLED";
   podUrl?: string;
+  tripSheetNo?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -160,7 +161,8 @@ const ConsignmentSchema = new Schema<IConsignment>(
       enum: ["DRAFT", "DOCKET_ALLOCATED", "BOOKED", "IN_TRANSIT", "ARRIVED", "DELIVERED", "BILLED", "CANCELLED"],
       default: "BOOKED"
     },
-    podUrl: { type: String }
+    podUrl: { type: String },
+    tripSheetNo: { type: String, uppercase: true, index: true }
   },
   { timestamps: true }
 );

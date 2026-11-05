@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { storageService } from "@/services/storageService";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Consignment } from "@/models/Consignment";
+import { memoryStore } from "@/lib/memoryStore";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,13 +18,21 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     const uploadResult = await storageService.uploadFile(buffer, file.name, file.type);
+    const cleanDocket = docketNo ? String(docketNo).trim().toUpperCase() : "";
 
-    if (docketNo) {
-      await connectToDatabase();
-      await Consignment.findOneAndUpdate(
-        { docketNo: docketNo.toUpperCase() },
-        { $set: { podUrl: uploadResult.fileUrl, status: "DELIVERED" } }
-      );
+    if (cleanDocket) {
+      try {
+        await connectToDatabase();
+        await Consignment.findOneAndUpdate(
+          { docketNo: cleanDocket },
+          { $set: { podUrl: uploadResult.fileUrl, status: "DELIVERED" } }
+        );
+      } catch {
+        memoryStore.updateConsignment(cleanDocket, {
+          podUrl: uploadResult.fileUrl,
+          status: "DELIVERED"
+        });
+      }
     }
 
     return NextResponse.json({
@@ -35,4 +44,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

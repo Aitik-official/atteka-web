@@ -134,7 +134,7 @@ export default function TripSheetsPage() {
         <WcvActionCard
           title="Prepare Loading Slip"
           description="Prepare Loading Slip"
-          onClick={() => setActiveTab("MANIFEST")}
+          href="/dashboard/operations/tripsheets/prepare"
           icon={ClipboardList}
         />
         <WcvActionCard

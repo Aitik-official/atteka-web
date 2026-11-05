@@ -156,6 +156,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
         { label: "Company Structure", route: "/dashboard/admin/company-structure", code: "C052" },
         { label: "Business Partners", route: "/dashboard/admin/business-partners", code: "C060" },
         { label: "Operations", route: "/dashboard/admin/operations", code: "C065" },
+        { label: "Docket Number Master", route: "/dashboard/masters/docket-numbers", code: "C066" },
         { label: "Finance & Accounts", route: "/dashboard/admin/finance-accounts", code: "C077" },
         { label: "APIs", route: "/dashboard/admin/apis", code: "C686" }
       ]

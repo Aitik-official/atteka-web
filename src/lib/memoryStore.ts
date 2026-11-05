@@ -24,6 +24,7 @@ export interface MockConsignment {
   ewayBillNo?: string;
   status: string;
   podUrl?: string;
+  tripSheetNo?: string;
 }
 
 const initialConsignments: MockConsignment[] = [
@@ -92,11 +93,58 @@ const initialConsignments: MockConsignment[] = [
   }
 ];
 
+export interface MockDocketNumber {
+  _id: string;
+  docketNo: string;
+  seriesPrefix: string;
+  sequenceNo: number;
+  branchCode?: string;
+  status: "AVAILABLE" | "RESERVED" | "ASSIGNED" | "CANCELLED";
+  assignedToCnId?: string;
+  assignedAt?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+const seedDocketNumbers = (): MockDocketNumber[] => {
+  const prefix = "ALC126";
+  const list: MockDocketNumber[] = [];
+  for (let i = 10; i <= 25; i++) {
+    list.push({
+      _id: `dn-${i}`,
+      docketNo: `${prefix}${String(i).padStart(4, "0")}`,
+      seriesPrefix: prefix,
+      sequenceNo: i,
+      branchCode: "ALC1",
+      status: "AVAILABLE",
+      createdAt: new Date().toISOString()
+    });
+  }
+  return list;
+};
+
 class MemoryStore {
   consignments: MockConsignment[] = [...initialConsignments];
   bills: any[] = [];
   receipts: any[] = [];
   bankOps: any[] = [];
+  tripSheets: any[] = [];
+  branches: any[] = [];
+  employees: any[] = [];
+  routes: any[] = [];
+  ftlTypes: any[] = [];
+  vehicles: any[] = [];
+  sacCodes: any[] = [];
+  docketNumbers: MockDocketNumber[] = seedDocketNumbers();
+  docketSeries = {
+    seriesKey: "DEFAULT",
+    prefix: "ALC126",
+    padLength: 4,
+    nextSequence: 26,
+    branchCode: "ALC1",
+    isActive: true,
+    description: "Primary CN / Docket stationery series"
+  };
 
   addConsignment(c: any) {
     const record = { ...c, _id: `c-${Date.now()}` };
@@ -104,8 +152,53 @@ class MemoryStore {
     return record;
   }
 
+  updateConsignment(idOrDocket: string, updates: any) {
+    const clean = (idOrDocket || "").toUpperCase();
+    const idx = this.consignments.findIndex(
+      (c) => c._id === idOrDocket || c.docketNo?.toUpperCase() === clean
+    );
+    if (idx === -1) return null;
+    this.consignments[idx] = { ...this.consignments[idx], ...updates };
+    return this.consignments[idx];
+  }
+
   getConsignments() {
     return this.consignments;
+  }
+
+  getDocketNumbers(status?: string) {
+    if (!status) return this.docketNumbers;
+    return this.docketNumbers.filter((d) => d.status === status);
+  }
+
+  generateDocketNumbers(count = 1) {
+    const created: MockDocketNumber[] = [];
+    for (let i = 0; i < count; i++) {
+      const seq = this.docketSeries.nextSequence++;
+      const docketNo = `${this.docketSeries.prefix}${String(seq).padStart(this.docketSeries.padLength, "0")}`;
+      const record: MockDocketNumber = {
+        _id: `dn-${Date.now()}-${seq}`,
+        docketNo,
+        seriesPrefix: this.docketSeries.prefix,
+        sequenceNo: seq,
+        branchCode: this.docketSeries.branchCode,
+        status: "AVAILABLE",
+        createdAt: new Date().toISOString()
+      };
+      this.docketNumbers.unshift(record);
+      created.push(record);
+    }
+    return created;
+  }
+
+  assignDocketNumber(docketNo: string, cnId?: string) {
+    const clean = docketNo.toUpperCase();
+    const item = this.docketNumbers.find((d) => d.docketNo === clean);
+    if (!item || item.status !== "AVAILABLE") return null;
+    item.status = "ASSIGNED";
+    item.assignedToCnId = cnId;
+    item.assignedAt = new Date().toISOString();
+    return item;
   }
 }
 
@@ -114,4 +207,27 @@ declare global {
 }
 
 export const memoryStore = global.memoryStoreInstance || (global.memoryStoreInstance = new MemoryStore());
+
+// Hot-reload may keep an older singleton that predates newer collections
+if (!Array.isArray((memoryStore as any).tripSheets)) {
+  (memoryStore as any).tripSheets = [];
+}
+if (!Array.isArray((memoryStore as any).branches)) {
+  (memoryStore as any).branches = [];
+}
+if (!Array.isArray((memoryStore as any).employees)) {
+  (memoryStore as any).employees = [];
+}
+if (!Array.isArray((memoryStore as any).routes)) {
+  (memoryStore as any).routes = [];
+}
+if (!Array.isArray((memoryStore as any).ftlTypes)) {
+  (memoryStore as any).ftlTypes = [];
+}
+if (!Array.isArray((memoryStore as any).vehicles)) {
+  (memoryStore as any).vehicles = [];
+}
+if (!Array.isArray((memoryStore as any).sacCodes)) {
+  (memoryStore as any).sacCodes = [];
+}
 

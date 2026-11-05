@@ -21,7 +21,7 @@ export default function CustomerBillingHubPage() {
         <WcvActionCard
           title="Transport Bill"
           description="Bill Generation"
-          href="/dashboard/finance/billing"
+          href="/dashboard/finance/customer-billing/transport-bill"
           icon={Receipt}
         />
         <WcvActionCard
@@ -33,7 +33,7 @@ export default function CustomerBillingHubPage() {
         <WcvActionCard
           title="View Print Bill"
           description="View Print Bill"
-          href="/dashboard/finance/billing"
+          href="/dashboard/finance/customer-billing/view-print-bills"
           icon={Printer}
         />
         <WcvActionCard

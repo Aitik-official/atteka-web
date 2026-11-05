@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   FileText,
@@ -50,8 +50,8 @@ export default function NewConsignmentPage() {
     return d.toISOString().split("T")[0];
   };
 
-  // Section 1: CN Summary (Matching original page initial fields)
-  const [generationMode, setGenerationMode] = useState<"AUTOMATIC" | "MANUAL">("AUTOMATIC");
+  // Section 1: CN Summary (original field set — masters linked in the background)
+  const [generationMode, setGenerationMode] = useState<"AUTOMATIC" | "MANUAL">("MANUAL");
   const [cnNumber, setCnNumber] = useState("");
   const [cnDate, setCnDate] = useState(getTodayStr());
   const [billingParty, setBillingParty] = useState("");
@@ -63,6 +63,10 @@ export default function NewConsignmentPage() {
   const [ewayBillNo, setEwayBillNo] = useState("");
   const [ewayBillExpiryDate, setEwayBillExpiryDate] = useState(getTodayStr());
   const [isLocalCn, setIsLocalCn] = useState("Yes");
+  const [serviceType, setServiceType] = useState("FTL");
+  const [typeOfFtl, setTypeOfFtl] = useState("");
+  const [fromLocation, setFromLocation] = useState("");
+  const [toLocation, setToLocation] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
   const [driverNo, setDriverNo] = useState("");
   const [approxKm, setApproxKm] = useState("0");
@@ -115,25 +119,27 @@ export default function NewConsignmentPage() {
   const [customerDirectory, setCustomerDirectory] = useState<CustomerOption[]>([]);
   const [branchesDirectory, setBranchesDirectory] = useState<any[]>([]);
   const [vehiclesDirectory, setVehiclesDirectory] = useState<any[]>([]);
+  const [routesDirectory, setRoutesDirectory] = useState<any[]>([]);
+  const [fromOptions, setFromOptions] = useState<string[]>([]);
+  const [toOptions, setToOptions] = useState<string[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
 
   // Status, draft allocation & pipeline
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [bookedCnPipeline, setBookedCnPipeline] = useState<any | null>(null);
-  const [savedDraftDocket, setSavedDraftDocket] = useState<string | null>(null);
-  const [allocatedDocketModal, setAllocatedDocketModal] = useState<{
-    docketNo: string;
-    details: any;
-  } | null>(null);
-  const [modalDocketInput, setModalDocketInput] = useState("");
+  const [savedDraftId, setSavedDraftId] = useState<string | null>(null);
+  const [savedTempDocket, setSavedTempDocket] = useState<string | null>(null);
+  const [detailsSaved, setDetailsSaved] = useState(false);
+  const [availableDockets, setAvailableDockets] = useState<any[]>([]);
+  const [docketSeries, setDocketSeries] = useState<any>(null);
+  const [selectedMasterDocket, setSelectedMasterDocket] = useState<string | null>(null);
+  const [loadingDockets, setLoadingDockets] = useState(false);
+  const [docketPage, setDocketPage] = useState(1);
+  const [docketPageSize, setDocketPageSize] = useState(10);
+  const [docketStatusFilter, setDocketStatusFilter] = useState<"ALL" | "AVAILABLE" | "USED">("ALL");
 
-  // Initialize automatic CN Number on client mount
-  useEffect(() => {
-    setCnNumber(`ALC126${Math.floor(1000 + Math.random() * 9000)}`);
-  }, []);
-
-  // Fetch Master Data (Customers, Branches, Vehicles) from Admin
+  // Fetch Master Data (Customers, Branches, Vehicles, Docket Numbers) from Admin / Masters
   useEffect(() => {
     fetch("/api/customers")
       .then((res) => res.json())
@@ -150,7 +156,7 @@ export default function NewConsignmentPage() {
         if (resData.success && Array.isArray(resData.data)) {
           setBranchesDirectory(resData.data);
           if (resData.data.length > 0 && !billedAt) {
-            setBilledAt(`${resData.data[0].branchCode} - ${resData.data[0].branchName}`);
+            setBilledAt(`${resData.data[0].branchName || "Ateka Logistics"}-${resData.data[0].branchCode}`);
           }
         }
       })
@@ -164,7 +170,76 @@ export default function NewConsignmentPage() {
         }
       })
       .catch(() => {});
+
+    fetch("/api/routes")
+      .then((res) => res.json())
+      .then((resData) => {
+        if (resData.success && Array.isArray(resData.data)) {
+          setRoutesDirectory(resData.data);
+          setFromOptions(resData.locations?.origins || []);
+          setToOptions(resData.locations?.destinations || []);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  const applyRouteDistance = (from: string, to: string, routes = routesDirectory) => {
+    if (!from || !to) return;
+    const normalize = (s: string) => s.toUpperCase().trim();
+    const match = routes.find(
+      (r) =>
+        normalize(r.origin) === normalize(from) &&
+        normalize(r.destination) === normalize(to)
+    );
+    if (match && match.distanceKm != null) {
+      setApproxKm(String(match.distanceKm));
+    }
+  };
+
+  // If From/To already selected when routes finish loading, fill Approx KM
+  useEffect(() => {
+    if (routesDirectory.length > 0 && fromLocation && toLocation) {
+      applyRouteDistance(fromLocation, toLocation, routesDirectory);
+    }
+  }, [routesDirectory]);
+
+  const isDocketUsed = (status?: string) => {
+    const s = String(status || "").toUpperCase();
+    return s === "ASSIGNED" || s === "USED" || s === "CANCELLED";
+  };
+
+  const displayDocketStatus = (status?: string) => {
+    if (isDocketUsed(status)) return "USED";
+    if (String(status || "").toUpperCase() === "RESERVED") return "RESERVED";
+    return "AVAILABLE";
+  };
+
+  const loadAvailableDockets = async () => {
+    setLoadingDockets(true);
+    try {
+      // Load full master pool (available + used) so used numbers stay visible
+      const res = await fetch("/api/docket-numbers?includeSeries=1");
+      const data = await res.json();
+      if (data.success) {
+        const list = [...(data.data || [])].sort(
+          (a: any, b: any) => Number(a.sequenceNo || 0) - Number(b.sequenceNo || 0)
+        );
+        setAvailableDockets(list);
+        if (data.series) setDocketSeries(data.series);
+        setDocketPage(1);
+        // Clear selection if previously selected docket is no longer available
+        setSelectedMasterDocket((prev) => {
+          if (!prev) return null;
+          const row = list.find((d: any) => d.docketNo === prev);
+          return row && !isDocketUsed(row.status) ? prev : null;
+        });
+      }
+    } catch {
+      setAvailableDockets([]);
+    } finally {
+      setLoadingDockets(false);
+    }
+  };
 
   // Recalculate freight whenever weight or basic rate triggers
   const subTotal = Number(freightAmount || 0) + Number(loadingCharge || 0);
@@ -180,31 +255,53 @@ export default function NewConsignmentPage() {
       setConsignorName(cust.name);
       if (cust.gstin) setConsignorGstin(cust.gstin);
       if (cust.address) setConsignorAddress(cust.address);
-      if (cust.city) setConsignorCity(cust.city);
+      if (cust.city) {
+        setConsignorCity(cust.city);
+        if (!fromLocation) {
+          const nextFrom = cust.city.toUpperCase();
+          setFromLocation(nextFrom);
+          applyRouteDistance(nextFrom, toLocation);
+        }
+      }
       if (cust.phone) setConsignorTelephone(cust.phone);
     } else if (lookupTarget === "consignee") {
       setConsigneeName(cust.name);
       if (cust.gstin) setConsigneeGstin(cust.gstin);
       if (cust.address) setConsigneeAddress(cust.address);
-      if (cust.city) setConsigneeCity(cust.city);
+      if (cust.city) {
+        setConsigneeCity(cust.city);
+        if (!toLocation) {
+          const nextTo = cust.city.toUpperCase();
+          setToLocation(nextTo);
+          applyRouteDistance(fromLocation, nextTo);
+        }
+      }
       if (cust.phone) setConsigneeTelephone(cust.phone);
     }
     setLookupTarget(null);
   };
 
   const handleResetForm = () => {
-    const generated = `ALC126${Math.floor(1000 + Math.random() * 9000)}`;
-    setCnNumber(generated);
+    setCnNumber("");
+    setGenerationMode("MANUAL");
     setCnDate(getTodayStr());
     setBillingParty("");
     setBuDescription("");
     setPaymentType("TBB");
     setMode("Road");
-    setBilledAt(branchesDirectory.length > 0 ? `${branchesDirectory[0].branchCode} - ${branchesDirectory[0].branchName}` : "");
+    setBilledAt(
+      branchesDirectory.length > 0
+        ? `${branchesDirectory[0].branchName || "Ateka Logistics"}-${branchesDirectory[0].branchCode}`
+        : ""
+    );
     setExpectedDeliveryDate(getTodayStr());
     setEwayBillNo("");
     setEwayBillExpiryDate(getTodayStr());
     setIsLocalCn("Yes");
+    setServiceType("FTL");
+    setTypeOfFtl("");
+    setFromLocation("");
+    setToLocation("");
     setVehicleNo("");
     setDriverNo("");
     setApproxKm("0");
@@ -241,24 +338,33 @@ export default function NewConsignmentPage() {
     setLoadingCharge(0);
     setSealNo("0");
     setSpecialInstructions("");
-    setSavedDraftDocket(null);
-    setAllocatedDocketModal(null);
-    setFeedback({ type: "success", message: "Form cleared. Initial fields ready." });
+    setSavedDraftId(null);
+    setSavedTempDocket(null);
+    setDetailsSaved(false);
+    setSelectedMasterDocket(null);
+    setAvailableDockets([]);
+    setFeedback({ type: "success", message: "Form cleared. Save CN details first, then assign a docket from master." });
     setTimeout(() => setFeedback(null), 2500);
   };
 
-  const buildPayload = (status: "DRAFT" | "BOOKED", targetDocketNo?: string) => {
-    const finalDocketNo = (targetDocketNo || cnNumber || `ALC126${Math.floor(1000 + Math.random() * 9000)}`).trim().toUpperCase();
+  const buildPayload = (status: "DRAFT" | "DOCKET_ALLOCATED" | "BOOKED", targetDocketNo?: string) => {
+    // Manual CN number is kept if typed; Automatic stays empty until linked from master table
+    const finalDocketNo =
+      targetDocketNo?.trim().toUpperCase() ||
+      (generationMode === "MANUAL" && cnNumber.trim() ? cnNumber.trim().toUpperCase() : undefined);
     return {
       docketNo: finalDocketNo,
+      draftId: savedDraftId || undefined,
+      previousDocketNo: savedTempDocket || undefined,
       bookingDate: cnDate,
       bookingType: "NORMAL" as const,
-      bookingBranch: billedAt.split("-")[0]?.trim() || "ALC1",
+      bookingBranch: (billedAt.split("-").pop() || billedAt.split("-")[0] || "ALC1").trim(),
       billingParty: billingParty.trim(),
       paymentBasis: paymentType,
-      serviceType: "FTL",
-      fromLocation: consignorCity.trim() || "MUMBAI",
-      toLocation: consigneeCity.trim() || "DELHI",
+      serviceType: serviceType || "FTL",
+      serviceFtl: typeOfFtl || undefined,
+      fromLocation: fromLocation.trim() || consignorCity.trim() || "MUMBAI",
+      toLocation: toLocation.trim() || consigneeCity.trim() || "DELHI",
       buDescription,
       mode,
       billedAt,
@@ -307,21 +413,13 @@ export default function NewConsignmentPage() {
     };
   };
 
-  // STEP 1: Generate a docket number, save all details in draft, and present allocation confirmation
-  const handleGenerateDocketAndSaveDraft = async (e?: React.FormEvent) => {
+  // STEP 1: Save CN details only (no docket / CN number yet)
+  const handleSaveCnDetails = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsSubmitting(true);
     setFeedback(null);
 
-    // If automatic mode and not yet assigned, generate a fresh docket number
-    const allocated = generationMode === "AUTOMATIC" && !savedDraftDocket
-      ? `ALC126${Math.floor(1000 + Math.random() * 9000)}`
-      : cnNumber.trim().toUpperCase();
-
-    setCnNumber(allocated);
-    setModalDocketInput(allocated);
-
-    const payload = buildPayload("DRAFT", allocated);
+    const payload = buildPayload("DRAFT");
 
     try {
       const res = await fetch("/api/consignments", {
@@ -332,19 +430,22 @@ export default function NewConsignmentPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setSavedDraftDocket(allocated);
-        setAllocatedDocketModal({
-          docketNo: allocated,
-          details: payload
-        });
+        const draftId = data.data?._id || null;
+        const tempDocket = data.data?.docketNo || null;
+        setSavedDraftId(draftId);
+        setSavedTempDocket(tempDocket);
+        setDetailsSaved(true);
+        setCnNumber("");
+        setSelectedMasterDocket(null);
+        await loadAvailableDockets();
         setFeedback({
           type: "success",
-          message: `Docket Number ${allocated} generated! Details saved in draft. Confirm and insert docket to finalize.`
+          message: "CN details saved. Select or generate a docket number from master below to link and finalize."
         });
       } else {
         setFeedback({
           type: "error",
-          message: data.error || "Failed to generate docket and save details."
+          message: data.error || "Failed to save CN details."
         });
       }
     } catch {
@@ -354,17 +455,73 @@ export default function NewConsignmentPage() {
     }
   };
 
-  // STEP 2: Selected docket number is inserted and CN is published / finalised
-  const handleFinalizeAndPublish = async (targetDocketNo?: string) => {
+  const handleGenerateMasterDocket = async () => {
+    setIsSubmitting(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/docket-numbers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate", count: 1 })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const created = Array.isArray(data.data) ? data.data[0] : data.data;
+        await loadAvailableDockets();
+        if (created?.docketNo) {
+          setSelectedMasterDocket(created.docketNo);
+        }
+        setFeedback({
+          type: "success",
+          message: `Docket ${created?.docketNo || ""} generated from master series. Select it below to link & finalize.`
+        });
+      } else {
+        setFeedback({ type: "error", message: data.error || "Failed to generate docket from master." });
+      }
+    } catch {
+      setFeedback({ type: "error", message: "Network communication error." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // STEP 2: Link selected master docket to CN and publish / finalize
+  const handleLinkDocketAndFinalize = async (targetDocketNo?: string) => {
+    const finalDocket = (targetDocketNo || selectedMasterDocket || "").trim().toUpperCase();
+    if (!finalDocket) {
+      setFeedback({ type: "error", message: "Select a docket number from the master table first." });
+      return;
+    }
+    const poolRow = availableDockets.find((d) => d.docketNo === finalDocket);
+    if (poolRow && isDocketUsed(poolRow.status)) {
+      setFeedback({ type: "error", message: `Docket ${finalDocket} is already USED and cannot be linked.` });
+      return;
+    }
+    if (!detailsSaved || !savedDraftId) {
+      setFeedback({ type: "error", message: "Save CN details before assigning a docket number." });
+      return;
+    }
+
     setIsSubmitting(true);
     setFeedback(null);
 
-    const finalDocket = (targetDocketNo || modalDocketInput || savedDraftDocket || cnNumber).trim().toUpperCase();
-    setCnNumber(finalDocket);
-
-    const payload = buildPayload("BOOKED", finalDocket);
-
     try {
+      // Mark docket as assigned in master stock pool
+      const assignRes = await fetch("/api/docket-numbers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "assign", docketNo: finalDocket, cnId: savedDraftId })
+      });
+      const assignData = await assignRes.json();
+      if (!assignRes.ok || !assignData.success) {
+        setFeedback({ type: "error", message: assignData.error || "Could not assign docket from master." });
+        setIsSubmitting(false);
+        return;
+      }
+
+      setCnNumber(finalDocket);
+      const payload = buildPayload("BOOKED", finalDocket);
+
       const res = await fetch("/api/consignments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -373,17 +530,19 @@ export default function NewConsignmentPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setAllocatedDocketModal(null);
-        setSavedDraftDocket(null);
+        setSelectedMasterDocket(null);
+        setDetailsSaved(false);
+        setSavedDraftId(null);
+        setSavedTempDocket(null);
+        setAvailableDockets([]);
 
-        // Open post-booking print and dispatch pipeline
         setBookedCnPipeline({
           cnNumber: finalDocket,
           bookingDate: cnDate,
           consignor: { name: consignorName, address: `${consignorAddress}, ${consignorCity}` },
           consignee: { name: consigneeName, address: `${consigneeAddress}, ${consigneeCity}` },
-          originBranch: consignorCity,
-          destinationBranch: consigneeCity,
+          originBranch: fromLocation || consignorCity,
+          destinationBranch: toLocation || consigneeCity,
           packageCount: Number(packagesCount),
           packageType: packagingType,
           actualWeight: Number(actualWeight),
@@ -398,7 +557,7 @@ export default function NewConsignmentPage() {
 
         setFeedback({
           type: "success",
-          message: `Consignment Note ${finalDocket} published and finalized successfully! Ready for printing.`
+          message: `Docket ${finalDocket} linked from master. Consignment Note finalized successfully!`
         });
       } else {
         setFeedback({
@@ -419,6 +578,23 @@ export default function NewConsignmentPage() {
       c.gstin?.toLowerCase().includes(customerSearch.toLowerCase()) ||
       c.city?.toLowerCase().includes(customerSearch.toLowerCase())
   );
+
+  const filteredMasterDockets = useMemo(() => {
+    return availableDockets.filter((d) => {
+      const used = isDocketUsed(d.status);
+      if (docketStatusFilter === "AVAILABLE") return !used;
+      if (docketStatusFilter === "USED") return used;
+      return true;
+    });
+  }, [availableDockets, docketStatusFilter]);
+
+  const docketTotalPages = Math.max(1, Math.ceil(filteredMasterDockets.length / docketPageSize));
+  const pagedMasterDockets = filteredMasterDockets.slice(
+    (docketPage - 1) * docketPageSize,
+    docketPage * docketPageSize
+  );
+  const availableCount = availableDockets.filter((d) => !isDocketUsed(d.status)).length;
+  const usedCount = availableDockets.length - availableCount;
 
   return (
     <div className="space-y-5 pb-16 max-w-7xl mx-auto">
@@ -470,7 +646,7 @@ export default function NewConsignmentPage() {
       )}
 
       {/* Main Form */}
-      <form onSubmit={handleGenerateDocketAndSaveDraft} className="space-y-5">
+      <form onSubmit={handleSaveCnDetails} className="space-y-5">
         {/* ======================================================== */}
         {/* SECTION 1: CN SUMMARY                                    */}
         {/* ======================================================== */}
@@ -486,7 +662,7 @@ export default function NewConsignmentPage() {
               </div>
             </div>
 
-            {/* Manual vs Automatically Radio */}
+            {/* Manual vs Automatically */}
             <div className="flex items-center gap-4 bg-white/10 px-3 py-1.5 rounded-lg text-xs font-medium backdrop-blur-xs">
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
@@ -507,7 +683,7 @@ export default function NewConsignmentPage() {
                   checked={generationMode === "AUTOMATIC"}
                   onChange={() => {
                     setGenerationMode("AUTOMATIC");
-                    setCnNumber(`ALC126${Math.floor(1000 + Math.random() * 9000)}`);
+                    setCnNumber("");
                   }}
                   className="text-blue-500 focus:ring-blue-400"
                 />
@@ -524,13 +700,15 @@ export default function NewConsignmentPage() {
               </label>
               <input
                 type="text"
-                required
+                required={generationMode === "MANUAL" && !detailsSaved}
                 readOnly={generationMode === "AUTOMATIC"}
                 value={cnNumber}
-                onChange={(e) => setCnNumber(e.target.value)}
-                placeholder="e.g. ALC126001"
+                onChange={(e) => setCnNumber(e.target.value.toUpperCase())}
+                placeholder={generationMode === "AUTOMATIC" ? "Assigned from Docket Master after save" : "e.g. ALC126"}
                 className={`w-full h-9 px-3 border border-slate-200 rounded-lg text-xs font-mono font-bold ${
-                  generationMode === "AUTOMATIC" ? "bg-slate-100 text-slate-700 cursor-not-allowed" : "bg-white text-blue-700 focus:ring-2 focus:ring-blue-500"
+                  generationMode === "AUTOMATIC"
+                    ? "bg-slate-100 text-slate-700 cursor-not-allowed"
+                    : "bg-white text-blue-700 focus:ring-2 focus:ring-blue-500"
                 }`}
               />
             </div>
@@ -604,7 +782,7 @@ export default function NewConsignmentPage() {
                 onChange={(e) => setPaymentType(e.target.value as any)}
                 className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
               >
-                <option value="TBB">TBB (To Be Billed)</option>
+                <option value="TBB">TBB</option>
                 <option value="PAID">Paid</option>
                 <option value="TO_PAY">To Pay</option>
               </select>
@@ -627,7 +805,7 @@ export default function NewConsignmentPage() {
               </select>
             </div>
 
-            {/* Billed At (From Branch Master) */}
+            {/* Billed At (Branch Master) */}
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
                 Billed At <span className="text-red-500">*</span>
@@ -639,11 +817,14 @@ export default function NewConsignmentPage() {
                   onChange={(e) => setBilledAt(e.target.value)}
                   className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
-                  {branchesDirectory.map((b) => (
-                    <option key={b._id || b.branchCode} value={`${b.branchCode} - ${b.branchName}`}>
-                      {b.branchCode} - {b.branchName}
-                    </option>
-                  ))}
+                  {branchesDirectory.map((b) => {
+                    const label = `${b.branchName || "Ateka Logistics"}-${b.branchCode}`;
+                    return (
+                      <option key={b._id || b.branchCode} value={label}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
               ) : (
                 <input
@@ -651,7 +832,7 @@ export default function NewConsignmentPage() {
                   required
                   value={billedAt}
                   onChange={(e) => setBilledAt(e.target.value)}
-                  placeholder="e.g. ALC1 - Mumbai Central"
+                  placeholder="Ateka Logistics-ALC1"
                   className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               )}
@@ -678,7 +859,6 @@ export default function NewConsignmentPage() {
                 type="text"
                 value={ewayBillNo}
                 onChange={(e) => setEwayBillNo(e.target.value)}
-                placeholder="12-digit GST E-Way Bill"
                 className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -707,46 +887,173 @@ export default function NewConsignmentPage() {
               </select>
             </div>
 
-            {/* Vehicle No (From Vehicle Master) */}
+            {/* Service Type */}
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Service Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                required
+                value={serviceType}
+                onChange={(e) => setServiceType(e.target.value)}
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="FTL">FTL</option>
+                <option value="LTL">LTL</option>
+                <option value="EXPRESS">EXPRESS</option>
+                <option value="PART_LOAD">PART LOAD</option>
+              </select>
+            </div>
+
+            {/* Type of FTL */}
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Type of FTL <span className="text-red-500">*</span>
+              </label>
+              <select
+                required
+                value={typeOfFtl}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTypeOfFtl(val);
+                  // Link Type of FTL to matching vehicle type from master when possible
+                  const match = vehiclesDirectory.find(
+                    (v) =>
+                      String(v.vehicleType || "").toUpperCase() === val.toUpperCase() ||
+                      String(v.vehicleType || "").toUpperCase().includes(val.toUpperCase().split(" ")[0])
+                  );
+                  if (match) {
+                    setVehicleNo(match.vehicleNumber);
+                    if (match.driverPhone) setDriverNo(match.driverPhone);
+                  }
+                }}
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">---select---</option>
+                <option value="32 FT CONTAINER VEHICLE">32 FT CONTAINER VEHICLE</option>
+                <option value="32 FT SXL">32 FT SXL</option>
+                <option value="32 FT MULTI AXLE">32 FT MULTI AXLE</option>
+                <option value="20 FT CONTAINER">20 FT CONTAINER</option>
+                <option value="TAURUS 10 TYRE">TAURUS 10 TYRE</option>
+                {Array.from(new Set(vehiclesDirectory.map((v) => v.vehicleType).filter(Boolean))).map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* From — Route Master */}
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                From <span className="text-red-500">*</span>
+              </label>
+              <select
+                required
+                value={fromLocation}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFromLocation(val);
+                  applyRouteDistance(val, toLocation);
+                }}
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">---select---</option>
+                {fromOptions.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
+                {fromLocation && !fromOptions.includes(fromLocation) && (
+                  <option value={fromLocation}>{fromLocation}</option>
+                )}
+              </select>
+            </div>
+
+            {/* To — Route Master */}
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                To <span className="text-red-500">*</span>
+              </label>
+              <select
+                required
+                value={toLocation}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setToLocation(val);
+                  applyRouteDistance(fromLocation, val);
+                }}
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">---select---</option>
+                {toOptions.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
+                {toLocation && !toOptions.includes(toLocation) && (
+                  <option value={toLocation}>{toLocation}</option>
+                )}
+              </select>
+            </div>
+
+            {/* Vehicle No — dropdown linked to Vehicle Master */}
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
                 Vehicle No <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 required
-                list="vehiclesList"
                 value={vehicleNo}
                 onChange={(e) => {
-                  const val = e.target.value.toUpperCase();
+                  const val = e.target.value;
                   setVehicleNo(val);
                   const match = vehiclesDirectory.find((v) => v.vehicleNumber === val);
-                  if (match && match.driverMobile && !driverNo) {
-                    setDriverNo(match.driverMobile);
+                  if (match) {
+                    if (match.driverPhone) setDriverNo(match.driverPhone);
+                    if (match.vehicleType) setTypeOfFtl(match.vehicleType);
                   }
                 }}
-                placeholder="e.g. MH04AB1234"
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs font-mono font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <datalist id="vehiclesList">
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs font-mono font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">---select---</option>
                 {vehiclesDirectory.map((v) => (
                   <option key={v._id || v.vehicleNumber} value={v.vehicleNumber}>
-                    {v.vehicleType ? `${v.vehicleType} • ` : ""}{v.ownerName || ""}
+                    {v.vehicleNumber}
                   </option>
                 ))}
-              </datalist>
+              </select>
             </div>
 
-            {/* Driver No */}
+            {/* Driver No — dropdown linked to Vehicle Master drivers */}
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Driver No</label>
-              <input
-                type="text"
+              <select
                 value={driverNo}
-                onChange={(e) => setDriverNo(e.target.value)}
-                placeholder="Driver Contact / License"
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+                onChange={(e) => {
+                  const phone = e.target.value;
+                  setDriverNo(phone);
+                  const match = vehiclesDirectory.find((v) => v.driverPhone === phone);
+                  if (match) {
+                    setVehicleNo(match.vehicleNumber);
+                    if (match.vehicleType) setTypeOfFtl(match.vehicleType);
+                  }
+                }}
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">---select---</option>
+                {Array.from(
+                  new Map(
+                    vehiclesDirectory
+                      .filter((v) => v.driverPhone)
+                      .map((v) => [v.driverPhone, v])
+                  ).values()
+                ).map((v) => (
+                  <option key={v.driverPhone} value={v.driverPhone}>
+                    {v.driverName ? `${v.driverName} - ${v.driverPhone}` : v.driverPhone}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Approx KM */}
@@ -768,7 +1075,7 @@ export default function NewConsignmentPage() {
                 type="text"
                 value={customerGstNo}
                 onChange={(e) => setCustomerGstNo(e.target.value.toUpperCase())}
-                placeholder="e.g. 27AAACT2727Q1ZB"
+                placeholder="e.g. 27AAACE1795K2ZC - MUMBAI"
                 className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -1382,115 +1689,285 @@ export default function NewConsignmentPage() {
               {isSubmitting ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Processing...</span>
+                  <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 text-blue-200" />
-                  <span>{savedDraftDocket ? "Update Docket Details" : "Generate Docket No. & Save Details"}</span>
+                  <Save className="w-4 h-4 text-blue-200" />
+                  <span>{detailsSaved ? "Update CN Details" : "Save CN Details"}</span>
                 </>
               )}
             </button>
-            {savedDraftDocket && (
-              <button
-                type="button"
-                onClick={() => handleFinalizeAndPublish(savedDraftDocket)}
-                disabled={isSubmitting}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer shrink-0 animate-in fade-in"
-              >
-                <CheckCircle className="w-4 h-4 text-emerald-100" />
-                <span>Insert Docket ({savedDraftDocket}) & Publish CN</span>
-              </button>
-            )}
           </div>
         </div>
       </form>
 
       {/* ======================================================== */}
-      {/* DOCKET NUMBER ALLOCATION & CONFIRMATION MODAL            */}
+      {/* DOCKET NUMBER TABLE (shown after CN details are saved)   */}
       {/* ======================================================== */}
-      {allocatedDocketModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 space-y-5">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shadow-2xs">
-                  <Hash className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    Docket Number Allocated!
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Details saved in draft state • Insert docket to finalize &amp; publish
-                  </p>
-                </div>
+      {detailsSaved && (
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden animate-in fade-in">
+          <div className="bg-gradient-to-r from-emerald-700 to-teal-800 text-white px-5 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
+                <Hash className="w-4 h-4" />
               </div>
+              <div>
+                <h2 className="text-sm font-bold tracking-tight">Assign Docket Number</h2>
+                <p className="text-[11px] text-emerald-100">
+                  Stock from Admin / Masters • Generate or select a number, then link to finalize this CN
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={() => setAllocatedDocketModal(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                onClick={loadAvailableDockets}
+                disabled={loadingDockets}
+                className="px-3 py-1.5 text-xs bg-white/15 hover:bg-white/25 rounded-lg font-semibold cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                Refresh Pool
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateMasterDocket}
+                disabled={isSubmitting}
+                className="px-3 py-1.5 text-xs bg-white text-emerald-800 hover:bg-emerald-50 rounded-lg font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Generate Docket
+              </button>
+              <button
+                type="button"
+                disabled={!selectedMasterDocket || isSubmitting}
+                onClick={() => handleLinkDocketAndFinalize()}
+                className="px-3 py-1.5 text-xs bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-900 rounded-lg font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                Link &amp; Finalize
+                {selectedMasterDocket ? ` (${selectedMasterDocket})` : ""}
               </button>
             </div>
+          </div>
 
-            {/* Docket Display & Selection Box */}
-            <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2.5">
-              <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider block">
-                Selected / Allocated Docket Number:
+          <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 text-xs text-slate-600 flex flex-wrap items-center gap-4">
+            <span>
+              Billing: <strong className="text-slate-800">{billingParty || "N/A"}</strong>
+            </span>
+            <span>
+              Route:{" "}
+              <strong className="text-slate-800">
+                {fromLocation || consignorCity || "Origin"} → {toLocation || consigneeCity || "Destination"}
+              </strong>
+            </span>
+            <span>
+              Total: <strong className="text-blue-700 font-mono">₹{grandTotal.toLocaleString()}</strong>
+            </span>
+            <span>
+              Pool:{" "}
+              <strong className="text-slate-800">
+                {availableDockets.length}
+              </strong>{" "}
+              (<span className="text-emerald-700 font-semibold">{availableCount} available</span>
+              {" · "}
+              <span className="text-slate-500 font-semibold">{usedCount} used</span>)
+            </span>
+            {docketSeries && (
+              <span>
+                Series:{" "}
+                <strong className="font-mono text-slate-800">
+                  {docketSeries.prefix}
+                  {String(docketSeries.nextSequence).padStart(docketSeries.padLength || 4, "0")}
+                </strong>{" "}
+                (next)
               </span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={modalDocketInput}
-                  onChange={(e) => setModalDocketInput(e.target.value.toUpperCase())}
-                  placeholder="Docket Number"
-                  className="flex-1 h-11 px-3 text-base font-mono font-bold text-blue-800 bg-white border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase tracking-wider text-center shadow-2xs"
-                />
-              </div>
-              <p className="text-[11px] text-blue-700 leading-relaxed">
-                Confirm this system docket number or adjust it to match your physical pre-printed stationary series before finalizing.
-              </p>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              <label className="text-slate-600">
+                Show{" "}
+                <select
+                  value={docketStatusFilter}
+                  onChange={(e) => {
+                    setDocketStatusFilter(e.target.value as any);
+                    setDocketPage(1);
+                  }}
+                  className="h-7 px-2 border border-slate-200 rounded-md bg-white text-xs"
+                >
+                  <option value="ALL">All</option>
+                  <option value="AVAILABLE">Available</option>
+                  <option value="USED">Used</option>
+                </select>
+              </label>
+              <label className="text-slate-600">
+                <select
+                  value={docketPageSize}
+                  onChange={(e) => {
+                    setDocketPageSize(Number(e.target.value));
+                    setDocketPage(1);
+                  }}
+                  className="h-7 px-2 border border-slate-200 rounded-md bg-white text-xs"
+                >
+                  {[5, 10, 25, 50].map((n) => (
+                    <option key={n} value={n}>
+                      {n} / page
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
+          </div>
 
-            {/* Quick summary verification */}
-            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1.5 text-slate-600">
-              <div className="flex justify-between">
-                <span>Billing Party:</span>
-                <span className="font-semibold text-slate-800">{billingParty || "N/A"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Route Corridor:</span>
-                <span className="font-semibold text-slate-800">{consignorCity || "Origin"} &rarr; {consigneeCity || "Destination"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Packages / Weight:</span>
-                <span className="font-semibold text-slate-800">{packagesCount} pkgs ({chargedWeight} kg)</span>
-              </div>
-              <div className="flex justify-between border-t border-slate-200 pt-1">
-                <span>Grand Total:</span>
-                <span className="font-bold text-blue-700 font-mono">₹{grandTotal.toLocaleString()}</span>
-              </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs min-w-[640px]">
+              <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3.5 w-10"></th>
+                  <th className="py-2.5 px-3.5">Docket Number</th>
+                  <th className="py-2.5 px-3.5">Series</th>
+                  <th className="py-2.5 px-3.5">Sequence</th>
+                  <th className="py-2.5 px-3.5">Branch</th>
+                  <th className="py-2.5 px-3.5">Status</th>
+                  <th className="py-2.5 px-3.5">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loadingDockets ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-400">
+                      Loading docket numbers from master...
+                    </td>
+                  </tr>
+                ) : filteredMasterDockets.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-500">
+                      No docket numbers in master. Click{" "}
+                      <strong>Generate Docket</strong> or add stock in{" "}
+                      <a href="/dashboard/masters/docket-numbers" className="text-blue-700 font-semibold underline">
+                        Docket Number Master
+                      </a>
+                      .
+                    </td>
+                  </tr>
+                ) : (
+                  pagedMasterDockets.map((d) => {
+                    const used = isDocketUsed(d.status);
+                    const statusLabel = displayDocketStatus(d.status);
+                    const selected = !used && selectedMasterDocket === d.docketNo;
+                    return (
+                      <tr
+                        key={d._id || d.docketNo}
+                        onClick={() => {
+                          if (!used) setSelectedMasterDocket(d.docketNo);
+                        }}
+                        className={`transition-colors ${
+                          used
+                            ? "bg-slate-50/60 text-slate-400 cursor-default"
+                            : selected
+                              ? "bg-emerald-50/80 cursor-pointer"
+                              : "hover:bg-slate-50/80 cursor-pointer"
+                        }`}
+                      >
+                        <td className="py-2.5 px-3.5">
+                          <input
+                            type="radio"
+                            name="masterDocket"
+                            disabled={used}
+                            checked={selected}
+                            onChange={() => {
+                              if (!used) setSelectedMasterDocket(d.docketNo);
+                            }}
+                            className="text-emerald-600 focus:ring-emerald-500 disabled:opacity-40"
+                          />
+                        </td>
+                        <td className={`py-2.5 px-3.5 font-bold font-mono ${used ? "text-slate-400" : "text-blue-700"}`}>
+                          {d.docketNo}
+                        </td>
+                        <td className="py-2.5 px-3.5 font-mono text-slate-600">{d.seriesPrefix}</td>
+                        <td className="py-2.5 px-3.5 font-mono text-slate-700">{d.sequenceNo}</td>
+                        <td className="py-2.5 px-3.5 text-slate-600">{d.branchCode || "-"}</td>
+                        <td className="py-2.5 px-3.5">
+                          <span
+                            className={`inline-flex px-2 py-0.5 rounded-md font-semibold text-[10px] ${
+                              statusLabel === "USED"
+                                ? "bg-slate-200 text-slate-600"
+                                : statusLabel === "RESERVED"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-emerald-100 text-emerald-800"
+                            }`}
+                          >
+                            {statusLabel}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3.5">
+                          {used ? (
+                            <span className="text-[10px] font-semibold text-slate-400">—</span>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={isSubmitting}
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                setSelectedMasterDocket(d.docketNo);
+                                handleLinkDocketAndFinalize(d.docketNo);
+                              }}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                            >
+                              Link &amp; Finalize
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="px-5 py-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50/50">
+            <div>
+              Showing{" "}
+              {(docketPage - 1) * docketPageSize + (filteredMasterDockets.length ? 1 : 0)} to{" "}
+              {Math.min(docketPage * docketPageSize, filteredMasterDockets.length)} of{" "}
+              {filteredMasterDockets.length} entries
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-3">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => setAllocatedDocketModal(null)}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg cursor-pointer transition-colors"
+                disabled={docketPage <= 1}
+                onClick={() => setDocketPage((p) => Math.max(1, p - 1))}
+                className="px-2.5 py-1 border border-slate-200 rounded bg-white disabled:opacity-40 hover:bg-slate-50"
               >
-                Keep as Draft
+                Previous
               </button>
+              {Array.from({ length: Math.min(docketTotalPages, 5) }, (_, i) => {
+                let pageNum = i + 1;
+                if (docketTotalPages > 5) {
+                  const start = Math.max(1, Math.min(docketPage - 2, docketTotalPages - 4));
+                  pageNum = start + i;
+                }
+                return (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setDocketPage(pageNum)}
+                    className={`px-2.5 py-1 rounded font-bold ${
+                      docketPage === pageNum
+                        ? "bg-emerald-600 text-white"
+                        : "border border-slate-200 bg-white hover:bg-slate-50"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
               <button
                 type="button"
-                disabled={!modalDocketInput.trim() || isSubmitting}
-                onClick={() => handleFinalizeAndPublish(modalDocketInput)}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg flex items-center gap-2 shadow-sm cursor-pointer transition-all shrink-0"
+                disabled={docketPage >= docketTotalPages}
+                onClick={() => setDocketPage((p) => Math.min(docketTotalPages, p + 1))}
+                className="px-2.5 py-1 border border-slate-200 rounded bg-white disabled:opacity-40 hover:bg-slate-50"
               >
-                <CheckCircle className="w-4 h-4 text-emerald-100" />
-                <span>Insert Docket &amp; Publish CN</span>
+                Next
               </button>
             </div>
           </div>

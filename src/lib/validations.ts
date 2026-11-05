@@ -7,12 +7,15 @@ export const LoginSchema = z.object({
 });
 
 export const ConsignmentSchema = z.object({
-  docketNo: z.string().min(3, "Docket number is required"),
+  docketNo: z.string().min(3, "Docket number is required").optional(),
+  draftId: z.string().optional(),
+  previousDocketNo: z.string().optional(),
   bookingType: z.enum(["NORMAL", "SYSTEM"]).default("NORMAL"),
   bookingBranch: z.string().default("ALC1"),
   billingParty: z.string().min(1, "Billing party is required"),
   paymentBasis: z.enum(["PAID", "TO_PAY", "TBB"]).default("TBB"),
   serviceType: z.string().default("FTL"),
+  serviceFtl: z.string().optional(),
   fromLocation: z.string().default("MUMBAI"),
   toLocation: z.string().default("DELHI"),
   consignorName: z.string().min(1, "Consignor name is required"),
@@ -60,6 +63,19 @@ export const ConsignmentSchema = z.object({
   currency: z.string().default("INR"),
   sealNo: z.string().optional(),
   status: z.enum(["DRAFT", "DOCKET_ALLOCATED", "BOOKED", "IN_TRANSIT", "ARRIVED", "DELIVERED", "BILLED", "CANCELLED"]).default("BOOKED")
+}).superRefine((data, ctx) => {
+  const status = data.status || "BOOKED";
+  if (status === "DRAFT") {
+    // Draft CN details may be saved before a master docket number is assigned
+    return;
+  }
+  if (!data.docketNo || data.docketNo.trim().length < 3) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Docket number is required to finalize the CN",
+      path: ["docketNo"]
+    });
+  }
 });
 
 export const CustomerSchema = z.object({
