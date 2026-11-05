@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Consignment } from "@/models/Consignment";
 import { ConsignmentSchema } from "@/lib/validations";
 import { memoryStore } from "@/lib/memoryStore";
+import { postConsignmentLedger } from "@/lib/booksEngine";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -127,17 +128,49 @@ export async function POST(req: NextRequest) {
       ewayBillExpiry: data.ewayBillExpiry ? new Date(data.ewayBillExpiry) : undefined,
       remark: data.specialInstructions || data.remark,
       specialInstructions: data.specialInstructions || data.remark,
-      status: "BOOKED"
+      status: data.status || "BOOKED"
     };
 
     try {
       await connectToDatabase();
-      const newConsignment = await Consignment.create(payload);
-      return NextResponse.json({ success: true, message: "Consignment created successfully", data: newConsignment }, { status: 201 });
+      // Upsert: If draft already exists for this docket number, update it; otherwise create new
+      const existing = await Consignment.findOne({ docketNo: payload.docketNo });
+      let savedConsignment;
+      if (existing) {
+        savedConsignment = await Consignment.findOneAndUpdate(
+          { docketNo: payload.docketNo },
+          { $set: payload },
+          { new: true }
+        );
+      } else {
+        savedConsignment = await Consignment.create(payload);
+      }
+
+      // Auto-post double-entry General Ledger ONLY when finalized/booked
+      if (payload.status === "BOOKED") {
+        try {
+          await postConsignmentLedger({
+            cnNumber: payload.docketNo,
+            consignorName: payload.consignor.name,
+            totalFreight: freightAmount,
+            gstAmount,
+            grandTotal,
+            branchCode: payload.bookingBranch
+          });
+        } catch (ledgerErr) {
+          console.warn("Ledger auto-post error:", ledgerErr);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: payload.status === "DRAFT" ? "Draft docket details saved successfully" : "Consignment finalized and booked successfully",
+        data: savedConsignment
+      }, { status: 201 });
     } catch {
       // Memory store fallback
       const saved = memoryStore.addConsignment(payload);
-      return NextResponse.json({ success: true, message: "Consignment created (Memory Store)", data: saved, isMemoryStore: true }, { status: 201 });
+      return NextResponse.json({ success: true, message: "Consignment saved (Memory Store)", data: saved, isMemoryStore: true }, { status: 201 });
     }
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

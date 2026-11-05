@@ -98,6 +98,8 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "CRM",
       icon: UserCheck,
       submodules: [
+        { label: "Customer Master", route: "/dashboard/masters/customers", code: "C061" },
+        { label: "Customer GST Registration", route: "/dashboard/masters/customer-gst", code: "C062" },
         { label: "Lead Details", route: "/dashboard/crm/lead-details", code: "C504" },
         { label: "Vist Details", route: "/dashboard/crm/visit-details", code: "C505" },
         { label: "Activity", route: "/dashboard/crm/activity", code: "C916" }

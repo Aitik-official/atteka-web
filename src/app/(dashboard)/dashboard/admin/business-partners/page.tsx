@@ -22,7 +22,7 @@ export default function BusinessPartnersAdminHubPage() {
         <WcvActionCard
           title="Customer GST Registration"
           description="BA Master"
-          href="/dashboard/finance/e-invoice"
+          href="/dashboard/masters/customer-gst"
           icon={ShieldCheck}
         />
         <WcvActionCard

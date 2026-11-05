@@ -74,7 +74,7 @@ export interface IConsignment extends Document {
   ewayBillExpiry?: Date;
   remark?: string;
   specialInstructions?: string;
-  status: "BOOKED" | "IN_TRANSIT" | "ARRIVED" | "DELIVERED" | "BILLED" | "CANCELLED";
+  status: "DRAFT" | "DOCKET_ALLOCATED" | "BOOKED" | "IN_TRANSIT" | "ARRIVED" | "DELIVERED" | "BILLED" | "CANCELLED";
   podUrl?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -157,7 +157,7 @@ const ConsignmentSchema = new Schema<IConsignment>(
     specialInstructions: { type: String },
     status: {
       type: String,
-      enum: ["BOOKED", "IN_TRANSIT", "ARRIVED", "DELIVERED", "BILLED", "CANCELLED"],
+      enum: ["DRAFT", "DOCKET_ALLOCATED", "BOOKED", "IN_TRANSIT", "ARRIVED", "DELIVERED", "BILLED", "CANCELLED"],
       default: "BOOKED"
     },
     podUrl: { type: String }
