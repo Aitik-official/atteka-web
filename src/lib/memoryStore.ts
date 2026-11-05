@@ -135,6 +135,13 @@ class MemoryStore {
   ftlTypes: any[] = [];
   vehicles: any[] = [];
   sacCodes: any[] = [];
+  drivingLicences: any[] = [];
+  vendorsList: any[] = [];
+  vendorGstList: any[] = [];
+  crmVisits: any[] = [];
+  crmLeads: any[] = [];
+  crmQuotations: any[] = [];
+  crmQuoteCustomers: any[] = [];
   docketNumbers: MockDocketNumber[] = seedDocketNumbers();
   docketSeries = {
     seriesKey: "DEFAULT",
@@ -229,5 +236,26 @@ if (!Array.isArray((memoryStore as any).vehicles)) {
 }
 if (!Array.isArray((memoryStore as any).sacCodes)) {
   (memoryStore as any).sacCodes = [];
+}
+if (!Array.isArray((memoryStore as any).drivingLicences)) {
+  (memoryStore as any).drivingLicences = [];
+}
+if (!Array.isArray((memoryStore as any).vendorsList)) {
+  (memoryStore as any).vendorsList = [];
+}
+if (!Array.isArray((memoryStore as any).vendorGstList)) {
+  (memoryStore as any).vendorGstList = [];
+}
+if (!Array.isArray((memoryStore as any).crmVisits)) {
+  (memoryStore as any).crmVisits = [];
+}
+if (!Array.isArray((memoryStore as any).crmLeads)) {
+  (memoryStore as any).crmLeads = [];
+}
+if (!Array.isArray((memoryStore as any).crmQuotations)) {
+  (memoryStore as any).crmQuotations = [];
+}
+if (!Array.isArray((memoryStore as any).crmQuoteCustomers)) {
+  (memoryStore as any).crmQuoteCustomers = [];
 }
 
