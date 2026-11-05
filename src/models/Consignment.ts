@@ -13,8 +13,17 @@ export interface IConsignment extends Document {
   toLocation: string;
   vehicleNo?: string;
   driverPhone?: string;
+  driverNo?: string;
+  approxKm?: number;
+  buDescription?: string;
+  mode?: string;
+  billedAt?: string;
+  expectedDeliveryDate?: Date;
+  isLocalCn?: string;
+  customerGstNo?: string;
   consignor: {
     name: string;
+    gstin?: string;
     address?: string;
     city?: string;
     pincode?: string;
@@ -23,11 +32,27 @@ export interface IConsignment extends Document {
   };
   consignee: {
     name: string;
+    gstin?: string;
     address?: string;
     city?: string;
     pincode?: string;
     phone?: string;
     email?: string;
+  };
+  documentationDetails?: {
+    riskType?: string;
+    policyNo?: string;
+    policyDate?: Date;
+    shipment?: string;
+    poNo?: string;
+    containerNumber?: string;
+    containerSize?: string;
+  };
+  invoiceDetails?: {
+    invoiceBeNo?: string;
+    invoiceBeDate?: Date;
+    declaredValue?: number;
+    currency?: string;
   };
   packageDetails: {
     packageType: string;
@@ -35,6 +60,7 @@ export interface IConsignment extends Document {
     packagesCount: number;
     actualWeight: number;
     chargedWeight: number;
+    sealNo?: string;
   };
   financials: {
     freightAmount: number;
@@ -47,6 +73,7 @@ export interface IConsignment extends Document {
   ewayBillNo?: string;
   ewayBillExpiry?: Date;
   remark?: string;
+  specialInstructions?: string;
   status: "BOOKED" | "IN_TRANSIT" | "ARRIVED" | "DELIVERED" | "BILLED" | "CANCELLED";
   podUrl?: string;
   createdAt: Date;
@@ -67,8 +94,17 @@ const ConsignmentSchema = new Schema<IConsignment>(
     toLocation: { type: String, required: true },
     vehicleNo: { type: String },
     driverPhone: { type: String },
+    driverNo: { type: String },
+    approxKm: { type: Number, default: 0 },
+    buDescription: { type: String },
+    mode: { type: String, default: "Road" },
+    billedAt: { type: String },
+    expectedDeliveryDate: { type: Date },
+    isLocalCn: { type: String, default: "Yes" },
+    customerGstNo: { type: String },
     consignor: {
       name: { type: String, required: true },
+      gstin: { type: String },
       address: { type: String },
       city: { type: String },
       pincode: { type: String },
@@ -77,18 +113,35 @@ const ConsignmentSchema = new Schema<IConsignment>(
     },
     consignee: {
       name: { type: String, required: true },
+      gstin: { type: String },
       address: { type: String },
       city: { type: String },
       pincode: { type: String },
       phone: { type: String },
       email: { type: String }
     },
+    documentationDetails: {
+      riskType: { type: String, default: "Owner's Risk" },
+      policyNo: { type: String },
+      policyDate: { type: Date },
+      shipment: { type: String },
+      poNo: { type: String },
+      containerNumber: { type: String },
+      containerSize: { type: String }
+    },
+    invoiceDetails: {
+      invoiceBeNo: { type: String },
+      invoiceBeDate: { type: Date },
+      declaredValue: { type: Number, default: 0 },
+      currency: { type: String, default: "INR" }
+    },
     packageDetails: {
       packageType: { type: String, default: "BOX" },
       productDescription: { type: String, required: true },
       packagesCount: { type: Number, default: 1 },
       actualWeight: { type: Number, required: true },
-      chargedWeight: { type: Number, required: true }
+      chargedWeight: { type: Number, required: true },
+      sealNo: { type: String }
     },
     financials: {
       freightAmount: { type: Number, required: true },
@@ -101,6 +154,7 @@ const ConsignmentSchema = new Schema<IConsignment>(
     ewayBillNo: { type: String },
     ewayBillExpiry: { type: Date },
     remark: { type: String },
+    specialInstructions: { type: String },
     status: {
       type: String,
       enum: ["BOOKED", "IN_TRANSIT", "ARRIVED", "DELIVERED", "BILLED", "CANCELLED"],

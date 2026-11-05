@@ -67,24 +67,53 @@ export async function POST(req: NextRequest) {
       serviceType: data.serviceType,
       fromLocation: data.fromLocation,
       toLocation: data.toLocation,
+      buDescription: data.buDescription,
+      mode: data.mode,
+      billedAt: data.billedAt,
+      expectedDeliveryDate: data.expectedDeliveryDate ? new Date(data.expectedDeliveryDate) : undefined,
+      isLocalCn: data.isLocalCn,
+      vehicleNo: data.vehicleNo,
+      driverNo: data.driverNo,
+      approxKm: data.approxKm,
+      customerGstNo: data.customerGstNo,
       consignor: {
         name: data.consignorName,
+        gstin: data.consignorGstin,
         address: data.consignorAddress,
         city: data.consignorCity,
+        pincode: data.consignorPincode,
         phone: data.consignorPhone
       },
       consignee: {
         name: data.consigneeName,
+        gstin: data.consigneeGstin,
         address: data.consigneeAddress,
         city: data.consigneeCity,
+        pincode: data.consigneePincode,
         phone: data.consigneePhone
+      },
+      documentationDetails: {
+        riskType: data.riskType,
+        policyNo: data.policyNo,
+        policyDate: data.policyDate ? new Date(data.policyDate) : undefined,
+        shipment: data.shipment,
+        poNo: data.poNo,
+        containerNumber: data.containerNumber,
+        containerSize: data.containerSize
+      },
+      invoiceDetails: {
+        invoiceBeNo: data.invoiceBeNo,
+        invoiceBeDate: data.invoiceBeDate ? new Date(data.invoiceBeDate) : undefined,
+        declaredValue: data.declaredValue,
+        currency: data.currency
       },
       packageDetails: {
         packageType: data.packageType,
         productDescription: data.productDescription,
         packagesCount: data.packagesCount,
         actualWeight: data.actualWeight,
-        chargedWeight: data.chargedWeight
+        chargedWeight: data.chargedWeight,
+        sealNo: data.sealNo
       },
       financials: {
         freightAmount,
@@ -95,7 +124,9 @@ export async function POST(req: NextRequest) {
         grandTotal
       },
       ewayBillNo: data.ewayBillNo,
-      remark: data.remark,
+      ewayBillExpiry: data.ewayBillExpiry ? new Date(data.ewayBillExpiry) : undefined,
+      remark: data.specialInstructions || data.remark,
+      specialInstructions: data.specialInstructions || data.remark,
       status: "BOOKED"
     };
 
