@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Users, Plus, CheckCircle2, Search, X, AlertCircle } from "lucide-react";
+import { Users, Plus, CheckCircle2, Search, X, AlertCircle, Edit3, Save } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ResponsiveTableWrapper } from "@/components/common/ResponsiveTableWrapper";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -10,6 +10,7 @@ export default function CustomerMasterPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [gstin, setGstin] = useState("");
@@ -63,6 +64,30 @@ export default function CustomerMasterPage() {
       }
     } catch {
       setErrorMsg("Network error adding customer");
+    }
+  };
+
+  const handleUpdateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustomer) return;
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/customers", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingCustomer)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEditingCustomer(null);
+        setSuccessMsg(`Customer ${editingCustomer.name} updated successfully!`);
+        loadCustomers();
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        setErrorMsg(data.error || "Failed to update customer");
+      }
+    } catch {
+      setErrorMsg("Network error updating customer");
     }
   };
 
@@ -130,6 +155,7 @@ export default function CustomerMasterPage() {
               <th className="py-3 px-3.5">Phone</th>
               <th className="py-3 px-3.5">Credit Terms</th>
               <th className="py-3 px-3.5">Status</th>
+              <th className="py-3 px-3.5 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium">
@@ -143,6 +169,15 @@ export default function CustomerMasterPage() {
                 <td className="py-2.5 px-3.5 text-slate-700 font-medium">{c.creditPeriod} Days</td>
                 <td className="py-2.5 px-3.5">
                   <StatusBadge status="ACTIVE" size="sm" />
+                </td>
+                <td className="py-2.5 px-3.5 text-right">
+                  <button
+                    onClick={() => setEditingCustomer({ ...c })}
+                    className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-md text-[11px] font-semibold transition-colors inline-flex items-center gap-1"
+                    title="Edit Customer"
+                  >
+                    <Edit3 className="w-3 h-3" /> Edit
+                  </button>
                 </td>
               </tr>
             ))}

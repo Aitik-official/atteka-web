@@ -36,9 +36,8 @@ interface ModuleCard {
 }
 
 export default function DashboardHome() {
-  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({
-    C001: true // Operations open by default for immediate usability
-  });
+  // Start with all cards collapsed so the dashboard grid remains clean on refresh/login
+  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
 
   const toggleDropdown = (id: string) => {
     setOpenDropdowns((prev) => ({

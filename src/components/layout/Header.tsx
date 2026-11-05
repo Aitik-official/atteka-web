@@ -13,8 +13,12 @@ import {
   LogOut,
   ShieldCheck,
   FileText,
-  X
+  X,
+  Bell,
+  Smartphone,
+  AlertTriangle
 } from "lucide-react";
+import { computeVehicleCompliance, generateWhatsAppExpiryMessage } from "@/lib/complianceEngine";
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -33,6 +37,34 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [alertsDropdown, setAlertsDropdown] = useState(false);
+
+  // Mock fleet compliance items for notification watchdog
+  const fleetAlerts = [
+    computeVehicleCompliance({
+      registrationNumber: "MH-04-GP-1928",
+      vehicleType: "32 FT Multi-Axle",
+      fitnessExpiryDate: "2026-11-18",
+      insuranceExpiryDate: "2026-11-09",
+      nationalPermitExpiryDate: "2027-04-30",
+      driverName: "Ram Singh Yadav",
+      driverPhone: "9820112345"
+    }),
+    computeVehicleCompliance({
+      registrationNumber: "MH-04-AB-3841",
+      vehicleType: "20 FT Container",
+      fitnessExpiryDate: "2026-10-30", // Expired
+      insuranceExpiryDate: "2027-01-15",
+      nationalPermitExpiryDate: "2027-02-28",
+      driverName: "Dilip Kumar",
+      driverPhone: "9833019283"
+    })
+  ];
+
+  const criticalAlertsCount = fleetAlerts.reduce(
+    (acc, v) => acc + v.items.filter((i) => i.status === "EXPIRED" || i.status === "EXPIRING_SOON").length,
+    0
+  );
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -169,6 +201,82 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
         >
           <Settings className="w-4 h-4" />
         </button>
+
+        {/* Fleet Compliance Expiry Alert Watchdog */}
+        <div className="relative">
+          <button
+            onClick={() => setAlertsDropdown(!alertsDropdown)}
+            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors relative flex items-center justify-center"
+            title="Fleet Compliance & Document Expiry Watchdog"
+          >
+            <Bell className="w-4 h-4" />
+            {criticalAlertsCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white rounded-full font-bold text-[9px] flex items-center justify-center shadow-xs animate-pulse">
+                {criticalAlertsCount}
+              </span>
+            )}
+          </button>
+
+          {alertsDropdown && (
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3 z-50 text-xs animate-in fade-in slide-in-from-top-1">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-500" /> Fleet Compliance Watchdog
+                </span>
+                <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-bold">
+                  {criticalAlertsCount} Actions Due
+                </span>
+              </div>
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {fleetAlerts.map((v) => (
+                  <div key={v.vehicleRegNo} className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono font-bold text-blue-600">{v.vehicleRegNo}</span>
+                      <a
+                        href={`https://wa.me/91${v.driverPhone}?text=${generateWhatsAppExpiryMessage(v)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-md flex items-center gap-1 shadow-2xs"
+                      >
+                        WhatsApp Alert ➔
+                      </a>
+                    </div>
+                    <div className="text-[11px] text-slate-600">
+                      Driver: {v.driverName} ({v.driverPhone})
+                    </div>
+                    <div className="space-y-1 pt-1 border-t border-slate-200/60 text-[10px]">
+                      {v.items.map((i) => (
+                        <div key={i.name} className="flex justify-between">
+                          <span className="text-slate-500">{i.name}:</span>
+                          <span className={`font-mono font-bold ${i.status === "EXPIRED" ? "text-red-600" : "text-amber-600"}`}>
+                            {i.status === "EXPIRED" ? "EXPIRED" : `${i.daysRemaining} days left`} ({i.expiryDate})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-slate-100 mt-2 flex justify-between items-center text-[11px]">
+                <button
+                  onClick={() => {
+                    setAlertsDropdown(false);
+                    router.push("/dashboard/masters/vehicles");
+                  }}
+                  className="text-blue-600 font-semibold hover:underline"
+                >
+                  View Vehicle Master
+                </button>
+                <button
+                  onClick={() => setAlertsDropdown(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Green Circular Badge: '04' */}
         <div

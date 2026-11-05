@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Receipt, CheckSquare, Square, FileText, ArrowRight, CheckCircle2, DollarSign, AlertCircle } from "lucide-react";
+import { Receipt, CheckSquare, Square, FileText, ArrowRight, CheckCircle2, DollarSign, AlertCircle, Download } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ResponsiveTableWrapper } from "@/components/common/ResponsiveTableWrapper";
 import { SectionCard } from "@/components/common/SectionCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { MobileActionFooter } from "@/components/common/MobileActionFooter";
+import { formatGstr1OfflineJson } from "@/lib/gstr1Exporter";
 
 export default function CustomerBillingPage() {
   const [consignments, setConsignments] = useState<any[]>([]);
@@ -244,6 +245,43 @@ export default function CustomerBillingPage() {
         title="Generated Customer Bills Archive"
         totalCount={generatedBills.length}
         showSwipeHint={true}
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              if (generatedBills.length === 0) {
+                alert("No bills available to export.");
+                return;
+              }
+              const gstr1Data = formatGstr1OfflineJson(
+                generatedBills.map((b) => ({
+                  billNumber: b.billNumber,
+                  billDate: b.billDate,
+                  customerName: b.customerName,
+                  customerGstin: b.customerGstin || "27AABCT1234F1Z5",
+                  totalFreight: b.totalFreight || 0,
+                  cgst: (b.taxAmount || 0) / 2,
+                  sgst: (b.taxAmount || 0) / 2,
+                  igst: 0,
+                  grandTotal: b.grandTotal || 0,
+                  irn: b.irn
+                }))
+              );
+              const blob = new Blob([JSON.stringify(gstr1Data, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `GSTR1_Offline_Return_Atteka_${new Date().toISOString().slice(0, 10)}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
+            title="Download official GSTN GSTR-1 Offline JSON for direct upload to gst.gov.in"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export GSTR-1 Offline JSON</span>
+          </button>
+        }
       >
         <table className="w-full text-left text-xs whitespace-nowrap min-w-[700px]">
           <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">

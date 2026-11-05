@@ -37,7 +37,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit PDC Advance Payable Branch"
             description="Edit PDC Advance Payable Branch"
-            href="#"
             icon={Building}
           />
         </div>
@@ -45,7 +44,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit PDC Balance Payable Branch"
             description="Edit PDC Balance Payable Branch"
-            href="#"
             icon={Building}
           />
         </div>
@@ -53,7 +51,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit PDC Vendor/Date/Vehicle"
             description="Edit PDC Vendor/Date/Vehicle"
-            href="#"
             icon={Edit3}
           />
         </div>
@@ -61,7 +58,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Cancel PDC Advance Entry"
             description="Cancel PDC Advance Entry"
-            href="#"
             icon={XCircle}
           />
         </div>
@@ -71,7 +67,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Cancel Multiple PDC Advance Entry"
             description="Cancel Multiple PDC Advance Entry"
-            href="#"
             icon={XCircle}
           />
         </div>
@@ -79,7 +74,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Bill Collection Branch"
             description="Edit Bill Collection Branch"
-            href="#"
             icon={Building}
           />
         </div>
@@ -87,7 +81,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Bill Remark and Bill Address"
             description="Edit Bill Remark and Bill Address"
-            href="#"
             icon={Edit3}
           />
         </div>
@@ -95,7 +88,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Bill Amount"
             description="Edit Bill Amount"
-            href="#"
             icon={DollarSign}
           />
         </div>
@@ -105,7 +97,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Billing Party"
             description="Edit Billing Party"
-            href="#"
             icon={Users}
           />
         </div>
@@ -113,7 +104,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Bill Date"
             description="Edit Bill Date"
-            href="#"
             icon={Calendar}
           />
         </div>
@@ -121,7 +111,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Cancel Bill"
             description="Cancel Bill"
-            href="#"
             icon={XCircle}
           />
         </div>
@@ -129,7 +118,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Cancel MR"
             description="Cancel MR"
-            href="#"
             icon={XCircle}
           />
         </div>
@@ -139,7 +127,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit MR Bank Account"
             description="Edit MR Bank Account"
-            href="#"
             icon={CreditCard}
           />
         </div>
@@ -147,7 +134,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Manual document Number"
             description="Edit Manual document Number"
-            href="#"
             icon={FileText}
           />
         </div>
@@ -155,7 +141,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Voucher Date"
             description="Edit Voucher Date"
-            href="#"
             icon={Calendar}
           />
         </div>
@@ -163,7 +148,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Cheque No & Date"
             description="Edit Cheque No & Date"
-            href="#"
             icon={CreditCard}
           />
         </div>
@@ -173,7 +157,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Cancel Cheque"
             description="Cancel Cheque"
-            href="#"
             icon={XCircle}
           />
         </div>
@@ -181,7 +164,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Cancel Voucher"
             description="Cancel Voucher"
-            href="#"
             icon={XCircle}
           />
         </div>
@@ -189,7 +171,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Account Head"
             description="Edit Account Head"
-            href="#"
             icon={Edit3}
           />
         </div>
@@ -205,7 +186,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Narration"
             description="Edit Narration"
-            href="#"
             icon={Edit3}
           />
         </div>
@@ -213,7 +193,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Voucher Amount"
             description="Edit Voucher Amount"
-            href="#"
             icon={DollarSign}
           />
         </div>
@@ -221,7 +200,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit PDC Non-Financial to Financial"
             description="Edit PDC Non-Financial to Financial"
-            href="#"
             icon={Edit3}
           />
         </div>
@@ -229,7 +207,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Update Vendor PAN NUMBER"
             description="Update Vendor PAN NUMBER"
-            href="#"
             icon={CreditCard}
           />
         </div>
@@ -239,7 +216,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Cancel Vendor Invoice"
             description="Cancel Vendor Invoice"
-            href="#"
             icon={XCircle}
           />
         </div>
@@ -247,7 +223,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Cancel Vendor Payment"
             description="Cancel Vendor Payment"
-            href="#"
             icon={XCircle}
           />
         </div>
@@ -255,7 +230,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Other Bill Amount"
             description="QryOtherBill,EditOtherBill"
-            href="#"
             icon={DollarSign}
           />
         </div>
@@ -263,7 +237,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Update Vendor TDS Aplicable"
             description="Update Vendor TDS Aplicable"
-            href="#"
             icon={FileMinus}
           />
         </div>
@@ -273,7 +246,6 @@ export default function ExceptionalFinanceHubPage() {
           <WcvActionCard
             title="Edit Dedicated Bill Amount"
             description="Edit Dedicated Bill Amount"
-            href="#"
             icon={DollarSign}
           />
         </div>

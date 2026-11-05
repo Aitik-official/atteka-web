@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -33,11 +33,25 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
   const pathname = usePathname();
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    C001: true,
-    C002: true
-  });
+  // Start with all groups collapsed by default so menu isn't stuck open on refresh/login
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [filterQuery, setFilterQuery] = useState("");
+
+  // Automatically expand only the group matching the current active route
+  useEffect(() => {
+    if (!pathname) return;
+    const activeModule = menuModules.find((m) =>
+      m.submodules.some(
+        (sub) => pathname === sub.route || pathname.startsWith(sub.route + "/")
+      )
+    );
+    if (activeModule) {
+      setOpenGroups((prev) => ({
+        ...prev,
+        [activeModule.id]: true
+      }));
+    }
+  }, [pathname]);
 
   const toggleGroup = (id: string) => {
     setOpenGroups((prev) => ({

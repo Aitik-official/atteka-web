@@ -22,3 +22,30 @@ export async function GET() {
   }
 }
 
+export async function POST(req: Request) {
+  try {
+    await connectToDatabase();
+    const body = await req.json();
+    const newBranch = await Branch.create(body);
+    return NextResponse.json({ success: true, message: "Branch created", data: newBranch }, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    await connectToDatabase();
+    const body = await req.json();
+    const { _id, branchCode, ...updates } = body;
+    const query = _id ? { _id } : { branchCode: branchCode?.toUpperCase() };
+    const updated = await Branch.findOneAndUpdate(query, { $set: updates }, { new: true });
+    if (!updated) {
+      return NextResponse.json({ error: "Branch not found" }, { status: 404 });
+    }
+    return NextResponse.json({ success: true, message: "Branch updated", data: updated });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+

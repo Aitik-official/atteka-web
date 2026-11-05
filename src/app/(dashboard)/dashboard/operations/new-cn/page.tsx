@@ -13,11 +13,18 @@ import {
   User,
   Package,
   CreditCard,
-  ArrowLeft
+  ArrowLeft,
+  Printer,
+  FileCheck,
+  Send,
+  Sparkles,
+  X
 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/common/SectionCard";
 import { MobileActionFooter } from "@/components/common/MobileActionFooter";
+import { printLaserA4Cn, printThermalCounterSlip, printDotMatrixSheet } from "@/lib/printEngine";
+import { postConsignmentLedger } from "@/lib/booksEngine";
 
 export default function NewConsignmentPage() {
   const router = useRouter();
@@ -66,6 +73,7 @@ export default function NewConsignmentPage() {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [bookedCnPipeline, setBookedCnPipeline] = useState<any | null>(null);
 
   // Auto-calculate freight
   useEffect(() => {
@@ -120,13 +128,40 @@ export default function NewConsignmentPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        // Auto-post double-entry General Ledger
+        postConsignmentLedger({
+          cnNumber: docketNo,
+          consignorName,
+          totalFreight: Number(freightAmount),
+          gstAmount: Math.round(Number(freightAmount) * 0.18),
+          grandTotal: Math.round(Number(freightAmount) * 1.18),
+          branchCode: bookingBranch
+        });
+
+        // Trigger immediate Pipeline Next Steps Drawer (Solves "The Flow")
+        setBookedCnPipeline({
+          cnNumber: docketNo,
+          bookingDate,
+          consignor: { name: consignorName, address: `${consignorAddress}, ${consignorCity}` },
+          consignee: { name: consigneeName, address: `${consigneeAddress}, ${consigneeCity}` },
+          originBranch: fromLocation,
+          destinationBranch: toLocation,
+          packageCount: Number(packagesCount),
+          packageType,
+          actualWeight: Number(actualWeight),
+          chargedWeight: Number(chargedWeight),
+          totalFreight: Number(freightAmount),
+          freightCharges: {
+            subtotal: Number(freightAmount),
+            gst: Math.round(Number(freightAmount) * 0.18),
+            grandTotal: Math.round(Number(freightAmount) * 1.18)
+          }
+        });
+
         setMessage({
           type: "success",
-          text: `Consignment Docket ${docketNo} saved successfully! Direct MongoDB record created.`
+          text: `Consignment Docket ${docketNo} saved and posted to General Ledger!`
         });
-        setTimeout(() => {
-          router.push("/dashboard/operations/dockets");
-        }, 1200);
       } else {
         setMessage({
           type: "error",
@@ -675,6 +710,120 @@ export default function NewConsignmentPage() {
           </button>
         </MobileActionFooter>
       </form>
+
+      {/* Immediate Pipeline Action Drawer (Solves "The Flow") */}
+      {bookedCnPipeline && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">Docket Booked Successfully!</h3>
+                  <span className="text-[11px] font-mono font-bold text-blue-600">{bookedCnPipeline.cnNumber}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setBookedCnPipeline(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
+              <div className="flex justify-between"><span className="text-slate-500">Route:</span><span className="font-semibold">{bookedCnPipeline.originBranch} ➔ {bookedCnPipeline.destinationBranch}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Consignor:</span><span className="font-medium text-slate-800">{bookedCnPipeline.consignor.name}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Tonnage:</span><span className="font-mono">{bookedCnPipeline.chargedWeight} KG</span></div>
+              <div className="flex justify-between font-bold border-t border-slate-200 pt-1 mt-1"><span>Grand Total:</span><span className="font-mono text-emerald-700">₹{bookedCnPipeline.freightCharges.grandTotal.toLocaleString()}</span></div>
+            </div>
+
+            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Operational Next Steps:</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => printThermalCounterSlip(bookedCnPipeline)}
+                className="p-3 bg-white border border-slate-200 hover:border-blue-400 rounded-xl text-left flex items-center gap-2.5 transition-all shadow-2xs group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <Printer className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold block text-slate-800">3&quot; Thermal POS</span>
+                  <span className="text-[10px] text-slate-500">Counter receipt</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => printLaserA4Cn(bookedCnPipeline)}
+                className="p-3 bg-white border border-slate-200 hover:border-blue-400 rounded-xl text-left flex items-center gap-2.5 transition-all shadow-2xs group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <Printer className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold block text-slate-800">Laser A4 Copy</span>
+                  <span className="text-[10px] text-slate-500">Code128 Barcode</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => printDotMatrixSheet(bookedCnPipeline)}
+                className="p-3 bg-white border border-slate-200 hover:border-blue-400 rounded-xl text-left flex items-center gap-2.5 transition-all shadow-2xs group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                  <Printer className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold block text-slate-800">Dot-Matrix Feed</span>
+                  <span className="text-[10px] text-slate-500">Tractor carbon copy</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setBookedCnPipeline(null);
+                  router.push("/dashboard/operations/tripsheets");
+                }}
+                className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-left flex items-center gap-2.5 transition-all shadow-xs group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-white/20 text-white flex items-center justify-center shrink-0">
+                  <Truck className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold block">Assign Tripsheet ➔</span>
+                  <span className="text-[10px] text-blue-100">Vehicle dispatch</span>
+                </div>
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`*Atteka Logistics Docket Booking Confirmation*\nCN Number: ${bookedCnPipeline.cnNumber}\nConsignor: ${bookedCnPipeline.consignor.name}\nFrom: ${bookedCnPipeline.originBranch} to ${bookedCnPipeline.destinationBranch}\nTrack your shipment live at: https://ateka.com/track`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-600 font-bold hover:underline flex items-center gap-1"
+              >
+                <Send className="w-3.5 h-3.5" /> WhatsApp to Consignor
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setBookedCnPipeline(null);
+                  router.push("/dashboard/operations/dockets");
+                }}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg"
+              >
+                Go to Docket List
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

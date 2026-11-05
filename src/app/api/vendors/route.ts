@@ -41,3 +41,20 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PUT(req: NextRequest) {
+  try {
+    await connectToDatabase();
+    const body = await req.json();
+    const { _id, vendorCode, ...updates } = body;
+
+    const query = _id ? { _id } : { vendorCode };
+    const updated = await Vendor.findOneAndUpdate(query, { $set: updates }, { new: true });
+    if (!updated) {
+      return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+    }
+    return NextResponse.json({ success: true, message: "Vendor updated", data: updated });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
