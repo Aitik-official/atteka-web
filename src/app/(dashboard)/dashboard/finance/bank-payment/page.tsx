@@ -69,11 +69,7 @@ export default function BankPaymentPage() {
         moduleCode="C782"
         title="IndusInd Bank Online Payment Process"
         subtitle="Finance • H2HOnlineBankPayment.aspx • Host-to-Host (H2H) Corporate Banking Gateway"
-        breadcrumbs={[
-          { label: "Finance", href: "/dashboard" },
-          { label: "Bank Payment (H2H)" }
-        ]}
-        actions={<SimulatedBadge text="INDUSIND H2H ADAPTER" />}
+actions={<SimulatedBadge text="INDUSIND H2H ADAPTER" />}
       />
 
       {errorMsg && (

@@ -22,14 +22,14 @@ export default function TrackingDocumentsHubPage() {
         {/* Row 1 */}
         <WcvActionCard
           title="Docket Tracking"
-          description="Docket Tracking"
-          href="/dashboard/operations/tracking"
+          description="Track CN by Docket / Invoice / DN No"
+          href="/dashboard/tracking/documents/cn-tracking"
           icon={Search}
         />
         <WcvActionCard
           title="New CN Tracking"
-          description="New Docket Tracking"
-          href="/dashboard/operations/tracking"
+          description="View & Track — date range, document type, docket results"
+          href="/dashboard/tracking/documents/new-cn-tracking"
           icon={FileText}
         />
         <WcvActionCard
@@ -40,8 +40,8 @@ export default function TrackingDocumentsHubPage() {
         />
         <WcvActionCard
           title="Track Documents [CN/TC/THC/PDC]"
-          description="Track Documents [CN/TC/THC/PDC]"
-          href="/dashboard/operations/tracking"
+          description="Track by date / type or system / manual document no"
+          href="/dashboard/tracking/documents/track-documents"
           icon={Layers}
         />
 

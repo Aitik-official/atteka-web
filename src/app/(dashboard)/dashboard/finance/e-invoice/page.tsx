@@ -96,11 +96,7 @@ export default function EInvoicePage() {
         moduleCode="C655"
         title="Generate E-Invoice (IRN Engine)"
         subtitle="Finance • GenrateIRN.aspx • Government GST / NIC E-Invoice System Interface"
-        breadcrumbs={[
-          { label: "Finance", href: "/dashboard" },
-          { label: "E-Invoice Engine" }
-        ]}
-        actions={<SimulatedBadge text="GST IRP SIMULATION" />}
+actions={<SimulatedBadge text="GST IRP SIMULATION" />}
       />
 
       {/* Authentic WebCoreVision Ribbon Header matching Image 1 */}
@@ -111,21 +107,25 @@ export default function EInvoicePage() {
         <WcvActionCard
           title="Authentication Token"
           description="Authentication Token"
+          href="/dashboard/finance/e-invoice/authentication-token"
           icon={Key}
         />
         <WcvActionCard
           title="Genrate IRN"
           description="Genrate IRN"
+          href="/dashboard/finance/e-invoice/generate-irn"
           icon={QrCode}
         />
         <WcvActionCard
           title="Cancel IRN"
           description="Cancel IRN"
+          href="/dashboard/finance/e-invoice/cancel-irn"
           icon={XCircle}
         />
         <WcvActionCard
           title="Genrate Credit Note IRN"
           description="Genrate Credit Note IRN"
+          href="/dashboard/finance/e-invoice/generate-credit-note-irn"
           icon={FileSpreadsheet}
         />
       </div>

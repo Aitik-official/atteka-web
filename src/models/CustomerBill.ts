@@ -18,11 +18,15 @@ export interface ICustomerBill extends Document {
   dateFrom?: string;
   dateTo?: string;
   billType?: string;
+  billFormat?: string;
   topsheetNo?: string;
   mrsNo?: string;
   mrsDate?: Date;
   consignments: string[];
   lineItems?: any[];
+  customChargeColumns?: any[];
+  podAttachments?: { docketNo: string; podUrl: string; podFileName?: string }[];
+  preparedBy?: string;
   totalFreight: number;
   taxAmount: number;
   igst?: number;
@@ -60,11 +64,15 @@ const CustomerBillSchema = new Schema<ICustomerBill>(
     dateFrom: { type: String },
     dateTo: { type: String },
     billType: { type: String, default: "Freight Bill" },
+    billFormat: { type: String, default: "E-Invoice Bill Formate" },
     topsheetNo: { type: String },
     mrsNo: { type: String },
     mrsDate: { type: Date },
     consignments: [{ type: String }],
     lineItems: [{ type: Schema.Types.Mixed }],
+    customChargeColumns: [{ type: Schema.Types.Mixed }],
+    podAttachments: [{ type: Schema.Types.Mixed }],
+    preparedBy: { type: String },
     totalFreight: { type: Number, required: true },
     taxAmount: { type: Number, required: true },
     igst: { type: Number, default: 0 },

@@ -83,43 +83,43 @@ export default function MREntryPage() {
         <WcvActionCard
           title="Generate Bill MR With Rebate"
           description="Generate Bill MR With Rebate"
-          href="#mr-entry-form"
+          href="/dashboard/finance/mr-entry/generate-bill-mr-rebate"
           icon={Receipt}
         />
         <WcvActionCard
           title="Generate Bill MR."
           description="Generate Bill MR."
-          href="#mr-entry-form"
+          href="/dashboard/finance/mr-entry/generate-bill-mr"
           icon={Receipt}
         />
         <WcvActionCard
           title="Generate Paid/Topay MR."
           description="Generate Paid/Topay MR."
-          href="#mr-entry-form"
+          href="/dashboard/finance/mr-entry/paid-topay-mr"
           icon={Receipt}
         />
         <WcvActionCard
           title="View Print MR"
           description="View Print MR"
-          href="#mr-history"
+          href="/dashboard/finance/mr-entry/view-print-mr"
           icon={Printer}
         />
         <WcvActionCard
           title="Credit Note"
           description="Credit Note"
-          href="#mr-entry-form"
+          href="/dashboard/finance/mr-entry/credit-note"
           icon={FileSpreadsheet}
         />
         <WcvActionCard
           title="View Print Credit Note"
           description="View Print Credit Note"
-          href="#mr-history"
+          href="/dashboard/finance/mr-entry/view-print-credit-note"
           icon={Printer}
         />
         <WcvActionCard
           title="Credit Note New"
           description="Credit Note New"
-          href="#mr-entry-form"
+          href="/dashboard/finance/mr-entry/credit-note-new"
           icon={PlusCircle}
         />
       </div>
@@ -130,11 +130,7 @@ export default function MREntryPage() {
           moduleCode="C202"
           title="Money Receipt (MR) Entry & Collection"
           subtitle="Finance • BillMR_RebateNew.aspx • Customer Bill Collections, Rebates & Ledger Credits"
-          breadcrumbs={[
-            { label: "Finance", href: "/dashboard" },
-            { label: "Money Receipt (MR)" }
-          ]}
-        />
+/>
       </div>
 
       {success && (

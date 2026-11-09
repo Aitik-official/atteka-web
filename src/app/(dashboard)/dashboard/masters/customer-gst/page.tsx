@@ -279,12 +279,7 @@ export default function CustomerGstPage() {
         moduleCode="C062"
         title="Customer GST Registration"
         subtitle="Masters • CustGSTRegsList.aspx & CustGSTRegsAdd.aspx • Multi-State GSTIN & Branch Profiles"
-        breadcrumbs={[
-          { label: "Masters", href: "/dashboard" },
-          { label: "Business Partners", href: "/dashboard/admin/business-partners" },
-          { label: "Customer GST Registration" }
-        ]}
-        actions={
+actions={
           <div className="flex items-center gap-2">
             <a
               href="/dashboard/masters/customers"

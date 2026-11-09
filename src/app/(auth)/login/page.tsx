@@ -3,7 +3,14 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Eye, EyeOff, ShieldCheck, Lock, User, RefreshCw } from "lucide-react";
+import { Eye, EyeOff, Lock, User, RefreshCw } from "lucide-react";
+
+function safeNextPath(raw: string | null): string {
+  if (!raw) return "/dashboard";
+  // Only allow internal app paths (block open redirects)
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
+  return raw;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -77,7 +84,8 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.push(safeNextPath(next));
     } catch {
       setError("Connection error. Please try again.");
       setLoading(false);

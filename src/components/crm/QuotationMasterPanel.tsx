@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { WcvRibbonHeader } from "@/components/common/WcvActionCard";
 import { exportToCsv, stampFilename } from "@/lib/exportCsv";
+import { toast } from "@/lib/toastBus";
 
 const SERVICE_TYPES = ["FTL", "LTL", "PART LOAD", "EXPRESS", "DEDICATED"];
 const LOCATIONS = [
@@ -236,6 +237,7 @@ export function QuotationMasterPanel({ onBack }: Props) {
       const data = await res.json();
       if (res.ok && data.success) {
         setFeedback({ type: "success", message: data.message });
+        toast.success(data.message || "Quotation saved.");
         setSelectedCustomer(customerName.trim().toUpperCase());
         setShowForm(false);
         await loadCustomers();
@@ -245,10 +247,14 @@ export function QuotationMasterPanel({ onBack }: Props) {
         const listData = await listRes.json();
         if (listData.success) setRows(listData.data || []);
       } else {
-        setFeedback({ type: "error", message: data.error || "Failed to save quotation." });
+        const msg = data.error || "Failed to save quotation.";
+        setFeedback({ type: "error", message: msg });
+        toast.error(msg);
       }
     } catch {
-      setFeedback({ type: "error", message: "Network error while saving quotation." });
+      const msg = "Network error while saving quotation.";
+      setFeedback({ type: "error", message: msg });
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

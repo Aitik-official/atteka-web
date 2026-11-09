@@ -32,11 +32,7 @@ export default function ReportsHubPage() {
         moduleCode="C291"
         title="Financial Reports & Trial Balance"
         subtitle="Reports • TrailBalance.aspx & ProfitLoss.aspx (C292) • General Ledger balances, revenue, and trip costs"
-        breadcrumbs={[
-          { label: "Reports", href: "/dashboard" },
-          { label: "Trial Balance" }
-        ]}
-        actions={
+actions={
           <button
             onClick={() => window.print()}
             className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"

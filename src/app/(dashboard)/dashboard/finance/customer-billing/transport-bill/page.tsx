@@ -20,6 +20,7 @@ import {
   X
 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
+import { toast } from "@/lib/toastBus";
 
 type Step = 1 | 2 | 3;
 
@@ -126,6 +127,7 @@ export default function TransportBillPage() {
 
   // Step 3 bill fields
   const [manualBillNo, setManualBillNo] = useState("");
+  const [billFormat, setBillFormat] = useState("E-Invoice Bill Formate");
   const [partyBillingAddress, setPartyBillingAddress] = useState("");
   const [gstin, setGstin] = useState("");
   const [destinationAddress, setDestinationAddress] = useState("");
@@ -197,6 +199,7 @@ export default function TransportBillPage() {
     setGstin(selectedCustomer.gstin || gstin);
     setCity(selectedCustomer.city || city);
     setCreditLimit(Number(selectedCustomer.creditLimit) || 0);
+    if (selectedCustomer.billFormat) setBillFormat(selectedCustomer.billFormat);
   }, [selectedCustomer]);
 
   const applyStep1Filter = () => {
@@ -296,17 +299,20 @@ export default function TransportBillPage() {
           );
         setAllConsignments(patch);
         setFilteredDockets(patch);
-        setFeedback({
-          type: "success",
-          message: `POD uploaded for ${uploadingPodFor} only. Other dockets still need their own POD.`
-        });
+        const msg = `POD uploaded for ${uploadingPodFor}. Other dockets still need their own POD.`;
+        setFeedback({ type: "success", message: msg });
+        toast.success(msg, { code: uploadingPodFor, title: "Docket POD" });
         setUploadingPodFor(null);
         setPodFile(null);
       } else {
-        setFeedback({ type: "error", message: data.error || "POD upload failed." });
+        const msg = data.error || "POD upload failed.";
+        setFeedback({ type: "error", message: msg });
+        toast.error(msg);
       }
     } catch {
-      setFeedback({ type: "error", message: "Network error while uploading POD." });
+      const msg = "Network error while uploading POD.";
+      setFeedback({ type: "error", message: msg });
+      toast.error(msg);
     } finally {
       setPodUploading(false);
     }
@@ -523,6 +529,7 @@ export default function TransportBillPage() {
           gstBranch,
           dateFrom,
           dateTo,
+          billFormat,
           consignmentIds: chargeRows.map((r) => r.docketNo),
           lineItems: chargeRows,
           customChargeColumns: customColumns,
@@ -540,7 +547,12 @@ export default function TransportBillPage() {
         setGeneratedBillNo(billNo);
         setFeedback({
           type: "success",
-          message: `Transport Bill ${billNo} generated successfully for ${chargeRows.length} CN(s). Copy the bill number below.`
+          message: `Transport Bill generated successfully for ${chargeRows.length} CN(s).`
+        });
+        toast.sticky(`Transport Bill generated for ${chargeRows.length} CN(s). Keep this number for reference.`, {
+          type: "success",
+          title: "Bill Number",
+          code: billNo
         });
         const billed = new Set(chargeRows.map((r) => r.docketNo));
         setAllConsignments((prev) => prev.filter((c) => !billed.has(c.docketNo)));
@@ -548,10 +560,14 @@ export default function TransportBillPage() {
         setSelectedDockets([]);
         setChargeRows([]);
       } else {
-        setFeedback({ type: "error", message: data.error || "Bill generation failed." });
+        const msg = data.error || "Bill generation failed.";
+        setFeedback({ type: "error", message: msg });
+        toast.error(msg);
       }
     } catch {
-      setFeedback({ type: "error", message: "Network error while confirming bill generation." });
+      const msg = "Network error while confirming bill generation.";
+      setFeedback({ type: "error", message: msg });
+      toast.error(msg);
     } finally {
       setGenerating(false);
     }
@@ -573,12 +589,7 @@ export default function TransportBillPage() {
         moduleCode="C194"
         title="Transport Bill"
         subtitle="Finance • Customer Billing • BillGenrateStep1.aspx → Docket Select → Confirm Bill Generation"
-        breadcrumbs={[
-          { label: "Finance", href: "/dashboard" },
-          { label: "Customer Billing", href: "/dashboard/finance/customer-billing" },
-          { label: "Transport Bill" }
-        ]}
-        actions={
+actions={
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -643,9 +654,9 @@ export default function TransportBillPage() {
                   onClick={async () => {
                     try {
                       await navigator.clipboard.writeText(generatedBillNo);
-                      setFeedback({ type: "success", message: `Bill number ${generatedBillNo} copied to clipboard.` });
+                      toast.success(`Bill number ${generatedBillNo} copied to clipboard.`);
                     } catch {
-                      setFeedback({ type: "error", message: "Could not copy. Select and copy the bill number manually." });
+                      toast.error("Could not copy. Select and copy the bill number manually.");
                     }
                   }}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-600 hover:bg-green-700 text-white text-[11px] font-bold"
@@ -1033,6 +1044,18 @@ export default function TransportBillPage() {
                 placeholder="Optional manual bill number"
                 className="w-full h-9 px-3 border border-slate-200 rounded-lg font-mono"
               />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Bill Format</label>
+              <select
+                value={billFormat}
+                onChange={(e) => setBillFormat(e.target.value)}
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white"
+              >
+                <option value="E-Invoice Bill Formate">E-Invoice Bill Formate</option>
+                <option value="Standard Bill Format">Standard Bill Format</option>
+                <option value="Thermal Format">Thermal Format</option>
+              </select>
             </div>
             <div className="md:col-span-2 lg:col-span-1">
               <label className="block font-semibold text-slate-700 mb-1">Party Billing Address</label>

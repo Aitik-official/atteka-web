@@ -15,6 +15,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
+import { BILL_FORMATS, printCustomerBill } from "@/lib/billPrintFormats";
 
 function todayInput() {
   return new Date().toISOString().slice(0, 10);
@@ -33,42 +34,6 @@ function formatBillDate(value?: string | Date) {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function printBillPdf(bill: any) {
-  const win = window.open("", "_blank", "noopener,noreferrer,width=900,height=1100");
-  if (!win) return;
-  const amount = Number(bill.totalFreight || bill.amount || 0);
-  const gst = Number(bill.taxAmount || bill.gstAmount || 0);
-  const total = Number(bill.grandTotal || amount + gst);
-  win.document.write(`<!DOCTYPE html><html><head><title>${bill.billNumber}</title>
-    <style>
-      body{font-family:Arial,sans-serif;padding:28px;color:#0f172a}
-      h1{font-size:18px;margin:0 0 4px}
-      .muted{color:#64748b;font-size:12px}
-      table{width:100%;border-collapse:collapse;margin-top:18px;font-size:12px}
-      th,td{border:1px solid #cbd5e1;padding:8px;text-align:left}
-      th{background:#f8fafc}
-      .tot{font-weight:700}
-      @media print{button{display:none}}
-    </style></head><body>
-    <h1>Atteka Logistics — Transport Bill</h1>
-    <div class="muted">Bill No: <strong>${bill.billNumber || ""}</strong> &nbsp;|&nbsp; Date: ${formatBillDate(bill.billDate)}</div>
-    <div class="muted">Party: <strong>${bill.customerName || bill.partyName || ""}</strong></div>
-    <div class="muted">Branch: ${bill.billingBranch || bill.collectionBranch || "ALC1"} &nbsp;|&nbsp; Type: ${bill.billType || "Freight Bill"}</div>
-    <table>
-      <thead><tr><th>Description</th><th>Amount</th></tr></thead>
-      <tbody>
-        <tr><td>Freight / Taxable</td><td>₹ ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td></tr>
-        <tr><td>GST</td><td>₹ ${gst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td></tr>
-        <tr class="tot"><td>Total</td><td>₹ ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td></tr>
-      </tbody>
-    </table>
-    <p class="muted" style="margin-top:16px">CNs: ${(bill.consignments || []).join(", ") || "-"}</p>
-    <p class="muted">E-Invoice / IRN: ${bill.irnDetails?.irn || bill.irn || "-"}</p>
-    <button onclick="window.print()" style="margin-top:20px;padding:8px 14px">Print PDF</button>
-    </body></html>`);
-  win.document.close();
-}
-
 export default function ViewPrintBillsPage() {
   const [step, setStep] = useState<1 | 2>(1);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -79,7 +44,7 @@ export default function ViewPrintBillsPage() {
   const [dateTo, setDateTo] = useState(todayInput());
   const [billingParty, setBillingParty] = useState("");
   const [billType, setBillType] = useState("Freight");
-  const [billFormat, setBillFormat] = useState("E-Invoice Bill Formate");
+  const [billFormat, setBillFormat] = useState<string>(BILL_FORMATS[0]);
   const [billNo, setBillNo] = useState("");
   const [manualBillNo, setManualBillNo] = useState("");
   const [docketNo, setDocketNo] = useState("");
@@ -282,12 +247,7 @@ export default function ViewPrintBillsPage() {
         moduleCode="C194"
         title="View / Print Bills"
         subtitle="Finance • Customer Billing • ViewPrintBills.aspx"
-        breadcrumbs={[
-          { label: "Finance", href: "/dashboard" },
-          { label: "Customer Billing", href: "/dashboard/finance/customer-billing" },
-          { label: "View / Print Bills" }
-        ]}
-        actions={
+actions={
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -387,9 +347,11 @@ export default function ViewPrintBillsPage() {
               onChange={(e) => setBillFormat(e.target.value)}
               className="w-full h-10 px-3 border border-blue-200 rounded-lg text-xs bg-white"
             >
-              <option value="E-Invoice Bill Formate">E-Invoice Bill Formate</option>
-              <option value="Standard Bill Format">Standard Bill Format</option>
-              <option value="Thermal Format">Thermal Format</option>
+              {BILL_FORMATS.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -608,7 +570,7 @@ export default function ViewPrintBillsPage() {
                             <td className="py-2.5 px-3">
                               <button
                                 type="button"
-                                onClick={() => printBillPdf(b)}
+                                onClick={() => printCustomerBill(b, billFormat)}
                                 className="text-blue-700 font-mono font-semibold hover:underline inline-flex items-center gap-1"
                               >
                                 <Download className="w-3 h-3" />
@@ -638,7 +600,7 @@ export default function ViewPrintBillsPage() {
                   <div className="font-mono">₹{Number(b.grandTotal || 0).toLocaleString()}</div>
                   <button
                     type="button"
-                    onClick={() => printBillPdf(b)}
+                    onClick={() => printCustomerBill(b, billFormat)}
                     className="mt-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[11px] font-bold"
                   >
                     Print PDF

@@ -17,19 +17,19 @@ export default function ChequeManagementHubPage() {
         <WcvActionCard
           title="On a/c Cheque Receipt"
           description="On a/c Cheque Receipt"
-          href="/dashboard/finance/mr-entry"
+          href="/dashboard/finance/cheque-management/on-account-cheque-receipt"
           icon={Receipt}
         />
         <WcvActionCard
           title="On A/C Cheque Deposit"
           description="On A/C Cheque Deposit"
-          href="/dashboard/finance/bank-statement"
+          href="/dashboard/finance/cheque-management/on-account-cheque-deposit"
           icon={Landmark}
         />
         <WcvActionCard
           title="Assign Cheque Book"
           description="Assign Cheque Book"
-          href="/dashboard/finance/bank-statement"
+          href="/dashboard/finance/cheque-management/assign-cheque-book"
           icon={BookOpen}
         />
       </div>

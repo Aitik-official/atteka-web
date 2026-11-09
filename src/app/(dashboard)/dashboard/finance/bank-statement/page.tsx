@@ -30,11 +30,7 @@ export default function BankStatementPage() {
         moduleCode="C850"
         title="Bank Statement & BRS Viewer"
         subtitle="Finance • BankStatement.aspx • IndusInd Corporate Account Statement & Bank Reconciliation"
-        breadcrumbs={[
-          { label: "Finance", href: "/dashboard" },
-          { label: "Bank Statement" }
-        ]}
-        actions={<SimulatedBadge text="STATEMENT ADAPTER" />}
+actions={<SimulatedBadge text="STATEMENT ADAPTER" />}
       />
 
       {/* Account Header Card */}

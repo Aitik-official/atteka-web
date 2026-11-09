@@ -72,6 +72,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Operations",
       icon: Users2,
       submodules: [
+        { label: "Operations Hub", route: "/dashboard/operations", code: "C001" },
         { label: "Freight Booking (C009)", route: "/dashboard/operations/freight-booking", code: "C009" },
         { label: "CN Operations [System]", route: "/dashboard/operations/cn-operations", code: "C019" },
         { label: "TripSheet Operations", route: "/dashboard/operations/tripsheets", code: "C035" },
@@ -83,6 +84,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Finance",
       icon: Landmark,
       submodules: [
+        { label: "Finance Hub", route: "/dashboard/finance", code: "C002" },
         { label: "Vendor Billing", route: "/dashboard/finance/vendor-billing", code: "C181" },
         { label: "Customer Billing", route: "/dashboard/finance/customer-billing", code: "C194" },
         { label: "Genrate E-Invoice (IRN)", route: "/dashboard/finance/e-invoice", code: "C655" },
@@ -98,6 +100,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "CRM",
       icon: UserCheck,
       submodules: [
+        { label: "CRM Hub", route: "/dashboard/crm", code: "C003" },
         { label: "Customer Master", route: "/dashboard/masters/customers", code: "C061" },
         { label: "Customer GST Registration", route: "/dashboard/masters/customer-gst", code: "C062" },
         { label: "Lead Details", route: "/dashboard/crm/lead-details", code: "C504" },
@@ -110,6 +113,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Fleet",
       icon: Truck,
       submodules: [
+        { label: "Fleet Hub", route: "/dashboard/fleet", code: "C158" },
         { label: "Trip Management", route: "/dashboard/fleet/trip-management", code: "C749" },
         { label: "Fuel and Toll Management", route: "/dashboard/fleet/fuel-toll", code: "C750" }
       ]
@@ -119,6 +123,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Tracking",
       icon: MapPin,
       submodules: [
+        { label: "Tracking Hub", route: "/dashboard/tracking", code: "C004" },
         { label: "Tracking Douments", route: "/dashboard/tracking/documents", code: "C111" },
         { label: "Track Customer/Vendor", route: "/dashboard/tracking/party", code: "C485" }
       ]
@@ -128,6 +133,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Exceptional",
       icon: ClipboardCheck,
       submodules: [
+        { label: "Exceptional Hub", route: "/dashboard/exceptional", code: "C136" },
         { label: "Operation", route: "/dashboard/operations/dockets", code: "C117" },
         { label: "Finance", route: "/dashboard/exceptional/finance", code: "C132" },
         { label: "Bank Reconciliation Statment", route: "/dashboard/exceptional/brs", code: "C520" },
@@ -139,6 +145,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Reports",
       icon: BarChart2,
       submodules: [
+        { label: "Reports Hub", route: "/dashboard/reports", code: "C006" },
         { label: "Operation Report", route: "/dashboard/reports/operations", code: "C084" },
         { label: "Finance", route: "/dashboard/reports/finance", code: "C085" },
         { label: "Accounts", route: "/dashboard/reports/accounts", code: "C086" },
@@ -153,6 +160,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       name: "Admin",
       icon: Settings,
       submodules: [
+        { label: "Admin Hub", route: "/dashboard/admin", code: "C007" },
         { label: "Company Structure", route: "/dashboard/admin/company-structure", code: "C052" },
         { label: "Business Partners", route: "/dashboard/admin/business-partners", code: "C060" },
         { label: "Operations", route: "/dashboard/admin/operations", code: "C065" },

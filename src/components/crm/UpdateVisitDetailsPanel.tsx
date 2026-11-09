@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, Download, RotateCcw, Save, Search, X } from "lucide-react";
 import { WcvRibbonHeader } from "@/components/common/WcvActionCard";
 import { exportToCsv, stampFilename } from "@/lib/exportCsv";
+import { toast } from "@/lib/toastBus";
 
 const PROSPECT_STATUSES = [
   "Hot",
@@ -178,7 +179,9 @@ export function UpdateVisitDetailsPanel({ onBack }: Props) {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setFeedback({ type: "success", message: data.message || "Visit details saved." });
+        const msg = data.message || "Visit details saved.";
+        setFeedback({ type: "success", message: msg });
+        toast.success(msg);
         const keepLead = {
           ...emptyForm(),
           leadCode: payload.leadCode,
@@ -189,10 +192,14 @@ export function UpdateVisitDetailsPanel({ onBack }: Props) {
         setForm(keepLead);
         loadVisits(payload.leadCode);
       } else {
-        setFeedback({ type: "error", message: data.error || "Failed to save visit." });
+        const msg = data.error || "Failed to save visit.";
+        setFeedback({ type: "error", message: msg });
+        toast.error(msg);
       }
     } catch {
-      setFeedback({ type: "error", message: "Network error while saving visit." });
+      const msg = "Network error while saving visit.";
+      setFeedback({ type: "error", message: msg });
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

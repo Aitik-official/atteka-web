@@ -109,11 +109,7 @@ export default function DocketNumberMasterPage() {
         moduleCode="C066"
         title="Docket Number Master"
         subtitle="Admin / Masters • Stationery series & available CN / docket stock pool"
-        breadcrumbs={[
-          { label: "Admin", href: "/dashboard/admin/operations" },
-          { label: "Docket Number Master" }
-        ]}
-      />
+/>
 
       {feedback && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold">

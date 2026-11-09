@@ -76,7 +76,7 @@ const INITIAL_FORM: CustomerFormData = {
   creditPeriod: 30,
   contract: "Standard",
   skipPod: false,
-  billFormat: "Standard",
+  billFormat: "E-Invoice Bill Formate",
   address: "",
   city: "",
   pinCode: "",
@@ -226,7 +226,7 @@ export default function CustomerMasterPage() {
       creditPeriod: cust.creditPeriod || 30,
       contract: cust.contract || "Standard",
       skipPod: Boolean(cust.skipPod),
-      billFormat: cust.billFormat || "Standard",
+      billFormat: cust.billFormat || "E-Invoice Bill Formate",
       address: cust.address || "",
       city: cust.city || "",
       pinCode: cust.pinCode || cust.pincode || "",
@@ -261,11 +261,7 @@ export default function CustomerMasterPage() {
         moduleCode="C061"
         title="Customer Master"
         subtitle="Manage customer details, GST, credit & contact information • Digital Signature & Billing Profile"
-        breadcrumbs={[
-          { label: "Masters", href: "/dashboard" },
-          { label: "Customer Master" }
-        ]}
-        actions={
+actions={
           <div className="flex items-center gap-2">
             <a
               href="/dashboard/masters/customer-gst"
@@ -581,11 +577,9 @@ export default function CustomerMasterPage() {
                     onChange={(e) => handleInputChange("billFormat", e.target.value)}
                     className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium text-slate-700"
                   >
-                    <option value="Standard">Standard Invoice</option>
-                    <option value="Consolidated">Consolidated Docket Bill</option>
-                    <option value="Detailed Summary">Detailed Summary Bill</option>
-                    <option value="GST Matrix">GST Tax Matrix Format</option>
-                    <option value="Custom Format">Custom Corporate Template</option>
+                    <option value="E-Invoice Bill Formate">E-Invoice Bill Formate</option>
+                    <option value="Standard Bill Format">Standard Bill Format</option>
+                    <option value="Thermal Format">Thermal Format</option>
                   </select>
                 </div>
               </div>
@@ -960,7 +954,7 @@ export default function CustomerMasterPage() {
 
                     {/* Bill Format */}
                     <td className="py-2.5 px-3.5 text-slate-700 text-[11px]">
-                      {c.billFormat || "Standard"}
+                      {c.billFormat || "E-Invoice Bill Formate"}
                     </td>
 
                     {/* Active */}
@@ -1068,7 +1062,7 @@ export default function CustomerMasterPage() {
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-500">Bill Format:</span>
-                  <span className="font-semibold text-slate-800">{dashboardCustomer.billFormat || "Standard"}</span>
+                  <span className="font-semibold text-slate-800">{dashboardCustomer.billFormat || "E-Invoice Bill Formate"}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-500">Primary Contact & Phone:</span>

@@ -1,16 +1,13 @@
 import React from "react";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import type { BreadcrumbItem } from "@/lib/breadcrumbs";
 
-export interface BreadcrumbItem {
-  label: string;
-  href?: string;
-}
+export type { BreadcrumbItem };
 
 interface PageHeaderProps {
   moduleCode?: string;
   title: string;
   subtitle?: string;
+  /** Deprecated: global DashboardBreadcrumbs covers navigation. Kept for API compat. */
   breadcrumbs?: BreadcrumbItem[];
   actions?: React.ReactNode;
   badgeColor?: "blue" | "emerald" | "amber" | "purple" | "slate";
@@ -20,10 +17,11 @@ export function PageHeader({
   moduleCode,
   title,
   subtitle,
-  breadcrumbs,
+  breadcrumbs: _breadcrumbs,
   actions,
   badgeColor = "blue"
 }: PageHeaderProps) {
+  void _breadcrumbs;
   const badgeColors = {
     blue: "bg-blue-100 text-blue-800 border-blue-200",
     emerald: "bg-emerald-100 text-emerald-800 border-emerald-200",
@@ -34,27 +32,6 @@ export function PageHeader({
 
   return (
     <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-2xs mb-4">
-      {/* Breadcrumb row */}
-      {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-2 overflow-x-auto whitespace-nowrap">
-          <Link href="/dashboard" className="hover:text-slate-700 transition-colors">
-            Home
-          </Link>
-          {breadcrumbs.map((crumb, idx) => (
-            <React.Fragment key={idx}>
-              <ChevronRight className="w-3 h-3 text-slate-300 shrink-0" />
-              {crumb.href ? (
-                <Link href={crumb.href} className="hover:text-slate-700 transition-colors">
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span className="text-slate-600 font-medium truncate">{crumb.label}</span>
-              )}
-            </React.Fragment>
-          ))}
-        </nav>
-      )}
-
       {/* Main Title & Action Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0 flex-1">

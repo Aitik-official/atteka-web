@@ -12,6 +12,7 @@ import {
   Truck
 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
+import { toast } from "@/lib/toastBus";
 
 interface DocketLine {
   id: string;
@@ -247,19 +248,28 @@ export default function PrepareLoadingSlipPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        const tripNo = data.data?.tripSheetNo || tripSheetNo || "";
         setFeedback({
           type: "success",
           message: `${data.message}. They now appear on Bill Generation — upload POD before confirming the bill.`
         });
+        toast.sticky(
+          `${data.message}. Dockets are ready on Bill Generation — upload POD before confirming the bill.`,
+          { type: "success", title: "Trip Sheet No", code: tripNo }
+        );
         // Remove assigned from local pools
         const assigned = new Set(selected.map((d) => d.docketNo));
         setBookedCns((prev) => prev.filter((c) => !assigned.has(c.docketNo)));
         setDocketLines([]);
       } else {
-        setFeedback({ type: "error", message: data.error || "Failed to prepare loading slip." });
+        const msg = data.error || "Failed to prepare loading slip.";
+        setFeedback({ type: "error", message: msg });
+        toast.error(msg);
       }
     } catch {
-      setFeedback({ type: "error", message: "Network error while saving trip sheet." });
+      const msg = "Network error while saving trip sheet.";
+      setFeedback({ type: "error", message: msg });
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -271,12 +281,7 @@ export default function PrepareLoadingSlipPage() {
         moduleCode="C709"
         title="Prepare Trip Sheet"
         subtitle="Operations · Freight & Vehicle Management · Prepare Loading Slip"
-        breadcrumbs={[
-          { label: "Operations", href: "/dashboard" },
-          { label: "TripSheet Operations", href: "/dashboard/operations/tripsheets" },
-          { label: "Prepare Loading Slip" }
-        ]}
-        actions={
+actions={
           <Link
             href="/dashboard/operations/tripsheets"
             className="px-3 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 font-medium inline-flex items-center gap-1.5"

@@ -79,11 +79,7 @@ export default function VendorMasterPage() {
         moduleCode="C063"
         title="Vendor Master & TDS Management"
         subtitle="Masters • VendorListMaster.aspx & VendorAproval.aspx (C615) • Fleet suppliers, TDS rates, and bank accounts"
-        breadcrumbs={[
-          { label: "Masters", href: "/dashboard" },
-          { label: "Vendor Master" }
-        ]}
-        actions={
+actions={
           <button
             onClick={() => setShowAdd(true)}
             className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"

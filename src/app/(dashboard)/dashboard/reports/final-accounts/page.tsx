@@ -22,25 +22,25 @@ export default function FinalAccountsReportsHubPage() {
         <WcvActionCard
           title="Trial Balance"
           description="Trial Balance Report"
-          href="/dashboard/finance/bank-statement"
+          href="/dashboard/reports/final-accounts/trial-balance"
           icon={Scale}
         />
         <WcvActionCard
           title="Profit & Loss Statement"
           description="Profit & Loss statement for various locations and company"
-          href="/dashboard/finance/bank-statement"
+          href="/dashboard/reports/final-accounts/profit-loss"
           icon={TrendingUp}
         />
         <WcvActionCard
           title="Balance Sheet"
           description="Balance Sheet of Company"
-          href="/dashboard/finance/bank-statement"
+          href="/dashboard/reports/final-accounts/balance-sheet"
           icon={FileSpreadsheet}
         />
         <WcvActionCard
           title="New Balance Sheet"
           description="Balance Sheet of Company"
-          href="/dashboard/finance/bank-statement"
+          href="/dashboard/reports/final-accounts/new-balance-sheet"
           icon={PieChart}
         />
 
@@ -48,7 +48,7 @@ export default function FinalAccountsReportsHubPage() {
         <WcvActionCard
           title="New Trial Balance"
           description="New Trial Balance Report"
-          href="/dashboard/finance/bank-statement"
+          href="/dashboard/reports/final-accounts/new-trial-balance"
           icon={BarChart3}
         />
       </div>

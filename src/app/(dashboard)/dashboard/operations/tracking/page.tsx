@@ -61,11 +61,7 @@ export default function TrackingPage() {
         moduleCode="C111"
         title="Live Multi-Document Tracking"
         subtitle="Operations • Reports/TrackDocument.aspx • Real-time status pipeline across all corridors"
-        breadcrumbs={[
-          { label: "Operations", href: "/dashboard" },
-          { label: "Document Tracking" }
-        ]}
-      />
+/>
 
       {/* Query Bar */}
       <SectionCard title="Search & Trace Query" icon={Search} badge="LOOKUP">

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { WcvRibbonHeader } from "@/components/common/WcvActionCard";
 import { exportToCsv, stampFilename } from "@/lib/exportCsv";
+import { toast } from "@/lib/toastBus";
 
 const GST_STATE_MAP: Record<string, string> = {
   "01": "JAMMU AND KASHMIR",
@@ -240,20 +241,24 @@ export function VendorGstRegistrationPanel({ onBack }: Props) {
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccessMsg(
-          isUpdate
-            ? `Vendor GST record for ${formData.partyName} updated successfully!`
-            : `Vendor GST record for ${formData.partyName} (${formData.gstNo}) saved successfully!`
-        );
+        const msg = isUpdate
+          ? `Vendor GST record for ${formData.partyName} updated successfully!`
+          : `Vendor GST record for ${formData.partyName} saved successfully!`;
+        setSuccessMsg(msg);
+        toast.success(msg, { code: formData.gstNo, title: "GST No" });
         handleReset();
         setShowAddForm(false);
         loadRecords();
         setTimeout(() => setSuccessMsg(""), 5000);
       } else {
-        setErrorMsg(data.error || "Failed to save GST details");
+        const msg = data.error || "Failed to save GST details";
+        setErrorMsg(msg);
+        toast.error(msg);
       }
     } catch {
-      setErrorMsg("Network error saving GST details");
+      const msg = "Network error saving GST details";
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
 

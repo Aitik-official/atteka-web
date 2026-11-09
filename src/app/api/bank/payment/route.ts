@@ -22,18 +22,16 @@ export async function POST(req: NextRequest) {
     });
 
     const record = {
-      _id: `bop-${Date.now()}`,
       transactionId: paymentResult.transactionId,
       bankName: "IndusInd Bank",
       accountNumber: accountNumber || "201002938471",
-      operationType: "ONLINE_PAYMENT",
+      operationType: "ONLINE_PAYMENT" as const,
       beneficiaryName,
       amount: Number(amount),
       utrNumber: paymentResult.utrNumber,
       status: paymentResult.status,
       isSimulated: true,
-      notes: remarks,
-      createdAt: new Date()
+      notes: remarks
     };
 
     try {
@@ -43,14 +41,17 @@ export async function POST(req: NextRequest) {
         success: true,
         data: dbRecord,
         isSimulated: true,
+        source: "mongodb",
         message: paymentResult.message
       });
     } catch {
-      memoryStore.bankOps.unshift(record);
+      const memory = { ...record, _id: `bop-${Date.now()}`, createdAt: new Date() };
+      memoryStore.bankOps.unshift(memory);
       return NextResponse.json({
         success: true,
-        data: record,
+        data: memory,
         isSimulated: true,
+        isMemoryStore: true,
         message: paymentResult.message
       });
     }

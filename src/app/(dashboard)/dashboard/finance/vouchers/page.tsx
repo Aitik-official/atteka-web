@@ -43,25 +43,25 @@ export default function VouchersHubPage() {
         <WcvActionCard
           title="Enter Vendor Invoice"
           description="Enter Vendor Invoice"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/enter-vendor-invoice"
           icon={FileText}
         />
         <WcvActionCard
           title="Enter Vendor Payment"
           description="Enter Vendor Payment"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/enter-vendor-payment"
           icon={CreditCard}
         />
         <WcvActionCard
           title="Debit Voucher"
           description="Payment voucher with GST % & TDS"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/debit-voucher"
           icon={Receipt}
         />
         <WcvActionCard
           title="Credit Voucher"
           description="Credit Voucher"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/credit-voucher"
           icon={DollarSign}
         />
 
@@ -69,25 +69,25 @@ export default function VouchersHubPage() {
         <WcvActionCard
           title="Contra Entry"
           description="Contra Entry"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/contra-entry"
           icon={ArrowLeftRight}
         />
         <WcvActionCard
           title="Journal Entry"
           description="Journal Entry"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/journal-entry"
           icon={BookOpen}
         />
         <WcvActionCard
           title="View Print Vouchers"
           description="View Print Vouchers"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/view-print-vouchers"
           icon={Printer}
         />
         <WcvActionCard
           title="View Journal Vouchers"
           description="View Journal Vouchers"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/view-journal-vouchers"
           icon={FileCheck}
         />
 
@@ -95,25 +95,25 @@ export default function VouchersHubPage() {
         <WcvActionCard
           title="Cancel Vendor Invoice"
           description="Cancel Vendor Invoice"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/cancel-vendor-invoice"
           icon={XCircle}
         />
         <WcvActionCard
           title="Cancel Vendor Payment"
           description="Cancel Vendor Payment"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/cancel-vendor-payment"
           icon={AlertTriangle}
         />
         <WcvActionCard
           title="View/Print Invoice Vendor"
           description="View/Print Vendor Invoice"
-          href="/dashboard/finance/billing"
+          href="/dashboard/finance/vouchers/view-vendor-invoice"
           icon={FileSpreadsheet}
         />
         <WcvActionCard
           title="View/Print Invoice Payment"
           description="View/Print Vendor Invoice Payment"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/view-vendor-invoice-payment"
           icon={Receipt}
         />
 
@@ -121,25 +121,25 @@ export default function VouchersHubPage() {
         <WcvActionCard
           title="Debit Note"
           description="Debit Note"
-          href="/dashboard/finance/billing"
+          href="/dashboard/finance/vouchers/debit-note"
           icon={FileMinus}
         />
         <WcvActionCard
           title="View Print Vouchers New"
           description="View Print Vouchers New"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/view-print-vouchers-new"
           icon={Printer}
         />
         <WcvActionCard
           title="View Cancel Vouchers"
           description="View Cancel Vouchers"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/vouchers/view-cancel-vouchers"
           icon={FileX}
         />
         <WcvActionCard
           title="GSTR2B Invoice Booking"
           description="GSTR2B Invoice Booking"
-          href="/dashboard/finance/e-invoice"
+          href="/dashboard/finance/vouchers/gstr2b-invoice-booking"
           icon={ShieldCheck}
         />
       </div>

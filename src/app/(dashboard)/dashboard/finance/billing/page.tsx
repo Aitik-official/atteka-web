@@ -109,11 +109,7 @@ export default function CustomerBillingPage() {
         moduleCode="C194"
         title="Customer Transport Billing (Bill Generation Step 1)"
         subtitle="Finance • BillGenrateStep1.aspx • Select customer dockets & generate official transport tax invoice"
-        breadcrumbs={[
-          { label: "Finance", href: "/dashboard" },
-          { label: "Customer Billing" }
-        ]}
-      />
+/>
 
       {successMsg && (
         <div className="p-3.5 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold rounded-xl flex items-center gap-2 animate-in fade-in">

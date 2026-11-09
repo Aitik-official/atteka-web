@@ -30,25 +30,25 @@ export default function AccountsReportsHubPage() {
         <WcvActionCard
           title="Cash and Bank Transaction Statement"
           description="Cash and Bank Transaction Statement"
-          href="/dashboard/finance/cash-bank-statement"
+          href="/dashboard/reports/accounts/cash-bank-statement"
           icon={Landmark}
         />
         <WcvActionCard
           title="General Ledger"
           description="Listing of transactions under various Account Heads"
-          href="/dashboard/finance/vouchers"
+          href="/dashboard/reports/accounts/general-ledger"
           icon={BookOpen}
         />
         <WcvActionCard
           title="Subsidiary Ledger"
           description="Listing of transactions under various Vendor / Customer"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/accounts/subsidiary-ledger"
           icon={Users}
         />
         <WcvActionCard
           title="Customer Ledger"
           description="Customer Ledger"
-          href="/dashboard/finance/mr-entry"
+          href="/dashboard/reports/accounts/customer-ledger"
           icon={FileText}
         />
 
@@ -56,7 +56,7 @@ export default function AccountsReportsHubPage() {
         <WcvActionCard
           title="Branch P&L Report"
           description="Branch Profit and Loss Report"
-          href="/dashboard/reports"
+          href="/dashboard/reports/accounts/branch-profit-loss"
           icon={TrendingDown}
         />
         <WcvActionCard

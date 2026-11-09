@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle2, Download } from "lucide-react";
 import { WcvRibbonHeader } from "@/components/common/WcvActionCard";
 import { exportToCsv, stampFilename } from "@/lib/exportCsv";
+import { toast } from "@/lib/toastBus";
 
 type Props = {
   onBack: () => void;
@@ -67,13 +68,18 @@ export function VendorApprovalPanel({ onBack }: Props) {
       const data = await res.json();
       if (res.ok && data.success) {
         setFeedback({ type: "success", message: data.message });
+        toast.success(data.message || `Vendor(s) marked ${approvalStatus}.`);
         setSelected(new Set());
         load();
       } else {
-        setFeedback({ type: "error", message: data.error || "Action failed." });
+        const msg = data.error || "Action failed.";
+        setFeedback({ type: "error", message: msg });
+        toast.error(msg);
       }
     } catch {
-      setFeedback({ type: "error", message: "Network error while updating approval." });
+      const msg = "Network error while updating approval.";
+      setFeedback({ type: "error", message: msg });
+      toast.error(msg);
     } finally {
       setActing(false);
     }

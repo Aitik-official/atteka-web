@@ -28,25 +28,25 @@ export default function FinanceReportsHubPage() {
         <WcvActionCard
           title="CN Register With Freight Details"
           description="Consignment Register With Freight Details"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/cn-freight-register"
           icon={FileText}
         />
         <WcvActionCard
           title="Un-Billed CN Registred"
           description="Both Financially Completed and Financially Un-Completed"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/unbilled-cn-register"
           icon={Clock}
         />
         <WcvActionCard
           title="Un-Billed CNs Branch wise ageing"
           description="Un-Billed Dockets Branch wise ageing"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/unbilled-branch-ageing"
           icon={Building}
         />
         <WcvActionCard
           title="Bills Generated Report [Docket wise]"
           description="Bills Generated Report [Docket wise]"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/bills-generated-docket-wise"
           icon={FileSpreadsheet}
         />
 
@@ -54,25 +54,25 @@ export default function FinanceReportsHubPage() {
         <WcvActionCard
           title="Voucher Wise Invoice Report"
           description="Voucher Wise Invoice Report"
-          href="/dashboard/finance/vouchers"
+          href="/dashboard/reports/finance/voucher-wise-invoice"
           icon={Receipt}
         />
         <WcvActionCard
           title="Bills Generated Report"
           description="Bills Generated Report"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/bills-generated"
           icon={DollarSign}
         />
         <WcvActionCard
           title="Party Wise Bill Summary"
           description="Party Wise Bill Summary"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/party-wise-bill-register"
           icon={Users}
         />
         <WcvActionCard
           title="Bill Register With Collection Details"
           description="Bill Register With Collection Details"
-          href="/dashboard/finance/mr-entry"
+          href="/dashboard/reports/finance/bill-register-collection"
           icon={CheckCircle}
         />
 
@@ -80,29 +80,35 @@ export default function FinanceReportsHubPage() {
         <WcvActionCard
           title="Submitted O/S Detail"
           description="Submitted O/S Detail"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/submitted-os-detail"
           icon={FileText}
         />
         <WcvActionCard
           title="Submitted O/S Detail [Without On Account]"
           description="Submitted O/S Detail [Without On Account]"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/submitted-os-without-on-account"
           icon={FileText}
         />
         <WcvActionCard
           title="Submitted O/S [Docket wise]"
           description="Financially unclosed Bills [Docket wise]"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/submitted-os-docket-wise"
           icon={FileSpreadsheet}
         />
         <WcvActionCard
           title="Submitted O/S Branch wise ageing"
           description="Submitted O/S Branch wise ageing"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/submitted-os-branch-ageing"
           icon={Building}
         />
 
         {/* Row 4 */}
+        <WcvActionCard
+          title="Submitted O/S Party wise ageing"
+          description="Submitted O/S Customer wise ageing"
+          href="/dashboard/reports/finance/submitted-os-party-ageing"
+          icon={Users}
+        />
         <WcvActionCard
           title="Submitted O/S PDD Report"
           description="Submitted O/S PDD Report"
@@ -112,13 +118,13 @@ export default function FinanceReportsHubPage() {
         <WcvActionCard
           title="Docket Wise Octroi Details"
           description="Docket Wise Octroi Details"
-          href="/dashboard/operations/dockets"
+          href="/dashboard/reports/finance/docket-wise-octroi"
           icon={Receipt}
         />
         <WcvActionCard
           title="MR wise Collection Report"
           description="MR wise Collection Report"
-          href="/dashboard/finance/mr-entry"
+          href="/dashboard/reports/finance/mr-wise-collection"
           icon={Receipt}
         />
         <WcvActionCard

@@ -171,11 +171,7 @@ export default function DocketsListPage() {
         moduleCode="C011"
         title="Consignments & Dockets Register"
         subtitle="Operations • EditCnNew.aspx • Master registry with live search & POD verification"
-        breadcrumbs={[
-          { label: "Operations", href: "/dashboard" },
-          { label: "Consignments Register" }
-        ]}
-        actions={
+actions={
           <Link
             href="/dashboard/operations/new-cn"
             className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"

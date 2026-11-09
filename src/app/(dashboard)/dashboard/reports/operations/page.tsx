@@ -24,26 +24,26 @@ export default function OperationReportsHubPage() {
         {/* Row 1 */}
         <WcvActionCard
           title="CN Register"
-          description="Consignment Register"
-          href="/dashboard/operations/dockets"
+          description="Consignment Register / Booking Register"
+          href="/dashboard/reports/operations/consignment-register"
           icon={FileText}
         />
         <WcvActionCard
           title="Undeliverd CN Register"
           description="Consignment Register - Undelivered"
-          href="/dashboard/operations/dockets"
+          href="/dashboard/reports/operations/consignment-register?undelivered=1"
           icon={AlertCircle}
         />
         <WcvActionCard
           title="Delivery Register"
-          description="CN Delivery Register"
-          href="/dashboard/operations/dockets"
+          description="Booking Register - Delivered"
+          href="/dashboard/reports/operations/delivery-register"
           icon={Truck}
         />
         <WcvActionCard
           title="Booking Summary"
           description="Booking Summary"
-          href="/dashboard/reports"
+          href="/dashboard/reports/operations/booking-summary"
           icon={BarChart2}
         />
 
@@ -51,25 +51,25 @@ export default function OperationReportsHubPage() {
         <WcvActionCard
           title="PDC Register"
           description="PDC Register"
-          href="/dashboard/operations/tripsheets"
+          href="/dashboard/reports/operations/pdc-register"
           icon={Layers}
         />
         <WcvActionCard
           title="PDC Register [Docket wise]"
           description="PDC Register [Docket wise]"
-          href="/dashboard/operations/tripsheets"
+          href="/dashboard/reports/operations/pdc-register-docket-wise"
           icon={FileSpreadsheet}
         />
         <WcvActionCard
           title="Scan POD/PODs Report"
           description="Scan POD/PODs Report"
-          href="/dashboard/operations/dockets"
+          href="/dashboard/reports/operations/scan-pod"
           icon={Camera}
         />
         <WcvActionCard
           title="DSR New Report"
           description="Proposed DSR Report"
-          href="/dashboard/reports"
+          href="/dashboard/reports/operations/dsr"
           icon={FileCheck2}
         />
       </div>

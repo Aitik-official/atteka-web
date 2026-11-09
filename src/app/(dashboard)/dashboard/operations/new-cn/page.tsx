@@ -603,12 +603,7 @@ export default function NewConsignmentPage() {
         moduleCode="C010"
         title="CN - INFORMATION"
         subtitle="Operations • ReliableDocketScr.aspx • Standard Consignment Note Information Hub"
-        breadcrumbs={[
-          { label: "Operations", href: "/dashboard" },
-          { label: "Consignment Management", href: "/dashboard/operations/cn-operations" },
-          { label: "CN - Information" }
-        ]}
-        actions={
+actions={
           <div className="flex items-center gap-2">
             <button
               type="button"

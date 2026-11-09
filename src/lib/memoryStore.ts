@@ -144,6 +144,10 @@ class MemoryStore {
   crmLeads: any[] = [];
   crmQuotations: any[] = [];
   crmQuoteCustomers: any[] = [];
+  companyAdvances: any[] = [];
+  tripSettlements: any[] = [];
+  companyVouchers: any[] = [];
+  bpclTransactions: any[] = [];
   docketNumbers: MockDocketNumber[] = seedDocketNumbers();
   docketSeries = {
     seriesKey: "DEFAULT",

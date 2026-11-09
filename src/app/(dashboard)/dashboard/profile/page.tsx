@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft, CheckCircle2, FileText, RotateCcw, Save } from "lucide-react";
+import { toast } from "@/lib/toastBus";
 
 type ProfileForm = {
   _id?: string;
@@ -205,12 +206,17 @@ export default function EmployeeProfilePage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setFeedback({ type: "success", message: "Employee profile updated successfully." });
+        toast.success("Employee profile updated successfully.");
         await load();
       } else {
-        setFeedback({ type: "error", message: data.error || "Failed to update profile." });
+        const msg = data.error || "Failed to update profile.";
+        setFeedback({ type: "error", message: msg });
+        toast.error(msg);
       }
     } catch {
-      setFeedback({ type: "error", message: "Network error while saving profile." });
+      const msg = "Network error while saving profile.";
+      setFeedback({ type: "error", message: msg });
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

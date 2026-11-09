@@ -22,7 +22,7 @@ export default function CashBankStatementHubPage() {
         <WcvActionCard
           title="View / Print Cash & Bank Statement"
           description="View / Print Cash & Bank Statement"
-          href="/dashboard/finance/bank-statement"
+          href="/dashboard/reports/accounts/cash-bank-statement"
           icon={FileText}
         />
         <WcvActionCard

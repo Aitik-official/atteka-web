@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
+import { CrmVisit } from "@/models/CrmVisit";
 import { memoryStore } from "@/lib/memoryStore";
 
 const FALLBACK_LEADS = [
@@ -8,45 +10,11 @@ const FALLBACK_LEADS = [
   { leadCode: "L00004", customerName: "APEX CHEM TRADE", contactPerson: "ANITA DESAI" }
 ];
 
-const FALLBACK_VISITS = [
-  {
-    _id: "visit-1",
-    leadCode: "L00001",
-    customerName: "RELIANCE RETAIL LTD",
-    contactPerson: "RAHUL SHARMA",
-    prospectStatus: "Hot",
-    visitDateTime: "04/11/2026 11:30",
-    visitRemark: "Annual contract renewal & rate revision discussion",
-    nextVisitDateTime: "15/11/2026 10:00",
-    conveyanceExpenses: 450,
-    createdAt: "2026-11-04T11:30:00.000Z"
-  },
-  {
-    _id: "visit-2",
-    leadCode: "L00002",
-    customerName: "TATA MOTORS SPARE PARTS",
-    contactPerson: "VIKRAM SHAH",
-    prospectStatus: "Warm",
-    visitDateTime: "02/11/2026 16:15",
-    visitRemark: "Bhiwandi to Pune daily shuttle quote follow-up",
-    nextVisitDateTime: "08/11/2026 14:00",
-    conveyanceExpenses: 320,
-    createdAt: "2026-11-02T16:15:00.000Z"
-  }
-];
-
-function ensureVisits() {
-  if (!Array.isArray((memoryStore as any).crmVisits) || (memoryStore as any).crmVisits.length === 0) {
-    (memoryStore as any).crmVisits = [...FALLBACK_VISITS];
-  }
-  return (memoryStore as any).crmVisits as any[];
-}
-
 function ensureLeads() {
-  if (!Array.isArray((memoryStore as any).crmLeads) || (memoryStore as any).crmLeads.length === 0) {
-    (memoryStore as any).crmLeads = [...FALLBACK_LEADS];
+  if (!Array.isArray(memoryStore.crmLeads) || memoryStore.crmLeads.length === 0) {
+    memoryStore.crmLeads = [...FALLBACK_LEADS];
   }
-  return (memoryStore as any).crmLeads as any[];
+  return memoryStore.crmLeads as any[];
 }
 
 export async function GET(req: NextRequest) {
@@ -59,13 +27,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: ensureLeads() });
     }
 
-    let list = [...ensureVisits()];
-    if (leadCode) {
-      list = list.filter((v) => String(v.leadCode || "").toUpperCase() === leadCode);
+    try {
+      await connectToDatabase();
+      const query: any = {};
+      if (leadCode) query.leadCode = leadCode;
+      const data = await CrmVisit.find(query).sort({ createdAt: -1 });
+      return NextResponse.json({ success: true, count: data.length, data, source: "mongodb" });
+    } catch {
+      let list = [...(memoryStore.crmVisits || [])];
+      if (leadCode) {
+        list = list.filter((v) => String(v.leadCode || "").toUpperCase() === leadCode);
+      }
+      list.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+      return NextResponse.json({
+        success: true,
+        count: list.length,
+        data: list,
+        isMemoryStore: true
+      });
     }
-    list.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
-
-    return NextResponse.json({ success: true, count: list.length, data: list });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -92,8 +72,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Visit Remark is required" }, { status: 400 });
     }
 
-    const record = {
-      _id: `visit-${Date.now()}`,
+    const record: any = {
       leadCode,
       customerName,
       contactPerson: String(body.contactPerson || "").trim(),
@@ -101,17 +80,30 @@ export async function POST(req: NextRequest) {
       visitDateTime,
       visitRemark,
       nextVisitDateTime: String(body.nextVisitDateTime || "").trim(),
-      conveyanceExpenses: Number(body.conveyanceExpenses) || 0,
-      createdAt: new Date().toISOString()
+      conveyanceExpenses: Number(body.conveyanceExpenses) || 0
     };
 
-    const list = ensureVisits();
-    list.unshift(record);
-
-    return NextResponse.json(
-      { success: true, message: "Visit details saved successfully", data: record },
-      { status: 201 }
-    );
+    try {
+      await connectToDatabase();
+      const saved = await CrmVisit.create(record);
+      return NextResponse.json(
+        { success: true, message: "Visit details saved successfully", data: saved, source: "mongodb" },
+        { status: 201 }
+      );
+    } catch {
+      const memory = { ...record, _id: `visit-${Date.now()}`, createdAt: new Date().toISOString() };
+      if (!Array.isArray(memoryStore.crmVisits)) memoryStore.crmVisits = [];
+      memoryStore.crmVisits.unshift(memory);
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Visit details saved (Memory Store — Mongo unavailable)",
+          data: memory,
+          isMemoryStore: true
+        },
+        { status: 201 }
+      );
+    }
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

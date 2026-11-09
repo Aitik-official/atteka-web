@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { WcvRibbonHeader } from "@/components/common/WcvActionCard";
 import { exportToCsv, stampFilename } from "@/lib/exportCsv";
+import { toast } from "@/lib/toastBus";
 
 const VENDOR_TYPES = ["OWN Company vehicle", "MARKET", "OTHERS", "ATTACHED", "COURIER", "MAINTENANCE"];
 const MSME_TYPES = ["Micro", "Small", "Medium"];
@@ -247,18 +248,21 @@ export function VendorMasterPanel({ onBack }: Props) {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setFeedback({
-          type: "success",
-          message: form._id ? "Vendor updated successfully." : "Vendor saved successfully."
-        });
+        const msg = form._id ? "Vendor updated successfully." : "Vendor saved successfully.";
+        setFeedback({ type: "success", message: msg });
+        toast.success(msg, { code: data.data?.vendorCode || form.vendorCode || undefined, title: "Vendor Code" });
         setShowForm(false);
         setForm(emptyForm());
         load();
       } else {
-        setFeedback({ type: "error", message: data.error || "Failed to save vendor." });
+        const msg = data.error || "Failed to save vendor.";
+        setFeedback({ type: "error", message: msg });
+        toast.error(msg);
       }
     } catch {
-      setFeedback({ type: "error", message: "Network error while saving vendor." });
+      const msg = "Network error while saving vendor.";
+      setFeedback({ type: "error", message: msg });
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
