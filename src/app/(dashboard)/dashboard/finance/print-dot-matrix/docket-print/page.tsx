@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type PrintMeta = {
   location: string;
@@ -58,9 +59,9 @@ export default function DocketPrintCnPage() {
     setMeta(info);
     // Allow React to paint the print sheet, then open the browser print dialog.
     setTimeout(() => {
-      window.print();
+      printScoped({ title: "CN Number Print [Dot-Matrix]", selector: ".docket-print-sheet" });
       toast.success(`${info.count} CN number(s) sent to Dot-Matrix printer (demo)`);
-    }, 120);
+    }, 280);
   };
 
   const submit = async () => {

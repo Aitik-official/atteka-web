@@ -110,11 +110,13 @@ export function DashboardClientShell({
     <ToastProvider>
       <div className="min-h-screen bg-[#f4f5f7] flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
         {/* Top Header */}
-        <Header
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={handleToggleSidebar}
-          user={user}
-        />
+        <div data-print-hide>
+          <Header
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={handleToggleSidebar}
+            user={user}
+          />
+        </div>
 
         {/* Center Layout: Sidebar + Main Area */}
         <div className="flex flex-1 relative mb-8">
@@ -123,17 +125,20 @@ export function DashboardClientShell({
             <div
               onClick={handleCloseSidebar}
               aria-hidden="true"
+              data-print-hide
               className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-40 transition-opacity md:hidden animate-in fade-in"
             />
           )}
 
           {/* Sidebar Component */}
-          <Sidebar
-            isOpen={sidebarOpen}
-            onClose={handleCloseSidebar}
-            user={user}
-            isMobile={isMobile}
-          />
+          <div data-print-hide>
+            <Sidebar
+              isOpen={sidebarOpen}
+              onClose={handleCloseSidebar}
+              user={user}
+              isMobile={isMobile}
+            />
+          </div>
 
           {/* Main Content: ml-0 on mobile, md:ml-64 or md:ml-16 on desktop */}
           <main
@@ -141,13 +146,18 @@ export function DashboardClientShell({
               sidebarOpen ? "md:ml-64" : "md:ml-16"
             }`}
           >
-            <DashboardBreadcrumbs />
+            <div data-print-hide>
+              <DashboardBreadcrumbs />
+            </div>
             {children}
           </main>
         </div>
 
         {/* Bottom Fixed Status Bar (Exact Replica of original Home.aspx footer, fully responsive) */}
-        <footer className="fixed bottom-0 left-0 right-0 h-8 bg-white border-t border-slate-200 px-3 sm:px-4 flex items-center justify-between text-xs text-slate-600 z-30 select-none shadow-xs overflow-x-auto scrollbar-none whitespace-nowrap">
+        <footer
+          data-print-hide
+          className="fixed bottom-0 left-0 right-0 h-8 bg-white border-t border-slate-200 px-3 sm:px-4 flex items-center justify-between text-xs text-slate-600 z-30 select-none shadow-xs overflow-x-auto scrollbar-none whitespace-nowrap"
+        >
           {/* Left: Location Pin */}
           <div className="flex items-center gap-1.5 text-slate-700 shrink-0">
             <MapPin className="w-3.5 h-3.5 text-slate-500" />

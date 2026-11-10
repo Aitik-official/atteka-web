@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { printScoped } from "@/lib/printEngine";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -398,7 +399,7 @@ actions={
 
       {/* STEP 2 — Results table (matches screenshot) */}
       {step === 2 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div data-print-root className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
@@ -440,7 +441,7 @@ actions={
               </button>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => printScoped()}
                 className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg bg-white hover:bg-slate-50 inline-flex items-center gap-1.5"
               >
                 <Printer className="w-3.5 h-3.5" /> Print

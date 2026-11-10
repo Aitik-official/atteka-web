@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Calendar, FileSpreadsheet, Table2, RefreshCw, Pencil, Printer, Search, X, Save } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type Txn = {
   _id?: string;
@@ -266,7 +267,7 @@ export default function BpclSaleTransactionPage() {
     toast.success("Excel / CSV exported");
   };
 
-  const printReport = () => window.print();
+  const printReport = () => printScoped();
 
   const saveManual = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -416,7 +417,7 @@ export default function BpclSaleTransactionPage() {
       )}
 
       {step === "report" && (
-        <div className="bg-white border border-slate-300 shadow-sm print:border-0 print:shadow-none">
+        <div data-print-root className="bg-white border border-slate-300 shadow-sm print:border-0 print:shadow-none">
           {/* Report toolbar */}
           <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-100 border-b border-slate-300 text-[11px] print:hidden">
             <span className="text-slate-600">1 of 1</span>

@@ -107,7 +107,142 @@ function renderSvgBarcode(text: string): string {
   return `<div style="font-family:monospace;font-weight:bold;letter-spacing:2px;text-align:center;">*${escapeHtml(text)}*</div>`;
 }
 
-function printIframe(title: string, css: string, contentHtml: string) {
+/**
+ * Print only a specific on-screen card/report (not the dashboard shell).
+ * Prefer an element marked `[data-print-root]`; otherwise picks the largest
+ * visible white panel in `main` that looks like a report/list.
+ */
+export function printScoped(options?: { title?: string; selector?: string; autoPrint?: boolean }) {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+
+  const title = options?.title || document.title || "Print";
+  const autoPrint = options?.autoPrint !== false;
+  const selector = options?.selector || "[data-print-root]";
+
+  let source = document.querySelector(selector) as HTMLElement | null;
+
+  if (!source) {
+    const candidates = Array.from(
+      document.querySelectorAll("main .bg-white, main [class*='bg-white']")
+    ) as HTMLElement[];
+    source =
+      candidates
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 200 && r.height > 120 && el.offsetParent !== null;
+        })
+        .sort((a, b) => {
+          const ar = a.getBoundingClientRect();
+          const br = b.getBoundingClientRect();
+          return br.width * br.height - ar.width * ar.height;
+        })[0] || (document.querySelector("main") as HTMLElement | null);
+  }
+
+  if (!source) {
+    window.print();
+    return;
+  }
+
+  const clone = source.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll("[data-print-hide], .no-print, [class*='print:hidden']").forEach((n) => {
+    n.remove();
+  });
+  // Hidden print sheets (e.g. display:none until print) must be visible in the iframe.
+  clone.style.display = "block";
+  clone.style.visibility = "visible";
+  clone.style.position = "static";
+  clone.style.width = "100%";
+  clone.removeAttribute("hidden");
+
+  const frameId = "atteka-scoped-print-frame";
+  const existing = document.getElementById(frameId);
+  if (existing) existing.remove();
+
+  const iframe = document.createElement("iframe");
+  iframe.id = frameId;
+  iframe.title = title;
+  iframe.setAttribute(
+    "style",
+    "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:99999;background:#fff;"
+  );
+  document.body.appendChild(iframe);
+
+  const win = iframe.contentWindow;
+  const doc = win?.document;
+  if (!doc || !win) {
+    iframe.remove();
+    window.print();
+    return;
+  }
+
+  const headExtras = Array.from(
+    document.querySelectorAll('link[rel="stylesheet"], style')
+  )
+    .map((n) => n.outerHTML)
+    .join("\n");
+
+  doc.open();
+  doc.write(`<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeHtml(title)}</title>
+    ${headExtras}
+    <style>
+      @page { margin: 10mm; }
+      html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+      [data-print-hide], .no-print, [class*="print:hidden"] { display: none !important; }
+      .atteka-print-toolbar {
+        position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between;
+        align-items: center; gap: 12px; background: #0f172a; color: #fff; padding: 10px 16px;
+      }
+      .atteka-print-toolbar button {
+        border: 0; border-radius: 6px; padding: 7px 14px; font-weight: 700; cursor: pointer; font-size: 12px;
+      }
+      .atteka-print-toolbar .print { background: #0171d3; color: #fff; }
+      .atteka-print-toolbar .close { background: #334155; color: #fff; }
+      .atteka-print-sheet { padding: 12px; }
+      /* Interactive controls belong to the app UI, not the printed document */
+      .atteka-print-sheet button,
+      .atteka-print-sheet input,
+      .atteka-print-sheet select,
+      .atteka-print-sheet textarea {
+        display: none !important;
+      }
+      @media print {
+        .atteka-print-toolbar { display: none !important; }
+        .atteka-print-sheet { padding: 0 !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="atteka-print-toolbar">
+      <span><strong>Atteka Logistics ERP</strong> &bull; ${escapeHtml(title)}</span>
+      <span style="display:flex;gap:8px;">
+        <button class="print" type="button" onclick="window.print()">Print Document</button>
+        <button class="close" type="button" onclick="parent.document.getElementById('${frameId}')?.remove()">Close</button>
+      </span>
+    </div>
+    <div class="atteka-print-sheet">${clone.outerHTML}</div>
+  </body>
+</html>`);
+  doc.close();
+
+  const kickPrint = () => {
+    try {
+      win.focus();
+      if (autoPrint) win.print();
+    } catch {
+      // ignore
+    }
+  };
+
+  // Wait for cloned stylesheets to settle, then print.
+  setTimeout(kickPrint, 350);
+}
+
+/** Opens an isolated print preview so only the sheet prints — not the dashboard shell. */
+export function printDocumentSheet(title: string, css: string, contentHtml: string, autoPrint = false) {
   if (typeof window === "undefined") return;
 
   const frameId = "atteka-multi-print-frame";
@@ -123,8 +258,9 @@ function printIframe(title: string, css: string, contentHtml: string) {
   );
   document.body.appendChild(iframe);
 
-  const doc = iframe.contentWindow?.document;
-  if (!doc) {
+  const win = iframe.contentWindow;
+  const doc = win?.document;
+  if (!doc || !win) {
     iframe.remove();
     alert("Could not initialize print engine.");
     return;
@@ -142,14 +278,29 @@ function printIframe(title: string, css: string, contentHtml: string) {
     <div class="toolbar">
       <span><strong>Atteka Logistics ERP</strong> &bull; ${escapeHtml(title)}</span>
       <span style="display:flex;gap:8px;">
-        <button class="print" type="button" onclick="window.print()">🖨️ Print Document</button>
-        <button class="close" type="button" onclick="parent.document.getElementById('${frameId}').remove()">✕ Close</button>
+        <button class="print" type="button" onclick="window.print()">Print Document</button>
+        <button class="close" type="button" onclick="parent.document.getElementById('${frameId}').remove()">Close</button>
       </span>
     </div>
     <div class="sheet">${contentHtml}</div>
   </body>
 </html>`);
   doc.close();
+
+  if (autoPrint) {
+    setTimeout(() => {
+      try {
+        win.focus();
+        win.print();
+      } catch {
+        // ignore
+      }
+    }, 200);
+  }
+}
+
+function printIframe(title: string, css: string, contentHtml: string) {
+  printDocumentSheet(title, css, contentHtml, false);
 }
 
 export function escapeHtml(val: any): string {

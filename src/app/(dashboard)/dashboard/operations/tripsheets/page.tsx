@@ -116,19 +116,13 @@ export default function TripSheetsPage() {
         <WcvActionCard
           title="Prepare Pickup PDC"
           description="Prepare Pickup PDC"
-          onClick={() => {
-            setActiveTab("PICKUP");
-            setShowCreateModal(true);
-          }}
+          href="/dashboard/operations/tripsheets/prepare-pickup-pdc"
           icon={Truck}
         />
         <WcvActionCard
           title="Prepare Delivery PDC"
           description="Prepare Delivery PDC"
-          onClick={() => {
-            setActiveTab("DELIVERY");
-            setShowCreateModal(true);
-          }}
+          href="/dashboard/operations/tripsheets/prepare-delivery-pdc"
           icon={FileCheck}
         />
         <WcvActionCard
@@ -140,7 +134,7 @@ export default function TripSheetsPage() {
         <WcvActionCard
           title="Update Delivery PDC"
           description="Update Delivery PDC"
-          onClick={() => setActiveTab("DELIVERY")}
+          href="/dashboard/operations/tripsheets/update-delivery-pdc"
           icon={FileText}
         />
       </div>

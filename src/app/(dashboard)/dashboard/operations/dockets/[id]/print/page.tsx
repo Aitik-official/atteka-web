@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { printScoped } from "@/lib/printEngine";
 import { useParams, useRouter } from "next/navigation";
 import { Printer, ArrowLeft, AlertCircle, FileText } from "lucide-react";
 
@@ -69,7 +70,7 @@ export default function PrintDocketPage() {
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto p-4 bg-white min-h-screen font-mono text-xs">
-      <div className="no-print flex justify-between items-center pb-4 border-b">
+      <div className="no-print flex justify-between items-center pb-4 border-b" data-print-hide>
         <button
           onClick={() => router.push("/dashboard/operations/dockets")}
           className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-sans text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -77,7 +78,7 @@ export default function PrintDocketPage() {
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Dockets
         </button>
         <button
-          onClick={() => window.print()}
+          onClick={() => printScoped({ title: `CN ${docket.docketNo}`, selector: "[data-print-root]" })}
           className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-sans text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
         >
           <Printer className="w-4 h-4" /> Print Consignment Note
@@ -85,6 +86,7 @@ export default function PrintDocketPage() {
       </div>
 
       {/* Docket Voucher - 3 Copies (Consignor, Consignee, Delivery) */}
+      <div data-print-root className="space-y-4">
       {["CONSIGNOR COPY", "CONSIGNEE COPY", "CARRIER / DRIVER COPY"].map((copyType, idx) => (
         <div key={copyType} className={`border-2 border-slate-800 p-4 rounded-sm ${idx > 0 ? "mt-6 pt-6 border-t-2" : ""}`}>
           <div className="flex justify-between items-start border-b border-slate-400 pb-2 mb-2">
@@ -161,6 +163,7 @@ export default function PrintDocketPage() {
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 }

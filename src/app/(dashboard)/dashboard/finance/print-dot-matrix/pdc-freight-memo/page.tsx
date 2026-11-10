@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Printer, Search, X } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type VendorOpt = { code: string; name: string; label: string };
 
@@ -140,7 +141,7 @@ export default function PdcFreightMemoPage() {
       return;
     }
     toast.success(`${selected.size} PDC Freight Memo(s) sent to Dot-Matrix printer (demo)`);
-    window.print();
+    printScoped();
   };
 
   return (
@@ -280,7 +281,7 @@ export default function PdcFreightMemoPage() {
       )}
 
       {step === "report" && (
-        <div className="space-y-3">
+        <div data-print-root className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <button
               type="button"

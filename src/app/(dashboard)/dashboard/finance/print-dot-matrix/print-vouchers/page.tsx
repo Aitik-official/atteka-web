@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Printer } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type VoucherRow = {
   srNo: number;
@@ -110,7 +111,7 @@ export default function PrintVouchersDotMatrixPage() {
 
   const printOne = (voucherNumberValue: string) => {
     toast.success(`Voucher ${voucherNumberValue} sent to Dot-Matrix printer (demo)`);
-    window.print();
+    printScoped();
   };
 
   return (
@@ -243,7 +244,7 @@ export default function PrintVouchersDotMatrixPage() {
       )}
 
       {step === "report" && (
-        <div className="space-y-3">
+        <div data-print-root className="space-y-3">
           <button
             type="button"
             onClick={() => setStep("filter")}

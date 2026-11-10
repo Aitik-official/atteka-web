@@ -1,791 +1,466 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  AlertCircle,
   ArrowLeft,
-  CheckCircle2,
+  Calendar,
+  ChevronDown,
+  Columns3,
+  Copy,
+  FileSpreadsheet,
+  LayoutGrid,
   Plus,
-  Save,
-  Trash2,
-  Truck
+  Printer
 } from "lucide-react";
-import { PageHeader } from "@/components/common/PageHeader";
 import { toast } from "@/lib/toastBus";
 
-interface DocketLine {
+type Row = {
   id: string;
-  selected: boolean;
+  tripSheetNo: string;
   docketNo: string;
-  ewayBillNo: string;
-  refDate: string;
-  consignorName: string;
-  consigneeName: string;
-  pkgsLoad: number | string;
-  pkgsTotal: number | string;
-  weightLoad: number | string;
-  weightTotal: number | string;
-  customerDockNo: string;
-  deliveryAddress: string;
-}
+  docketDateLabel: string;
+  customerName: string;
+  fromLocation: string;
+  toLocation: string;
+  vehicleNo: string;
+  freightAmt: number;
+  advanceAmt: number;
+  balanceAmt: number;
+};
 
-function todayInput() {
-  return new Date().toISOString().slice(0, 10);
-}
+const COLS = [
+  { key: "sno", label: "Sno.", search: "Search Sno." },
+  { key: "docketNo", label: "Docket No", search: "Search Docket No" },
+  { key: "docketDateLabel", label: "Docket Date", search: "Search Docket Date" },
+  { key: "customerName", label: "Customer Name", search: "Search Customer Name" },
+  { key: "fromLocation", label: "From Location", search: "Search From Location" },
+  { key: "toLocation", label: "To Location", search: "Search To Location" },
+  { key: "vehicleNo", label: "Veh no", search: "Search Veh no" },
+  { key: "freightAmt", label: "Freight Amt", search: "Search Freight Amt" },
+  { key: "advanceAmt", label: "Advance Amt", search: "Search Advance Amt" },
+  { key: "balanceAmt", label: "Balance Amt", search: "Search Balance Amt" },
+  { key: "view", label: "View Loading Slip", search: "Search View" }
+] as const;
 
-function formatRefDate(value?: string | Date) {
-  if (!value) return todayInput();
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return todayInput();
+type ColKey = (typeof COLS)[number]["key"];
+
+function toInputDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-export default function PrepareLoadingSlipPage() {
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [branches, setBranches] = useState<any[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [vendors, setVendors] = useState<any[]>([]);
-  const [origins, setOrigins] = useState<string[]>([]);
-  const [destinations, setDestinations] = useState<string[]>([]);
-  const [bookedCns, setBookedCns] = useState<any[]>([]);
+function formatLong(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
 
-  const [customerName, setCustomerName] = useState("");
-  const [tripSheetNo] = useState(`TS${Date.now().toString().slice(-8)}`);
-  const [tripDate, setTripDate] = useState(todayInput());
-  const [tripTime, setTripTime] = useState("12:00");
-  const [manualTripSheetNo, setManualTripSheetNo] = useState("");
-  const [location, setLocation] = useState("");
-  const [vendorName, setVendorName] = useState("");
-  const [vendorCode, setVendorCode] = useState("Auto");
-  const [vehicleNo, setVehicleNo] = useState("");
-  const [vehicleType, setVehicleType] = useState("");
-  const [pickupLocation, setPickupLocation] = useState("");
-  const [deliveryLocation, setDeliveryLocation] = useState("");
-  const [driverName, setDriverName] = useState("");
-  const [driverMobile, setDriverMobile] = useState("");
-  const [freight, setFreight] = useState<number | string>(0);
-  const [advanceAmt, setAdvanceAmt] = useState<number | string>(0);
-  const [balanceAmt, setBalanceAmt] = useState<number | string>(0);
-  const [startKm, setStartKm] = useState<number | string>(0);
-  const [specialInstructions, setSpecialInstructions] = useState("");
-  const [showDockets, setShowDockets] = useState(true);
+function cellText(r: Row, key: ColKey, sno: number) {
+  switch (key) {
+    case "sno":
+      return String(sno);
+    case "docketNo":
+      return r.docketNo;
+    case "docketDateLabel":
+      return r.docketDateLabel;
+    case "customerName":
+      return r.customerName;
+    case "fromLocation":
+      return r.fromLocation;
+    case "toLocation":
+      return r.toLocation;
+    case "vehicleNo":
+      return r.vehicleNo;
+    case "freightAmt":
+      return String(r.freightAmt);
+    case "advanceAmt":
+      return String(r.advanceAmt);
+    case "balanceAmt":
+      return String(r.balanceAmt);
+    case "view":
+      return "View";
+    default:
+      return "";
+  }
+}
 
-  const [docketLines, setDocketLines] = useState<DocketLine[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+export default function PrepareLoadingSlipHubPage() {
+  const [step, setStep] = useState<"filter" | "report">("filter");
+  const [fromDate, setFromDate] = useState(toInputDate(new Date()));
+  const [toDate, setToDate] = useState(toInputDate(new Date()));
+  const [showDates, setShowDates] = useState(false);
+  const [docketNo, setDocketNo] = useState("");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/customers").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/branches").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/vehicles").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/vendors").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/routes").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/consignments").then((r) => r.json()).catch(() => ({}))
-    ]).then(([custRes, branchRes, vehRes, vendorRes, routeRes, cnRes]) => {
-      if (custRes.success) setCustomers(custRes.data || []);
-      if (branchRes.success) {
-        const list = branchRes.data || [];
-        setBranches(list);
-        if (list[0]) {
-          setLocation(`${list[0].branchCode}-${list[0].branchName || "Ateka Logistics"}`);
-        }
-      }
-      if (vehRes.success) setVehicles(vehRes.data || []);
-      if (vendorRes.success) setVendors(vendorRes.data || []);
-      if (routeRes.success) {
-        const loc = routeRes.locations || {};
-        const o = loc.origins || [];
-        const d = loc.destinations || [];
-        setOrigins(o);
-        setDestinations(d);
-        if (!pickupLocation && o[0]) setPickupLocation(o[0]);
-        if (!deliveryLocation && d[0]) setDeliveryLocation(d[0]);
-      }
-      if (cnRes.success) {
-        const eligible = (cnRes.data || []).filter(
-          (c: any) =>
-            !["DRAFT", "BILLED", "CANCELLED"].includes(c.status) &&
-            !c.tripSheetNo
-        );
-        setBookedCns(eligible);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [tableSearch, setTableSearch] = useState("");
+  const [cardView, setCardView] = useState(false);
+  const [showColumnsMenu, setShowColumnsMenu] = useState(false);
+  const [visibleCols, setVisibleCols] = useState<Record<ColKey, boolean>>(
+    Object.fromEntries(COLS.map((c) => [c.key, true])) as Record<ColKey, boolean>
+  );
+  const [colFilters, setColFilters] = useState<Record<ColKey, string>>(
+    Object.fromEntries(COLS.map((c) => [c.key, ""])) as Record<ColKey, string>
+  );
 
-  useEffect(() => {
-    const f = Number(freight) || 0;
-    const a = Number(advanceAmt) || 0;
-    setBalanceAmt(Math.max(0, f - a));
-  }, [freight, advanceAmt]);
+  const dateRangeLabel = `${formatLong(fromDate)} - ${formatLong(toDate)}`;
 
-  const handleCustomerChange = (name: string) => {
-    setCustomerName(name);
-    // Consignor / Consignee on docket lines follow Trip Sheet Customer Name
-    if (name) {
-      setDocketLines((prev) =>
-        prev.map((d) => ({
-          ...d,
-          consignorName: name,
-          consigneeName: name
-        }))
-      );
-    }
-  };
-
-  const handleVendorSelect = (name: string) => {
-    setVendorName(name);
-    const match = vendors.find((v) => v.name === name);
-    setVendorCode(match?.vendorCode || "Auto");
-  };
-
-  const availableToAdd = useMemo(() => {
-    const used = new Set(docketLines.map((d) => d.docketNo));
-    return bookedCns.filter((c) => !used.has(c.docketNo));
-  }, [bookedCns, docketLines]);
-
-  const addDocketFromMaster = (docketNo?: string) => {
-    const source =
-      (docketNo && bookedCns.find((c) => c.docketNo === docketNo)) || availableToAdd[0];
-    if (!source) {
-      setFeedback({ type: "error", message: "No eligible booked CNs available to add." });
-      return;
-    }
-    if (!customerName.trim()) {
-      setFeedback({ type: "error", message: "Select Customer Name first — consignor/consignee use that name." });
-      return;
-    }
-    const pkgs = Number(source.packageDetails?.packagesCount) || 1;
-    const wt = Number(source.packageDetails?.chargedWeight) || 0;
-    const party = customerName.trim();
-    setDocketLines((prev) => [
-      ...prev,
-      {
-        id: `${source.docketNo}-${Date.now()}`,
-        selected: true,
-        docketNo: source.docketNo,
-        ewayBillNo: source.ewayBillNo || "",
-        refDate: formatRefDate(source.bookingDate || tripDate),
-        consignorName: party,
-        consigneeName: party,
-        pkgsLoad: pkgs,
-        pkgsTotal: pkgs,
-        weightLoad: wt,
-        weightTotal: wt,
-        customerDockNo: "",
-        deliveryAddress: source.consignee?.address || ""
-      }
-    ]);
-    setShowDockets(true);
-    if (!pickupLocation && source.fromLocation) setPickupLocation(source.fromLocation);
-    if (!deliveryLocation && source.toLocation) setDeliveryLocation(source.toLocation);
-  };
-
-  const updateLine = (id: string, patch: Partial<DocketLine>) => {
-    setDocketLines((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
-  };
-
-  const removeLine = (id: string) => {
-    setDocketLines((prev) => prev.filter((d) => d.id !== id));
-  };
-
-  const handleVehicleSelect = (val: string) => {
-    setVehicleNo(val);
-    const match = vehicles.find((v) => v.vehicleNumber === val);
-    if (match) {
-      if (match.vehicleType) setVehicleType(match.vehicleType);
-      if (match.driverName) setDriverName(match.driverName);
-      if (match.driverPhone) setDriverMobile(match.driverPhone);
-    }
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const selected = docketLines.filter((d) => d.selected && d.docketNo);
-    if (!customerName.trim()) {
-      setFeedback({ type: "error", message: "Customer Name is required." });
-      return;
-    }
-    if (!vehicleNo.trim()) {
-      setFeedback({ type: "error", message: "Vehicle No is required." });
-      return;
-    }
-    if (selected.length === 0) {
-      setFeedback({ type: "error", message: "Select/add at least one docket in Docket / Consignment Details." });
-      return;
-    }
-
-    setSaving(true);
-    setFeedback(null);
+  const loadReport = async () => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/tripsheets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tripSheetNo,
-          manualTripSheetNo,
-          customerName,
-          tripDate,
-          tripTime,
-          location,
-          vendorName,
-          vendorCode,
-          vehicleNo,
-          vehicleType,
-          pickupLocation,
-          deliveryLocation,
-          driverName,
-          driverMobile,
-          freight: Number(freight) || 0,
-          advanceAmt: Number(advanceAmt) || 0,
-          balanceAmt: Number(balanceAmt) || 0,
-          startKm: Number(startKm) || 0,
-          specialInstructions,
-          dockets: selected
-        })
+      const params = new URLSearchParams({
+        from: fromDate,
+        to: toDate,
+        docketNo: docketNo.trim()
       });
+      const res = await fetch(`/api/operations/prepare-loading-slip?${params.toString()}`);
       const data = await res.json();
-      if (res.ok && data.success) {
-        const tripNo = data.data?.tripSheetNo || tripSheetNo || "";
-        setFeedback({
-          type: "success",
-          message: `${data.message}. They now appear on Bill Generation — upload POD before confirming the bill.`
-        });
-        toast.sticky(
-          `${data.message}. Dockets are ready on Bill Generation — upload POD before confirming the bill.`,
-          { type: "success", title: "Trip Sheet No", code: tripNo }
-        );
-        // Remove assigned from local pools
-        const assigned = new Set(selected.map((d) => d.docketNo));
-        setBookedCns((prev) => prev.filter((c) => !assigned.has(c.docketNo)));
-        setDocketLines([]);
-      } else {
-        const msg = data.error || "Failed to prepare loading slip.";
-        setFeedback({ type: "error", message: msg });
-        toast.error(msg);
+      if (!res.ok) {
+        toast.error(data.error || "Failed to load loading sheets");
+        return;
       }
+      setRows(data.data || []);
+      setPage(1);
+      setStep("report");
     } catch {
-      const msg = "Network error while saving trip sheet.";
-      setFeedback({ type: "error", message: msg });
-      toast.error(msg);
+      toast.error("Failed to load loading sheets");
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
+
+  const indexed = useMemo(() => rows.map((r, i) => ({ row: r, sno: i + 1 })), [rows]);
+
+  const filtered = useMemo(() => {
+    const global = tableSearch.trim().toLowerCase();
+    return indexed.filter(({ row, sno }) => {
+      if (global) {
+        const blob = COLS.map((c) => cellText(row, c.key, sno)).join(" ").toLowerCase();
+        if (!blob.includes(global)) return false;
+      }
+      for (const c of COLS) {
+        const q = (colFilters[c.key] || "").trim().toLowerCase();
+        if (!q) continue;
+        if (!cellText(row, c.key, sno).toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [indexed, tableSearch, colFilters]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const pageRows = filtered.slice((pageSafe - 1) * pageSize, pageSafe * pageSize);
+  const fromEntry = filtered.length === 0 ? 0 : (pageSafe - 1) * pageSize + 1;
+  const toEntry = Math.min(pageSafe * pageSize, filtered.length);
+  const visibleColList = COLS.filter((c) => visibleCols[c.key]);
+
+  const copyTable = async () => {
+    const headers = visibleColList.map((c) => c.label).join("\t");
+    const lines = filtered.map(({ row, sno }) =>
+      visibleColList.map((c) => cellText(row, c.key, sno)).join("\t")
+    );
+    try {
+      await navigator.clipboard.writeText([headers, ...lines].join("\n"));
+      toast.success("Copied to clipboard");
+    } catch {
+      toast.error("Copy failed");
+    }
+  };
+
+  const exportExcel = () => {
+    const headers = visibleColList.map((c) => c.label).join(",");
+    const lines = filtered.map(({ row, sno }) =>
+      visibleColList.map((c) => `"${cellText(row, c.key, sno).replace(/"/g, '""')}"`).join(",")
+    );
+    const blob = new Blob([[headers, ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `view-print-loading-sheet-${fromDate}-to-${toDate}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Excel download started (demo)");
+  };
+
+  const btn =
+    "px-3 py-1.5 text-xs font-semibold border border-[#7eb6e8] text-[#0171d3] rounded-lg inline-flex items-center gap-1.5 hover:bg-[#e8f1fb]";
 
   return (
-    <div className="space-y-4 pb-16 max-w-7xl mx-auto">
-      <PageHeader
-        moduleCode="C709"
-        title="Prepare Trip Sheet"
-        subtitle="Operations · Freight & Vehicle Management · Prepare Loading Slip"
-actions={
-          <Link
-            href="/dashboard/operations/tripsheets"
-            className="px-3 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 font-medium inline-flex items-center gap-1.5"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back
-          </Link>
-        }
-      />
+    <div className="space-y-4 max-w-7xl mx-auto pb-10 font-sans">
+      {step === "filter" && (
+        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden max-w-xl mx-auto">
+          <div className="px-6 py-6 space-y-4">
+            <div>
+              <label className="block text-[13px] font-semibold text-slate-800 mb-1.5">
+                Select Docket Date
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowDates((v) => !v)}
+                  className="w-full h-11 px-3 border border-slate-300 rounded-sm bg-white text-left text-[13px] text-slate-700 inline-flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span className="flex-1 truncate">{dateRangeLabel}</span>
+                  <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                </button>
+                {showDates && (
+                  <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 shadow-lg rounded-sm p-3 flex flex-wrap gap-3">
+                    <label className="text-[11px] text-slate-600 flex-1 min-w-[140px]">
+                      From
+                      <input
+                        type="date"
+                        value={fromDate}
+                        onChange={(e) => setFromDate(e.target.value)}
+                        className="mt-1 w-full h-8 px-2 border border-slate-300 rounded-sm text-[12px]"
+                      />
+                    </label>
+                    <label className="text-[11px] text-slate-600 flex-1 min-w-[140px]">
+                      To
+                      <input
+                        type="date"
+                        value={toDate}
+                        onChange={(e) => setToDate(e.target.value)}
+                        className="mt-1 w-full h-8 px-2 border border-slate-300 rounded-sm text-[12px]"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowDates(false)}
+                      className="h-8 px-3 self-end rounded-full border border-[#0171d3] text-[#0171d3] text-xs font-semibold"
+                    >
+                      Done
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
 
-      {feedback && (
-        <div
-          className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-            feedback.type === "success"
-              ? "bg-green-50 border border-green-200 text-green-700"
-              : "bg-red-50 border border-red-200 text-red-700"
-          }`}
-        >
-          {feedback.type === "success" ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-          <span>{feedback.message}</span>
-          {feedback.type === "success" && (
-            <Link
-              href="/dashboard/finance/customer-billing/transport-bill"
-              className="ml-auto underline text-green-800"
-            >
-              Go to Bill Generation →
-            </Link>
-          )}
+            <div className="text-center">
+              <span className="text-slate-800 font-bold text-sm">OR</span>
+            </div>
+
+            <input
+              value={docketNo}
+              onChange={(e) => setDocketNo(e.target.value.toUpperCase())}
+              placeholder="Docket No"
+              className="w-full h-11 px-4 border border-[#7eb6e8] rounded-md text-[13px] text-[#0171d3] placeholder:text-[#0171d3]/80 focus:outline-none focus:border-[#0171d3]"
+            />
+
+            <div className="flex justify-center pt-1">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void loadReport()}
+                className="h-9 min-w-[110px] px-6 rounded-full border border-[#7eb6e8] bg-white text-[#0171d3] text-sm font-semibold hover:bg-[#e8f1fb] disabled:opacity-50"
+              >
+                {loading ? "Loading..." : "Submit"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-4">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">
-              Customer Name <span className="text-red-500">*</span>
-            </label>
-            {customers.length > 0 ? (
-              <select
-                required
-                value={customerName}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white"
-              >
-                <option value="">-- Select --</option>
-                {customers.map((c) => (
-                  <option key={c._id || c.customerCode} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                required
-                value={customerName}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Trip Sheet No.</label>
-            <input
-              readOnly
-              value={tripSheetNo}
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-slate-100 font-mono text-slate-600"
-              title="<System Generated>"
-            />
-            <p className="text-[10px] text-slate-400 mt-0.5">&lt;System Generated&gt;</p>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">
-              Date &amp; Time <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              required
-              value={tripDate}
-              onChange={(e) => setTripDate(e.target.value)}
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Time</label>
-            <input
-              type="time"
-              value={tripTime}
-              onChange={(e) => setTripTime(e.target.value)}
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Manual Trip Sheet No.</label>
-            <input
-              value={manualTripSheetNo}
-              onChange={(e) => setManualTripSheetNo(e.target.value.toUpperCase())}
-              placeholder="Optional reference"
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Trip Sheet Location</label>
-            {branches.length > 0 ? (
-              <select
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white"
-              >
-                {branches.map((b) => {
-                  const label = `${b.branchCode}-${b.branchName || "Ateka Logistics"}`;
-                  return (
-                    <option key={b._id || b.branchCode} value={label}>
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
-            ) : (
-              <input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="ALC1-Ateka Logistics"
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Vendor Name</label>
-            {vendors.length > 0 ? (
-              <select
-                value={vendorName}
-                onChange={(e) => handleVendorSelect(e.target.value)}
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white"
-              >
-                <option value="">-- Select Vendor --</option>
-                {vendors.map((v) => (
-                  <option key={v._id || v.vendorCode} value={v.name}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                value={vendorName}
-                onChange={(e) => setVendorName(e.target.value)}
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Vendor Code</label>
-            <input
-              readOnly
-              value={vendorCode}
-              placeholder="Auto"
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-slate-50 font-mono"
-              title="Filled from Vendor Master"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">
-              Vehicle No. <span className="text-red-500">*</span>
-            </label>
-            <select
-              required
-              value={vehicleNo}
-              onChange={(e) => handleVehicleSelect(e.target.value)}
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white font-mono font-semibold"
-            >
-              <option value="">--select--</option>
-              {vehicles.map((v) => (
-                <option key={v._id || v.vehicleNumber} value={v.vehicleNumber}>
-                  {v.vehicleNumber}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Type of Vehicle</label>
-            <select
-              value={vehicleType}
-              onChange={(e) => setVehicleType(e.target.value)}
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white"
-            >
-              <option value="">--select--</option>
-              <option value="32 FT CONTAINER VEHICLE">32 FT CONTAINER VEHICLE</option>
-              <option value="32 FT SXL">32 FT SXL</option>
-              <option value="20 FT CONTAINER">20 FT CONTAINER</option>
-              <option value="TAURUS 10 TYRE">TAURUS 10 TYRE</option>
-              {Array.from(new Set(vehicles.map((v) => v.vehicleType).filter(Boolean))).map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Pickup Location</label>
-            {origins.length > 0 ? (
-              <select
-                value={pickupLocation}
-                onChange={(e) => setPickupLocation(e.target.value)}
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white"
-              >
-                <option value="">-- Select --</option>
-                {origins.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                value={pickupLocation}
-                onChange={(e) => setPickupLocation(e.target.value.toUpperCase())}
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Delivery Location</label>
-            {destinations.length > 0 ? (
-              <select
-                value={deliveryLocation}
-                onChange={(e) => setDeliveryLocation(e.target.value)}
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white"
-              >
-                <option value="">-- Select --</option>
-                {destinations.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                value={deliveryLocation}
-                onChange={(e) => setDeliveryLocation(e.target.value.toUpperCase())}
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Driver Name</label>
-            <input
-              value={driverName}
-              onChange={(e) => setDriverName(e.target.value)}
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Driver Mobile No.</label>
-            <input
-              value={driverMobile}
-              onChange={(e) => setDriverMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
-              placeholder="10 digits"
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Freight (₹)</label>
-            <input
-              type="number"
-              value={freight}
-              onChange={(e) => setFreight(e.target.value)}
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Advance Amt (₹)</label>
-            <input
-              type="number"
-              value={advanceAmt}
-              onChange={(e) => setAdvanceAmt(e.target.value)}
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Balance Amt (₹)</label>
-            <input
-              type="number"
-              readOnly
-              value={balanceAmt}
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg font-mono bg-slate-50"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Start Km</label>
-            <input
-              type="number"
-              value={startKm}
-              onChange={(e) => setStartKm(e.target.value)}
-              className="w-full h-9 px-3 border border-slate-200 rounded-lg font-mono"
-            />
-          </div>
-
-          <div className="flex items-end">
+      {step === "report" && (
+        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-[#0171d3] text-white flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => {
-                setShowDockets(true);
-                if (docketLines.length === 0) addDocketFromMaster();
-              }}
-              className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold inline-flex items-center gap-1.5"
+              onClick={() => setStep("filter")}
+              className="h-7 w-7 rounded-full bg-white text-[#0171d3] inline-flex items-center justify-center"
             >
-              <Truck className="w-3.5 h-3.5" /> Show Dockets
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </button>
+            <h2 className="text-sm font-bold flex-1">View Print Loading Sheet</h2>
+            <Link
+              href="/dashboard/operations/tripsheets/prepare/new"
+              className="h-8 px-3 rounded-md bg-white text-[#0171d3] text-xs font-semibold inline-flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Loading Sheet
+            </Link>
+          </div>
+
+          <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <button type="button" onClick={() => setShowColumnsMenu((v) => !v)} className={btn}>
+                <Columns3 className="w-3.5 h-3.5" /> Column visibility
+              </button>
+              {showColumnsMenu && (
+                <div className="absolute z-20 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg p-2 text-xs max-h-64 overflow-y-auto">
+                  {COLS.map((c) => (
+                    <label key={c.key} className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded">
+                      <input
+                        type="checkbox"
+                        checked={visibleCols[c.key]}
+                        onChange={() =>
+                          setVisibleCols((prev) => ({ ...prev, [c.key]: !prev[c.key] }))
+                        }
+                      />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button type="button" onClick={() => void copyTable()} className={btn}>
+              <Copy className="w-3.5 h-3.5" /> Copy
+            </button>
+            <button type="button" onClick={exportExcel} className={btn}>
+              <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => setCardView((v) => !v)}
+              className={`${btn} ${cardView ? "bg-blue-50" : ""}`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" /> CARD VIEW
             </button>
           </div>
-        </div>
 
-        {/* Docket / Consignment Details */}
-        {showDockets && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900">Docket / Consignment Details</h3>
-              <button
-                type="button"
-                onClick={() => addDocketFromMaster()}
-                disabled={availableToAdd.length === 0}
-                className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 inline-flex items-center gap-1"
+          <div className="px-4 py-2 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <label className="inline-flex items-center gap-2 text-slate-600">
+              Show
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="h-8 px-2 border border-slate-200 rounded-md"
               >
-                <Plus className="w-3.5 h-3.5" /> Add More Dockets
-              </button>
-            </div>
+                {[10, 25, 50, 100].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              entries
+            </label>
+            <label className="inline-flex items-center gap-2 text-slate-600">
+              Search:
+              <input
+                value={tableSearch}
+                onChange={(e) => {
+                  setTableSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="h-8 px-2 border border-slate-200 rounded-md min-w-[180px]"
+              />
+            </label>
+          </div>
 
+          <div className="px-4 py-1 text-[11px] text-slate-500">
+            Showing {fromEntry} to {toEntry} of {filtered.length} entries
+          </div>
+
+          {!cardView ? (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[1100px]">
-                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                  <tr>
-                    <th className="py-2.5 px-3">SR No.</th>
-                    <th className="py-2.5 px-3">Select</th>
-                    <th className="py-2.5 px-3">Ref No. / EwayBillno</th>
-                    <th className="py-2.5 px-3">Ref Date</th>
-                    <th className="py-2.5 px-3">Consignor Name</th>
-                    <th className="py-2.5 px-3">Consignee Name</th>
-                    <th className="py-2.5 px-3">No. of Pkgs. (Load/Total)</th>
-                    <th className="py-2.5 px-3">Weight (Load/Total)</th>
-                    <th className="py-2.5 px-3">Customer Dockno</th>
-                    <th className="py-2.5 px-3">Delivery Address</th>
-                    <th className="py-2.5 px-3">Action</th>
+              <table className="w-full border-collapse text-[11px] min-w-[1100px]">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-700">
+                    {visibleColList.map((c) => (
+                      <th
+                        key={c.key}
+                        className="border border-slate-200 px-2 py-1.5 font-semibold text-left align-top whitespace-nowrap"
+                      >
+                        <div className="mb-1">{c.label}</div>
+                        <input
+                          value={colFilters[c.key]}
+                          onChange={(e) => {
+                            setColFilters((prev) => ({ ...prev, [c.key]: e.target.value }));
+                            setPage(1);
+                          }}
+                          placeholder={c.search}
+                          className="w-full h-7 px-1.5 border border-slate-200 rounded-sm text-[10px]"
+                        />
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {docketLines.length === 0 ? (
+                <tbody>
+                  {pageRows.map(({ row, sno }) => (
+                    <tr key={row.id} className="odd:bg-white even:bg-slate-50/60 hover:bg-[#eef5fc]">
+                      {visibleColList.map((c) => (
+                        <td key={c.key} className="border border-slate-200 px-2 py-1.5 whitespace-nowrap">
+                          {c.key === "view" ? (
+                            <button
+                              type="button"
+                              title="View / Print"
+                              onClick={() =>
+                                toast.success(`Loading slip ${row.tripSheetNo || row.docketNo} (demo)`)
+                              }
+                              className="h-7 w-7 inline-flex items-center justify-center rounded text-[#0171d3] hover:bg-[#e8f1fb]"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                          ) : c.key === "docketNo" ? (
+                            <span className="text-[#0171d3] font-semibold">{row.docketNo}</span>
+                          ) : (
+                            cellText(row, c.key, sno)
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {pageRows.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="py-8 text-center text-slate-400">
-                        No dockets added. Click <strong>Show Dockets</strong> or <strong>Add More Dockets</strong> to assign booked CNs.
+                      <td
+                        colSpan={Math.max(visibleColList.length, 1)}
+                        className="border border-slate-200 px-3 py-10 text-center text-slate-500"
+                      >
+                        No data available in table
                       </td>
                     </tr>
-                  ) : (
-                    docketLines.map((line, idx) => (
-                      <tr key={line.id} className="hover:bg-slate-50/60">
-                        <td className="py-2 px-3 font-semibold">{idx + 1}</td>
-                        <td className="py-2 px-3">
-                          <input
-                            type="checkbox"
-                            checked={line.selected}
-                            onChange={(e) => updateLine(line.id, { selected: e.target.checked })}
-                          />
-                        </td>
-                        <td className="py-2 px-3">
-                          <div className="font-mono font-bold text-blue-700">{line.docketNo}</div>
-                          <input
-                            value={line.ewayBillNo}
-                            onChange={(e) => updateLine(line.id, { ewayBillNo: e.target.value })}
-                            placeholder="EwayBillno"
-                            className="mt-1 w-full h-7 px-2 border border-slate-200 rounded text-[10px]"
-                          />
-                        </td>
-                        <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="date"
-                            value={line.refDate || ""}
-                            onChange={(e) => updateLine(line.id, { refDate: e.target.value })}
-                            className="h-8 min-w-[9.5rem] px-2 border border-slate-200 rounded bg-white cursor-pointer"
-                          />
-                        </td>
-                        <td className="py-2 px-3">
-                          <input
-                            value={line.consignorName}
-                            onChange={(e) => updateLine(line.id, { consignorName: e.target.value })}
-                            title="Defaults to Trip Sheet Customer Name"
-                            className="w-40 h-8 px-2 border border-slate-200 rounded"
-                          />
-                        </td>
-                        <td className="py-2 px-3">
-                          <input
-                            value={line.consigneeName}
-                            onChange={(e) => updateLine(line.id, { consigneeName: e.target.value })}
-                            title="Defaults to Trip Sheet Customer Name"
-                            className="w-40 h-8 px-2 border border-slate-200 rounded"
-                          />
-                        </td>
-                        <td className="py-2 px-3">
-                          <input
-                            type="number"
-                            value={line.pkgsLoad}
-                            onChange={(e) => updateLine(line.id, { pkgsLoad: e.target.value })}
-                            className="w-16 h-8 px-2 border border-slate-200 rounded font-mono"
-                          />
-                          <div className="text-[10px] text-slate-400 mt-0.5">/{line.pkgsTotal}</div>
-                        </td>
-                        <td className="py-2 px-3">
-                          <input
-                            type="number"
-                            value={line.weightLoad}
-                            onChange={(e) => updateLine(line.id, { weightLoad: e.target.value })}
-                            className="w-20 h-8 px-2 border border-slate-200 rounded font-mono"
-                          />
-                          <div className="text-[10px] text-slate-400 mt-0.5">/{line.weightTotal}</div>
-                        </td>
-                        <td className="py-2 px-3">
-                          <input
-                            value={line.customerDockNo}
-                            onChange={(e) => updateLine(line.id, { customerDockNo: e.target.value.toUpperCase() })}
-                            className="w-28 h-8 px-2 border border-slate-200 rounded font-mono"
-                          />
-                        </td>
-                        <td className="py-2 px-3">
-                          <input
-                            value={line.deliveryAddress}
-                            onChange={(e) => updateLine(line.id, { deliveryAddress: e.target.value })}
-                            className="w-40 h-8 px-2 border border-slate-200 rounded"
-                          />
-                        </td>
-                        <td className="py-2 px-3">
-                          <button
-                            type="button"
-                            onClick={() => removeLine(line.id)}
-                            className="text-rose-600 font-bold text-[10px] hover:underline inline-flex items-center gap-1"
-                          >
-                            <Trash2 className="w-3 h-3" /> DELETE
-                          </button>
-                        </td>
-                      </tr>
-                    ))
                   )}
                 </tbody>
               </table>
             </div>
-
-            <div className="px-5 py-3 border-t border-slate-100 flex justify-end">
-              <button
-                type="button"
-                onClick={() => addDocketFromMaster()}
-                disabled={availableToAdd.length === 0}
-                className="px-3 py-1.5 text-xs font-semibold border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-40"
-              >
-                + Add More Dockets
-              </button>
+          ) : (
+            <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {pageRows.map(({ row }) => (
+                <div key={row.id} className="border border-slate-200 rounded-md p-3 text-[11px] space-y-1">
+                  <div className="font-semibold text-[#0171d3]">{row.docketNo}</div>
+                  <div>{row.customerName}</div>
+                  <div>
+                    {row.fromLocation} → {row.toLocation}
+                  </div>
+                  <div className="text-slate-500">
+                    {row.vehicleNo} · Frt {row.freightAmt}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-5 text-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="font-semibold text-slate-700">Special Instructions / Remarks</label>
-            <span className="text-[11px] text-slate-400 font-mono">
-              {Math.max(0, 200 - specialInstructions.length)} characters remaining
-            </span>
+          <div className="px-4 py-3 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2 text-xs">
+            <button
+              type="button"
+              disabled={pageSafe <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="h-8 px-3 rounded-md border border-slate-200 disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              className="h-8 min-w-8 px-2 rounded-md border border-[#0171d3] bg-[#0171d3] text-white"
+            >
+              {pageSafe}
+            </button>
+            <button
+              type="button"
+              disabled={pageSafe >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="h-8 px-3 rounded-md border border-slate-200 disabled:opacity-40"
+            >
+              Next
+            </button>
           </div>
-          <textarea
-            maxLength={200}
-            rows={3}
-            value={specialInstructions}
-            onChange={(e) => setSpecialInstructions(e.target.value)}
-            placeholder="Any additional notes, loading instructions, etc."
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-          />
         </div>
-
-        <div className="flex justify-end gap-2">
-          <Link
-            href="/dashboard/operations/tripsheets"
-            className="px-4 py-2.5 text-xs font-semibold border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
-          >
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg inline-flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? "Saving..." : "Save Loading Slip & Assign Dockets"}
-          </button>
-        </div>
-      </form>
+      )}
     </div>
   );
 }

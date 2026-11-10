@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type AdviceRow = {
   id: string;
@@ -119,7 +120,7 @@ export default function PrintDebitAdvicePage() {
       return;
     }
     toast.success(`${selected.size} Debit Advice(s) sent to Dot-Matrix printer (demo)`);
-    window.print();
+    printScoped();
   };
 
   return (
@@ -235,7 +236,7 @@ export default function PrintDebitAdvicePage() {
       )}
 
       {step === "report" && (
-        <div className="space-y-3">
+        <div data-print-root className="space-y-3">
           <button
             type="button"
             onClick={() => setStep("filter")}

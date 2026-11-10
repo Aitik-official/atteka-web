@@ -12,6 +12,7 @@ import {
   Printer
 } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type Row = {
   id: string;
@@ -188,7 +189,7 @@ export default function ViewPrintCnPage() {
   };
 
   const printTable = () => {
-    window.print();
+    printScoped();
   };
 
   const btn =
@@ -269,7 +270,7 @@ export default function ViewPrintCnPage() {
       )}
 
       {step === "report" && (
-        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div data-print-root className="bg-white border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center gap-2">
             <button
               type="button"

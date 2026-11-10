@@ -12,6 +12,7 @@ import {
   Printer
 } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type Row = {
   id: string;
@@ -249,7 +250,7 @@ export default function PdcFreightAdvanceSinglePage() {
       )}
 
       {step === "report" && (
-        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div data-print-root className="bg-white border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -310,7 +311,7 @@ export default function PdcFreightAdvanceSinglePage() {
             </button>
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={() => printScoped()}
               className="px-3 py-1.5 text-xs font-semibold border border-[#7eb6e8] text-[#0171d3] rounded-lg inline-flex items-center gap-1.5"
             >
               <Printer className="w-3.5 h-3.5" /> Print

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { printScoped } from "@/lib/printEngine";
 import { BarChart3, FileSpreadsheet, Calendar, Download, Printer } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ResponsiveTableWrapper } from "@/components/common/ResponsiveTableWrapper";
@@ -34,7 +35,7 @@ export default function ReportsHubPage() {
         subtitle="Reports • TrailBalance.aspx & ProfitLoss.aspx (C292) • General Ledger balances, revenue, and trip costs"
 actions={
           <button
-            onClick={() => window.print()}
+            onClick={() => printScoped()}
             className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -97,6 +98,7 @@ actions={
       </div>
 
       {/* Trial Balance Table */}
+      <div data-print-root>
       <ResponsiveTableWrapper
         title={`General Ledger Trial Balance (${fromDate} to ${toDate})`}
         showSwipeHint={true}
@@ -144,6 +146,7 @@ actions={
           </tfoot>
         </table>
       </ResponsiveTableWrapper>
+      </div>
     </div>
   );
 }

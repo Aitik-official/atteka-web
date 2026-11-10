@@ -15,13 +15,13 @@ export default function ViewPrintDocumentHubPage() {
         <WcvActionCard
           title="View/Print Pickup PDC"
           description="View/Print Pickup PDC"
-          href="/dashboard/operations/tripsheets"
+          href="/dashboard/operations/view-print/pickup-pdc"
           icon={Truck}
         />
         <WcvActionCard
           title="View/Print Delivery PDC"
           description="View/Print Delivery PDC"
-          href="/dashboard/operations/tripsheets"
+          href="/dashboard/operations/view-print/delivery-pdc"
           icon={FileCheck}
         />
       </div>

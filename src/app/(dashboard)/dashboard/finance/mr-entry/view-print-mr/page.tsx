@@ -16,6 +16,7 @@ import {
   Table2
 } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type MrRow = {
   srNo: number;
@@ -324,7 +325,7 @@ export default function ViewPrintMrPage() {
       )}
 
       {step === "report" && (
-        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div data-print-root className="bg-white border border-slate-200 shadow-sm overflow-hidden">
           <div className="bg-[#1e88e5] text-white px-4 py-2.5 flex items-center justify-between">
             <h2 className="text-sm font-semibold tracking-wide">View / Print MR</h2>
             <button
@@ -383,7 +384,7 @@ export default function ViewPrintMrPage() {
               </button>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => printScoped()}
                 className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg bg-white hover:bg-slate-50 inline-flex items-center gap-1.5"
               >
                 <Printer className="w-3.5 h-3.5" /> Print

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, BarChart2, Calendar, ChevronDown, FileSpreadsheet, MoreHorizontal, Pencil, Printer, RefreshCw, Search, Table2, X } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type Row = {
   pdcNumber: string;
@@ -338,7 +339,7 @@ export default function PdcRegisterDocketWisePage() {
       )}
 
       {step === "report" && (
-        <div className="bg-white border border-slate-300 shadow-sm">
+        <div data-print-root className="bg-white border border-slate-300 shadow-sm">
           <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-100 border-b border-slate-300 text-[11px] print:hidden">
             <span className="text-slate-600">
               {page} of {totalPages}
@@ -377,7 +378,7 @@ export default function PdcRegisterDocketWisePage() {
             </button>
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={() => printScoped()}
               className="h-7 px-2 border border-slate-300 rounded bg-white inline-flex items-center gap-1"
             >
               <Printer className="w-3.5 h-3.5" /> Print

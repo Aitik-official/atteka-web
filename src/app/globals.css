@@ -61,3 +61,39 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #0171d3;
 }
+
+/* Dashboard chrome must never appear on browser print fallbacks */
+@media print {
+  [data-print-hide],
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* When a page marks a print root, print only that card */
+  body:has([data-print-root]) * {
+    visibility: hidden !important;
+  }
+  body:has([data-print-root]) [data-print-root],
+  body:has([data-print-root]) [data-print-root] * {
+    visibility: visible !important;
+  }
+  body:has([data-print-root]) [data-print-root] {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+}

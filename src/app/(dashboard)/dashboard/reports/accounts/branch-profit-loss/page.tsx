@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, BarChart2, FileSpreadsheet, Printer, RefreshCw, Search, Send, Table2 } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type PlRow = {
   branch: string;
@@ -217,7 +218,7 @@ export default function BranchProfitLossPage() {
       )}
 
       {step === "report" && (
-        <div className="space-y-3">
+        <div data-print-root className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <button
@@ -265,7 +266,7 @@ export default function BranchProfitLossPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={() => printScoped()}
                   className="h-7 w-7 border border-slate-300 rounded bg-white inline-flex items-center justify-center"
                   title="Print"
                 >

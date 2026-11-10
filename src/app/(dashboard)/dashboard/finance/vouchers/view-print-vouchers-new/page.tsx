@@ -16,6 +16,7 @@ import {
   Table2
 } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { printScoped } from "@/lib/printEngine";
 
 type VoucherRow = {
   srNo: number;
@@ -287,7 +288,7 @@ export default function ViewPrintVouchersNewPage() {
       )}
 
       {step === "report" && (
-        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div data-print-root className="bg-white border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -331,7 +332,7 @@ export default function ViewPrintVouchersNewPage() {
               <button type="button" onClick={exportExcel} className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5" /> PDF
               </button>
-              <button type="button" onClick={() => window.print()} className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5">
+              <button type="button" onClick={() => printScoped()} className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5">
                 <Printer className="w-3.5 h-3.5" /> Print
               </button>
               <button
