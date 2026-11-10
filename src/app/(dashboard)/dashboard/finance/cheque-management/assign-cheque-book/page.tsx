@@ -3,8 +3,9 @@
 import React, { useMemo, useState } from "react";
 import { Calendar } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { useMasterOptions } from "@/hooks/useMasterOptions";
+import { WcvFormCard, WcvSelect, wcvInputCls } from "@/components/common/WcvFormPrimitives";
 
-const LOCATIONS = ["ALC1", "ALC2", "PUNE", "NASHIK"];
 const BANK_ACCOUNTS = [
   "HDFC Bank - Ops · ****4521",
   "ICICI Bank - Current · ****8830",
@@ -17,6 +18,7 @@ function toInputDate(d: Date) {
 }
 
 export default function AssignChequeBookPage() {
+  const { options } = useMasterOptions();
   const [entryLocation, setEntryLocation] = useState("");
   const [bankAc, setBankAc] = useState("");
   const [fromSrNo, setFromSrNo] = useState(0);
@@ -64,33 +66,24 @@ export default function AssignChequeBookPage() {
   };
 
   const labelCls = "px-3 py-2.5 text-[12px] font-semibold text-[#0171d3] whitespace-nowrap align-middle";
-  const fieldCls =
-    "h-8 px-2 border border-blue-300 rounded-md text-xs bg-white focus:outline-none focus:border-[#0171d3]";
+  const fieldCls = `${wcvInputCls} h-8 text-xs`;
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto pb-12">
-      <div className="bg-white border border-slate-300 shadow-sm overflow-hidden">
-        <div className="bg-[#0171d3] text-white text-sm font-semibold px-3 py-2 text-center">
-          Cheque Book Issue Entry
-        </div>
-
-        <table className="w-full text-[12px] border-collapse">
+      <WcvFormCard title="Cheque Book Issue Entry" className="max-w-3xl mx-auto">
+        <table className="w-full text-[12px] border-collapse -mt-1">
           <tbody>
             <tr className="border-b border-slate-200">
               <td className={`${labelCls} w-[32%] border-r border-slate-100`}>Entry Location</td>
               <td className="px-3 py-2">
-                <select
+                <WcvSelect
                   value={entryLocation}
-                  onChange={(e) => setEntryLocation(e.target.value)}
-                  className={`${fieldCls} min-w-[220px]`}
-                >
-                  <option value="">--Select--</option>
-                  {LOCATIONS.map((l) => (
-                    <option key={l} value={l}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setEntryLocation}
+                  options={options.branches}
+                  includeEmpty
+                  placeholder="--Select--"
+                  className="min-w-[220px] h-8 text-xs"
+                />
               </td>
             </tr>
 
@@ -164,7 +157,7 @@ export default function AssignChequeBookPage() {
           </tbody>
         </table>
 
-        <div className="flex justify-center py-4 border-t border-slate-100">
+        <div className="flex justify-center py-2 border-t border-slate-100">
           <button
             type="button"
             disabled={saving}
@@ -174,7 +167,7 @@ export default function AssignChequeBookPage() {
             {saving ? "Submitting..." : "Submit"}
           </button>
         </div>
-      </div>
+      </WcvFormCard>
     </div>
   );
 }

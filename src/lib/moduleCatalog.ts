@@ -120,7 +120,16 @@ export const MODULE_SEARCH_CATALOG: ModuleSearchItem[] = [
   { id: "C485", label: "Track Customer/Vendor", code: "C485", route: "/dashboard/tracking/party", group: "Tracking" },
 
   // Exceptional
-  { id: "C117", label: "Operation", code: "C117", route: "/dashboard/operations/dockets", group: "Exceptional" },
+  { id: "C117", label: "Operation", code: "C117", route: "/dashboard/exceptional/operation", group: "Exceptional", keywords: ["exceptional operation", "reassign", "cancel delivery pdc"] },
+  { id: "C117A", label: "Reassign & Next Location", code: "C117", route: "/dashboard/exceptional/operation/reassign-next-location", group: "Exceptional" },
+  { id: "C117B", label: "Cancel Delivery PDC", code: "C117", route: "/dashboard/exceptional/operation/cancel-delivery-pdc", group: "Exceptional" },
+  { id: "C117C", label: "Edit THC Vendor/Date/Vehicle", code: "C117", route: "/dashboard/exceptional/operation/edit-thc-vendor-date-vehicle", group: "Exceptional" },
+  { id: "C117D", label: "Change Route", code: "C117", route: "/dashboard/exceptional/operation/change-route", group: "Exceptional" },
+  { id: "C117E", label: "Edit Billing Party", code: "C117", route: "/dashboard/exceptional/operation/edit-billing-party", group: "Exceptional" },
+  { id: "C117F", label: "Edit Manual document Number", code: "C117", route: "/dashboard/exceptional/operation/edit-manual-document-number", group: "Exceptional" },
+  { id: "C117G", label: "Edit PDC Vendor/Date/Vehicle", code: "C117", route: "/dashboard/exceptional/operation/edit-pdc-vendor-date-vehicle", group: "Exceptional" },
+  { id: "C117H", label: "Edit Billing Party/Branch/Po NO", code: "C117", route: "/dashboard/exceptional/operation/edit-billing-party-branch-po", group: "Exceptional" },
+  { id: "C117I", label: "Edit From & To location", code: "C117", route: "/dashboard/exceptional/operation/edit-from-to-location", group: "Exceptional" },
   { id: "C132", label: "Finance", code: "C132", route: "/dashboard/exceptional/finance", group: "Exceptional", keywords: ["fin"] },
   { id: "C520", label: "Bank Reconciliation Statment", code: "C520", route: "/dashboard/exceptional/brs", group: "Exceptional" },
   { id: "C588", label: "Company Vechicle Exceptional", code: "C588", route: "/dashboard/exceptional/vehicle", group: "Exceptional" },

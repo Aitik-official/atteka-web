@@ -134,7 +134,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       icon: ClipboardCheck,
       submodules: [
         { label: "Exceptional Hub", route: "/dashboard/exceptional", code: "C136" },
-        { label: "Operation", route: "/dashboard/operations/dockets", code: "C117" },
+        { label: "Operation", route: "/dashboard/exceptional/operation", code: "C117" },
         { label: "Finance", route: "/dashboard/exceptional/finance", code: "C132" },
         { label: "Bank Reconciliation Statment", route: "/dashboard/exceptional/brs", code: "C520" },
         { label: "Company Vechicle Exceptional", route: "/dashboard/exceptional/vehicle", code: "C588" }

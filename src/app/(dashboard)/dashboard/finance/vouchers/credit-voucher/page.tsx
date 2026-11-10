@@ -2,10 +2,11 @@
 
 import React, { useMemo, useState } from "react";
 import { toast } from "@/lib/toastBus";
+import { useMasterOptions } from "@/hooks/useMasterOptions";
+import { WcvFormCard, WcvSelect } from "@/components/common/WcvFormPrimitives";
 
 type EntityType = "Vendor" | "Customer" | "Staff" | "";
 
-const LOCATIONS = ["ALC1", "ALC2", "PUNE", "NASHIK"];
 const TDS_OPTIONS = ["--Select--", "194C", "194H", "194I", "194J", "194Q", "No TDS"];
 const MODES = ["--Select--", "Cash", "Cheque", "NEFT", "RTGS", "UPI"];
 const CASH_BANK = [
@@ -27,6 +28,7 @@ function fmtAmt(n: number) {
 }
 
 export default function CreditVoucherPage() {
+  const { options } = useMasterOptions();
   const [voucherDate, setVoucherDate] = useState(toInputDate(new Date()));
   const [location, setLocation] = useState("");
   const [receivedFrom, setReceivedFrom] = useState("");
@@ -93,13 +95,9 @@ export default function CreditVoucherPage() {
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-12">
-      <div className="bg-[#0171d3] text-white text-sm font-semibold px-4 py-2.5 rounded-sm shadow-sm">
-        Credit Voucher
-      </div>
-
-      <div className="bg-white border border-slate-200 shadow-sm rounded-sm overflow-hidden">
+      <WcvFormCard title="Credit Voucher" className="max-w-5xl mx-auto">
         {/* Voucher Information */}
-        <div className="p-4 sm:p-5 space-y-4 border-b border-slate-100">
+        <div className="space-y-4 border-b border-slate-100 pb-4">
           <p className="text-xs font-semibold text-slate-700 italic">
             Please Enter Voucher Information...
           </p>
@@ -124,18 +122,14 @@ export default function CreditVoucherPage() {
             </div>
             <div>
               <label className={labelCls}>Locations</label>
-              <select
+              <WcvSelect
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className={fieldCls}
-              >
-                <option value="">---select---</option>
-                {LOCATIONS.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
+                onChange={setLocation}
+                options={options.branches}
+                includeEmpty
+                placeholder="---select---"
+                className="w-full"
+              />
             </div>
 
             <div>
@@ -365,7 +359,7 @@ export default function CreditVoucherPage() {
             </button>
           </div>
         </div>
-      </div>
+      </WcvFormCard>
     </div>
   );
 }

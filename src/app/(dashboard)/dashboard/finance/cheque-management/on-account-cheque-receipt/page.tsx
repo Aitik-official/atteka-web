@@ -1,25 +1,17 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Calendar, Search } from "lucide-react";
 import { toast } from "@/lib/toastBus";
-
-type CustomerOpt = { code: string; name: string; label: string };
-
-const BRANCHES = ["ALC1", "ALC2", "PUNE", "NASHIK", "THANE"];
-
-const FALLBACK_CUSTOMERS: CustomerOpt[] = [
-  { code: "CUS0001", name: "NORTHBOUND FREIGHT PVT LTD", label: "CUS0001 - NORTHBOUND FREIGHT PVT LTD" },
-  { code: "CUS0002", name: "COASTAL CARGO SOLUTIONS", label: "CUS0002 - COASTAL CARGO SOLUTIONS" },
-  { code: "CUS0003", name: "METRO LOGISTICS PARTNERS", label: "CUS0003 - METRO LOGISTICS PARTNERS" },
-  { code: "CUS0004", name: "GATEWAY DISTRIBUTION CO", label: "CUS0004 - GATEWAY DISTRIBUTION CO" }
-];
+import { useMasterOptions } from "@/hooks/useMasterOptions";
+import { WcvFormCard } from "@/components/common/WcvFormPrimitives";
 
 function toInputDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
 export default function OnAccountChequeReceiptPage() {
+  const { options } = useMasterOptions();
   const [chequeUtrNo, setChequeUtrNo] = useState("");
   const [chequeUtrDate, setChequeUtrDate] = useState(toInputDate(new Date()));
   const [amount, setAmount] = useState(0);
@@ -29,28 +21,7 @@ export default function OnAccountChequeReceiptPage() {
   const [customerName, setCustomerName] = useState("");
   const [narration, setNarration] = useState("");
   const [chequeReceivedAt, setChequeReceivedAt] = useState("");
-  const [customers, setCustomers] = useState<CustomerOpt[]>(FALLBACK_CUSTOMERS);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/customers")
-      .then((r) => r.json())
-      .then((d) => {
-        if (!d.success || !Array.isArray(d.data) || !d.data.length) return;
-        setCustomers(
-          d.data.slice(0, 80).map((c: any) => {
-            const code = String(c.customerCode || c.code || "").trim();
-            const name = String(c.name || c.customerName || "Customer").trim();
-            return {
-              code: code || name.slice(0, 8).toUpperCase(),
-              name,
-              label: code ? `${code} - ${name}` : name
-            };
-          })
-        );
-      })
-      .catch(() => {});
-  }, []);
 
   const partyHint = useMemo(
     () => (!receivedFrom.trim() && customerName.trim() ? "other" : receivedFrom.trim() ? "master" : "none"),
@@ -97,12 +68,8 @@ export default function OnAccountChequeReceiptPage() {
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto pb-12">
-      <div className="bg-white border border-slate-300 shadow-sm overflow-hidden">
-        <div className="bg-[#0171d3] text-white text-sm font-semibold px-3 py-2 text-center">
-          On Account Cheque Entry
-        </div>
-
-        <div className="p-4 sm:p-5 space-y-0 text-[12px]">
+      <WcvFormCard title="On Account Cheque Entry" className="max-w-4xl mx-auto">
+        <div className="space-y-0 text-[12px] -mt-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 py-3 border-b border-slate-200">
             <label className="grid grid-cols-[150px_1fr] items-center gap-2">
               <span className={labelCls}>Cheque / UTR number</span>
@@ -161,8 +128,8 @@ export default function OnAccountChequeReceiptPage() {
                 />
                 <Search className="w-3.5 h-3.5 text-blue-500 absolute right-2.5 top-2.5 pointer-events-none" />
                 <datalist id="on-ac-customers">
-                  {customers.map((c) => (
-                    <option key={c.code} value={c.label} />
+                  {options.customers.map((c) => (
+                    <option key={c.value} value={c.label} />
                   ))}
                 </datalist>
               </div>
@@ -224,26 +191,26 @@ export default function OnAccountChequeReceiptPage() {
                 />
                 <Search className="w-3.5 h-3.5 text-blue-500 absolute right-2.5 top-2.5 pointer-events-none" />
                 <datalist id="on-ac-branches">
-                  {BRANCHES.map((b) => (
-                    <option key={b} value={b} />
+                  {options.branches.map((b) => (
+                    <option key={b.value} value={b.code || b.value} />
                   ))}
                 </datalist>
               </div>
             </label>
           </div>
         </div>
-      </div>
 
-      <div className="flex justify-center">
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => void submit()}
-          className="min-w-[120px] h-9 px-6 rounded-full border border-[#0171d3] text-[#0171d3] bg-white text-[12px] font-semibold hover:bg-blue-50 disabled:opacity-50"
-        >
-          {saving ? "Submitting..." : "Submit"}
-        </button>
-      </div>
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void submit()}
+            className="min-w-[120px] h-9 px-6 rounded-full border border-[#0171d3] text-[#0171d3] bg-white text-[12px] font-semibold hover:bg-blue-50 disabled:opacity-50"
+          >
+            {saving ? "Submitting..." : "Submit"}
+          </button>
+        </div>
+      </WcvFormCard>
     </div>
   );
 }

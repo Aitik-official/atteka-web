@@ -11,7 +11,7 @@ export default function ExceptionalHubPage() {
         {
           title: "Operation",
           description: "Exceptional operations",
-          href: "/dashboard/operations/dockets",
+          href: "/dashboard/exceptional/operation",
           icon: AlertTriangle
         },
         {

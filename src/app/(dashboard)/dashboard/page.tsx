@@ -112,7 +112,7 @@ export default function DashboardHome() {
       icon: ClipboardCheck,
       image: "/images/cards/exceptional.jpg",
       subcategories: [
-        { title: "Operation", code: "C117", route: "/dashboard/operations/dockets" },
+        { title: "Operation", code: "C117", route: "/dashboard/exceptional/operation" },
         { title: "Finance", code: "C132", route: "/dashboard/exceptional/finance" },
         { title: "Bank Reconciliation Statment", code: "C520", route: "/dashboard/exceptional/brs" },
         { title: "Company Vechicle Exceptional", code: "C588", route: "/dashboard/exceptional/vehicle" }

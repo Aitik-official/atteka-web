@@ -19,24 +19,13 @@ import {
 import { WcvRibbonHeader } from "@/components/common/WcvActionCard";
 import { exportToCsv, stampFilename } from "@/lib/exportCsv";
 import { toast } from "@/lib/toastBus";
+import { useMasterOptions } from "@/hooks/useMasterOptions";
+import { SERVICE_TYPE_OPTIONS } from "@/lib/masterOptions";
 
-const SERVICE_TYPES = ["FTL", "LTL", "PART LOAD", "EXPRESS", "DEDICATED"];
-const LOCATIONS = [
-  "MUMBAI",
-  "BHIWANDI",
-  "PUNE",
-  "NAGPUR",
-  "DELHI",
-  "GURUGRAM",
-  "AHMEDABAD",
-  "SURAT",
-  "BENGALURU",
-  "CHENNAI",
-  "HYDERABAD",
-  "KOLKATA",
-  "INDORE",
-  "JAIPUR",
-  "RAIPUR"
+const SERVICE_TYPES = [
+  ...SERVICE_TYPE_OPTIONS.map((s) => s.value),
+  "EXPRESS",
+  "DEDICATED"
 ];
 
 type RateLine = {
@@ -107,6 +96,7 @@ type Props = {
 };
 
 export function QuotationMasterPanel({ onBack }: Props) {
+  const { options: masterOptions } = useMasterOptions();
   const [customers, setCustomers] = useState<any[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState("");
@@ -124,6 +114,15 @@ export function QuotationMasterPanel({ onBack }: Props) {
   const [contractFromLocal, setContractFromLocal] = useState(toDateInput(todayDisplay()));
   const [contractToLocal, setContractToLocal] = useState(toDateInput(todayDisplay()));
   const [lines, setLines] = useState<RateLine[]>([emptyLine()]);
+
+  const locationOptions = useMemo(
+    () => masterOptions.locations.map((l) => l.value),
+    [masterOptions.locations]
+  );
+  const ftlOptions = useMemo(() => {
+    const fromMaster = masterOptions.ftlTypes.map((f) => f.value);
+    return Array.from(new Set([...vehicleTypes, ...fromMaster].filter(Boolean)));
+  }, [vehicleTypes, masterOptions.ftlTypes]);
 
   const loadCustomers = async () => {
     try {
@@ -416,7 +415,7 @@ export function QuotationMasterPanel({ onBack }: Props) {
                             className="w-full h-8 px-2 border border-[#0070d2] rounded bg-white"
                           >
                             <option value="">Select From Location</option>
-                            {LOCATIONS.map((loc) => (
+                            {locationOptions.map((loc) => (
                               <option key={loc} value={loc}>
                                 {loc}
                               </option>
@@ -430,7 +429,7 @@ export function QuotationMasterPanel({ onBack }: Props) {
                             className="w-full h-8 px-2 border border-[#0070d2] rounded bg-white"
                           >
                             <option value="">Select To Location</option>
-                            {LOCATIONS.map((loc) => (
+                            {locationOptions.map((loc) => (
                               <option key={loc} value={loc}>
                                 {loc}
                               </option>
@@ -444,7 +443,7 @@ export function QuotationMasterPanel({ onBack }: Props) {
                             className="w-full h-8 px-2 border border-[#0070d2] rounded bg-white"
                           >
                             <option value="">Select Vehicle Type</option>
-                            {vehicleTypes.map((v) => (
+                            {ftlOptions.map((v) => (
                               <option key={v} value={v}>
                                 {v}
                               </option>
