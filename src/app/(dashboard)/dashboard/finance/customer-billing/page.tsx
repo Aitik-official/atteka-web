@@ -15,7 +15,7 @@ export default function CustomerBillingHubPage() {
         <WcvActionCard
           title="Docket Financial Completion"
           description="Docket Financial Completion"
-          href="/dashboard/finance/billing"
+          href="/dashboard/finance/customer-billing/completion-financial"
           icon={CheckCircle}
         />
         <WcvActionCard
@@ -27,7 +27,7 @@ export default function CustomerBillingHubPage() {
         <WcvActionCard
           title="Other Bill"
           description="Other Bill"
-          href="/dashboard/finance/billing"
+          href="/dashboard/finance/customer-billing/other-bill"
           icon={FileText}
         />
         <WcvActionCard
@@ -39,13 +39,13 @@ export default function CustomerBillingHubPage() {
         <WcvActionCard
           title="Customer Invoice"
           description="Customer Invoice"
-          href="/dashboard/finance/billing"
+          href="/dashboard/finance/customer-billing/customer-invoice"
           icon={FileSpreadsheet}
         />
         <WcvActionCard
           title="Download Multiple PODs"
           description="Download Multiple PODs"
-          href="/dashboard/operations/dockets"
+          href="/dashboard/finance/customer-billing/download-multiple-pods"
           icon={Download}
         />
       </div>

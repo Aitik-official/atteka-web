@@ -63,14 +63,14 @@ export default function CnOperationsHubPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <WcvActionCard
           title="Edit Consignment (CN)"
-          description="Browse the consignment registry in active edit mode to modify rates, billing party, packages, and routes."
-          href="/dashboard/operations/dockets?action=edit"
+          description="Browse pending CNs by date or CN No, then open for edit."
+          href="/dashboard/operations/cn-operations/edit-cns"
           icon={Edit3}
         />
         <WcvActionCard
           title="View & Print CN"
-          description="Access the complete docket archive to generate laser A4 barcodes, thermal slips, or dot-matrix dockets."
-          href="/dashboard/operations/dockets"
+          description="Search by docket date or CN No, then view / print consignments."
+          href="/dashboard/operations/cn-operations/view-print-cn"
           icon={Printer}
         />
         <WcvActionCard

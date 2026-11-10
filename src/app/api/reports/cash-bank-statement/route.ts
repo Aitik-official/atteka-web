@@ -12,11 +12,12 @@ type Txn = {
 
 /** Fabricated demo cash/bank ledgers — column structure only; not client production data. */
 const DEMO_ACCOUNTS = [
-  { code: "AFB0001", name: "OPERATIONS BANK A/C" },
-  { code: "AFB0002", name: "COLLECTION BANK A/C" },
-  { code: "AFB0003", name: "ESCROW BANK A/C" },
-  { code: "CAS0001", name: "CASH IN HAND" },
-  { code: "CAS0002", name: "PETTY CASH" }
+  { code: "CAS00001", name: "CASH IN HAND" },
+  { code: "CAS00002", name: "PETTY CASH - ALC1" },
+  { code: "AFB00051", name: "HDFC BANK OPS ****4521" },
+  { code: "AFB00052", name: "ICICI CURRENT ****8830" },
+  { code: "AFB00053", name: "SBI COLLECTION ****1102" },
+  { code: "AFB00054", name: "AXIS PAYMENTS ****7744" }
 ];
 
 function parseIso(s: string | null, fallback: string) {

@@ -22,7 +22,7 @@ export default function CashBankStatementHubPage() {
         <WcvActionCard
           title="View / Print Cash & Bank Statement"
           description="View / Print Cash & Bank Statement"
-          href="/dashboard/reports/accounts/cash-bank-statement"
+          href="/dashboard/finance/cash-bank-statement/view-print-cbs"
           icon={FileText}
         />
         <WcvActionCard
@@ -34,13 +34,13 @@ export default function CashBankStatementHubPage() {
         <WcvActionCard
           title="Online Payment Report"
           description="Online Payment Report"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/cash-bank-statement/online-payment-report"
           icon={FileSpreadsheet}
         />
         <WcvActionCard
           title="Online Payment Re-Process"
           description="Online Payment Re-Process"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/cash-bank-statement/online-payment-reprocess"
           icon={RefreshCw}
         />
         <WcvActionCard
@@ -52,7 +52,7 @@ export default function CashBankStatementHubPage() {
         <WcvActionCard
           title="API Bank Statement"
           description="API Bank Statement"
-          href="/dashboard/finance/bank-statement"
+          href="/dashboard/finance/cash-bank-statement/api-bank-statement"
           icon={Server}
         />
       </div>

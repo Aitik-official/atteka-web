@@ -22,7 +22,7 @@ export default function PrintDotMatrixHubPage() {
         <WcvActionCard
           title="PDC Freight Memo"
           description="PDC Freight Memo"
-          href="/dashboard/operations/tripsheets"
+          href="/dashboard/finance/print-dot-matrix/pdc-freight-memo"
           icon={Truck}
         />
         <WcvActionCard
@@ -34,13 +34,13 @@ export default function PrintDotMatrixHubPage() {
         <WcvActionCard
           title="Print Voucher"
           description="Print Voucher"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/print-dot-matrix/print-vouchers"
           icon={Printer}
         />
         <WcvActionCard
           title="Print Debit Advice"
           description="Print Debit Advice"
-          href="/dashboard/finance/bank-payment"
+          href="/dashboard/finance/print-dot-matrix/print-debit-advice"
           icon={FileText}
         />
         <WcvActionCard
@@ -52,7 +52,7 @@ export default function PrintDotMatrixHubPage() {
         <WcvActionCard
           title="Docket Print"
           description="Docket Print"
-          href="/dashboard/operations/dockets"
+          href="/dashboard/finance/print-dot-matrix/docket-print"
           icon={FileSpreadsheet}
         />
       </div>

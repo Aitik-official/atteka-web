@@ -21,7 +21,7 @@ export default function FreightBookingHubPage() {
         <WcvActionCard
           title="Edit CN"
           description="Edit CN"
-          href="/dashboard/operations/dockets?action=edit"
+          href="/dashboard/operations/cn-operations/edit-cns"
           icon={Edit3}
         />
         <WcvActionCard

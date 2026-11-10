@@ -30,7 +30,7 @@ export default function AccountsReportsHubPage() {
         <WcvActionCard
           title="Cash and Bank Transaction Statement"
           description="Cash and Bank Transaction Statement"
-          href="/dashboard/reports/accounts/cash-bank-statement"
+          href="/dashboard/finance/cash-bank-statement/view-print-cbs"
           icon={Landmark}
         />
         <WcvActionCard
