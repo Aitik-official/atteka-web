@@ -111,7 +111,10 @@ export default function PrintVouchersDotMatrixPage() {
 
   const printOne = (voucherNumberValue: string) => {
     toast.success(`Voucher ${voucherNumberValue} sent to Dot-Matrix printer (demo)`);
-    printScoped();
+    printScoped({
+      title: "Print Vouchers [Dot-Matrix]",
+      layout: "dot-matrix"
+    });
   };
 
   return (

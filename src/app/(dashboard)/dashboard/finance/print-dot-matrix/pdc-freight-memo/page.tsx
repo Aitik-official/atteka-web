@@ -141,7 +141,10 @@ export default function PdcFreightMemoPage() {
       return;
     }
     toast.success(`${selected.size} PDC Freight Memo(s) sent to Dot-Matrix printer (demo)`);
-    printScoped();
+    printScoped({
+      title: "Print PDC Freight Memo [Dot-Matrix]",
+      layout: "dot-matrix"
+    });
   };
 
   return (

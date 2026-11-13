@@ -108,12 +108,375 @@ function renderSvgBarcode(text: string): string {
   return `<div style="font-family:monospace;font-weight:bold;letter-spacing:2px;text-align:center;">*${escapeHtml(text)}*</div>`;
 }
 
+/** True if node looks like Copy/Excel/Print/column toolbar chrome (not data). */
+function looksLikePrintToolbar(el: Element): boolean {
+  if (el.querySelector("table")) return false;
+  const txt = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+  if (!txt) return false;
+  if (txt.includes("column visibility") || txt.includes("card view")) return true;
+  if (txt.includes("excel") && txt.includes("print") && (txt.includes("copy") || txt.includes("column"))) {
+    return true;
+  }
+  if (txt.includes("show") && txt.includes("entries") && el.querySelector("select")) return true;
+  if (
+    (txt.includes("refresh") || txt.includes("find")) &&
+    txt.includes("print") &&
+    txt.includes("excel") &&
+    el.querySelectorAll("button").length >= 2
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function isBlueNavHeader(el: Element): boolean {
+  const cls = typeof (el as HTMLElement).className === "string" ? (el as HTMLElement).className : "";
+  if (!/(1e88e5|0171d3|2563eb|bg-\[#)/i.test(cls) && !/\bbg-blue-600\b|\bbg-blue-700\b/.test(cls)) {
+    return false;
+  }
+  return !el.querySelector("table");
+}
+
+export type PrintTableLayout = "auto" | "report" | "compact" | "landscape" | "dot-matrix";
+
+function extractPrintTitle(root: HTMLElement): string {
+  const h = root.querySelector("h1, h2, h3");
+  if (h?.textContent?.trim()) return h.textContent.trim();
+  for (const el of Array.from(root.querySelectorAll("div"))) {
+    if (!isBlueNavHeader(el)) continue;
+    const t = (el.textContent || "").replace(/\s+/g, " ").trim();
+    if (t && t.length < 140 && !/back|print selected/i.test(t)) return t;
+  }
+  return "";
+}
+
+function extractPrintMeta(root: HTMLElement): string {
+  for (const el of Array.from(root.querySelectorAll("div"))) {
+    if (el.querySelector("table") || looksLikePrintToolbar(el) || isBlueNavHeader(el)) continue;
+    const cls = String((el as HTMLElement).className || "");
+    const t = (el.textContent || "").replace(/\s+/g, " ").trim();
+    if (!t || t.length > 220) continue;
+    if (
+      (/e8f1fb|bg-slate-50|border-b/.test(cls) || /date|vendor|party|from|branch|period|pdc/i.test(t)) &&
+      /:/.test(t)
+    ) {
+      return t;
+    }
+  }
+  return "";
+}
+
+/** Clone a data table for print — no overflow wrapper, no min-width, no checkbox cols. */
+function cleanTableForPrint(table: HTMLTableElement): HTMLTableElement {
+  const clone = table.cloneNode(true) as HTMLTableElement;
+  clone.className = "atteka-print-table";
+  clone.removeAttribute("style");
+  clone.style.width = "100%";
+  clone.style.minWidth = "0";
+  clone.style.maxWidth = "100%";
+  clone.style.tableLayout = "auto";
+  clone.style.borderCollapse = "collapse";
+
+  clone.querySelectorAll("[class]").forEach((node) => {
+    const el = node as HTMLElement;
+    if (typeof el.className !== "string") return;
+    el.className = el.className
+      .split(/\s+/)
+      .filter((c) => !c.startsWith("min-w") && !c.includes("overflow"))
+      .join(" ");
+  });
+
+  // Drop checkbox / select-all columns
+  const firstHeaderRow = clone.querySelector("thead tr");
+  if (firstHeaderRow) {
+    const dropIdx: number[] = [];
+    Array.from(firstHeaderRow.children).forEach((cell, idx) => {
+      if (cell.querySelector('input[type="checkbox"]')) dropIdx.push(idx);
+      const label = (cell.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      if (label === "print" || label === "action" || label === "actions" || label === "select") {
+        dropIdx.push(idx);
+      }
+    });
+    const uniq = [...new Set(dropIdx)].sort((a, b) => b - a);
+    clone.querySelectorAll("tr").forEach((tr) => {
+      uniq.forEach((idx) => {
+        const cell = tr.children[idx];
+        cell?.remove();
+      });
+    });
+  }
+
+  clone.querySelectorAll("thead tr").forEach((tr) => {
+    if (tr.querySelector("input, select, button")) tr.remove();
+  });
+  clone.querySelectorAll("button, input, select, textarea").forEach((n) => n.remove());
+
+  return clone;
+}
+
+function resolveTableLayout(
+  layout: PrintTableLayout | undefined,
+  colCount: number
+): Exclude<PrintTableLayout, "auto"> {
+  if (layout && layout !== "auto") return layout;
+  if (colCount >= 8) return "landscape";
+  if (colCount >= 6) return "report";
+  return "compact";
+}
+
 /**
- * Print only a specific on-screen card/report (not the dashboard shell).
- * Prefer an element marked `[data-print-root]`; otherwise picks the largest
- * visible white panel in `main` that looks like a report/list.
+ * Build printable HTML from a page root:
+ * - Prefer `[data-print-body]`
+ * - Else build a clean report sheet from title + meta + table(s)
+ * - Else clone root and scrub chrome
  */
-export function printScoped(options?: { title?: string; selector?: string; autoPrint?: boolean }) {
+function buildPrintFragment(
+  root: HTMLElement,
+  layout: PrintTableLayout = "auto"
+): { fragment: HTMLElement; layout: Exclude<PrintTableLayout, "auto"> } {
+  const explicit = root.querySelector("[data-print-body]") as HTMLElement | null;
+  if (explicit) {
+    const frag = explicit.cloneNode(true) as HTMLElement;
+    const cols = frag.querySelector("thead tr")?.children.length || 0;
+    return { fragment: frag, layout: resolveTableLayout(layout, cols) };
+  }
+
+  const liveTables = Array.from(root.querySelectorAll("table")).filter((t) => {
+    const el = t as HTMLElement;
+    return el.getClientRects().length > 0;
+  }) as HTMLTableElement[];
+
+  if (liveTables.length > 0) {
+    const wrap = document.createElement("div");
+    wrap.className = "atteka-print-content atteka-print-report";
+
+    const titleText = extractPrintTitle(root);
+    if (titleText) {
+      const t = document.createElement("div");
+      t.className = "atteka-print-title";
+      t.textContent = titleText;
+      wrap.appendChild(t);
+    }
+
+    const metaText = extractPrintMeta(root);
+    if (metaText) {
+      const m = document.createElement("div");
+      m.className = "atteka-print-meta";
+      m.textContent = metaText;
+      wrap.appendChild(m);
+    }
+
+    let maxCols = 0;
+    for (const table of liveTables) {
+      const cleaned = cleanTableForPrint(table);
+      maxCols = Math.max(maxCols, cleaned.querySelector("thead tr")?.children.length || 0);
+      const holder = document.createElement("div");
+      holder.className = "atteka-print-table-wrap";
+      holder.appendChild(cleaned);
+      wrap.appendChild(holder);
+    }
+
+    const foot = document.createElement("div");
+    foot.className = "atteka-print-footer";
+    foot.textContent = `Printed ${new Date().toLocaleString("en-IN")} · Atteka Logistics ERP`;
+    wrap.appendChild(foot);
+
+    return { fragment: wrap, layout: resolveTableLayout(layout, maxCols) };
+  }
+
+  return {
+    fragment: root.cloneNode(true) as HTMLElement,
+    layout: resolveTableLayout(layout, 0)
+  };
+}
+
+/** Strip toolbars, filter rows, and interactive controls from a print clone. */
+function scrubPrintClone(clone: HTMLElement) {
+  clone
+    .querySelectorAll("[data-print-hide], .no-print, [class*='print:hidden']")
+    .forEach((n) => n.remove());
+
+  // Toolbars / show-entries bars
+  Array.from(clone.querySelectorAll("div, section, header, nav")).forEach((el) => {
+    if (el === clone) return;
+    if (looksLikePrintToolbar(el)) {
+      const nested = el.querySelectorAll("div").length;
+      if (nested < 40) el.remove();
+    }
+  });
+
+  // Blue module headers → plain title (when still present on full-card clones)
+  Array.from(clone.querySelectorAll("div")).forEach((el) => {
+    if (!isBlueNavHeader(el)) return;
+    const h = el.querySelector("h1, h2, h3");
+    if (h?.textContent?.trim()) {
+      const t = document.createElement("h2");
+      t.textContent = h.textContent.trim();
+      t.setAttribute(
+        "style",
+        "font:700 15px/1.35 system-ui,Segoe UI,sans-serif;margin:0 0 12px;color:#0f172a;border-bottom:1px solid #cbd5e1;padding-bottom:8px;"
+      );
+      el.replaceWith(t);
+    } else {
+      el.remove();
+    }
+  });
+
+  // Column filter rows in thead
+  clone.querySelectorAll("thead tr").forEach((tr) => {
+    if (tr.querySelector("input, select, button")) tr.remove();
+  });
+
+  // Pagination footers
+  Array.from(clone.querySelectorAll("div")).forEach((el) => {
+    if (el === clone || el.querySelector("table")) return;
+    const txt = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (
+      /^showing\s+\d+/.test(txt) ||
+      (txt.includes("previous") && txt.includes("next") && el.querySelectorAll("button").length > 0)
+    ) {
+      if (el.querySelectorAll("div").length < 8) el.remove();
+    }
+  });
+
+  clone.querySelectorAll("button, input, select, textarea").forEach((n) => n.remove());
+
+  // Drop empty "Print" action columns (header says Print, cells were only buttons)
+  clone.querySelectorAll("table").forEach((table) => {
+    const headerCells = Array.from(table.querySelectorAll("thead tr:first-child th, thead tr:first-child td"));
+    headerCells.forEach((th, idx) => {
+      const label = (th.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      if (label !== "print" && label !== "action" && label !== "actions") return;
+      table.querySelectorAll("tr").forEach((tr) => {
+        const cell = tr.children[idx] as HTMLElement | undefined;
+        cell?.remove();
+      });
+    });
+  });
+}
+
+function tablePrintLayoutCss(layout: Exclude<PrintTableLayout, "auto">): string {
+  const pageSize =
+    layout === "landscape" || layout === "dot-matrix"
+      ? "A4 landscape"
+      : "A4 portrait";
+  const fontSize = layout === "compact" ? "10px" : layout === "dot-matrix" ? "10.5px" : "11px";
+  const cellPad = layout === "compact" ? "3px 5px" : "5px 7px";
+  const titleSize = layout === "compact" ? "13px" : "16px";
+
+  return `
+    @page { size: ${pageSize}; margin: 10mm 8mm; }
+    html, body {
+      background: #fff !important; margin: 0 !important; padding: 0 !important;
+      font-family: "Segoe UI", system-ui, sans-serif; color: #0f172a;
+    }
+    [data-print-hide], .no-print, [class*="print:hidden"] { display: none !important; }
+
+    .atteka-print-toolbar {
+      position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between;
+      align-items: center; gap: 12px; background: #0f172a; color: #fff; padding: 10px 16px;
+    }
+    .atteka-print-toolbar button {
+      border: 0; border-radius: 6px; padding: 7px 14px; font-weight: 700; cursor: pointer; font-size: 12px;
+    }
+    .atteka-print-toolbar .print { background: #0171d3; color: #fff; }
+    .atteka-print-toolbar .close { background: #334155; color: #fff; }
+
+    .atteka-print-sheet {
+      padding: 14px 16px 20px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .atteka-print-content {
+      width: 100% !important;
+      max-width: 100% !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      overflow: visible !important;
+    }
+    .atteka-print-title {
+      font: 700 ${titleSize}/1.3 "Segoe UI", system-ui, sans-serif;
+      color: #0f172a;
+      margin: 0 0 6px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #0171d3;
+    }
+    .atteka-print-meta {
+      font-size: 11px;
+      color: #334155;
+      margin: 0 0 12px;
+      line-height: 1.45;
+    }
+    .atteka-print-table-wrap {
+      width: 100% !important;
+      overflow: visible !important;
+      margin: 0 0 12px;
+    }
+    .atteka-print-table,
+    .atteka-print-sheet table {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      border-collapse: collapse !important;
+      table-layout: fixed !important;
+      font-size: ${fontSize} !important;
+    }
+    .atteka-print-table th,
+    .atteka-print-table td,
+    .atteka-print-sheet th,
+    .atteka-print-sheet td {
+      border: 1px solid #94a3b8 !important;
+      padding: ${cellPad} !important;
+      vertical-align: top;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+      white-space: normal !important;
+    }
+    .atteka-print-table thead th,
+    .atteka-print-sheet thead th {
+      background: ${layout === "dot-matrix" ? "#e2e8f0" : "#0171d3"} !important;
+      color: ${layout === "dot-matrix" ? "#0f172a" : "#fff"} !important;
+      font-weight: 700 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .atteka-print-table tbody tr:nth-child(even) td {
+      background: #f8fafc !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .atteka-print-footer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid #cbd5e1;
+      font-size: 10px;
+      color: #64748b;
+    }
+    .atteka-print-sheet button,
+    .atteka-print-sheet input,
+    .atteka-print-sheet select,
+    .atteka-print-sheet textarea {
+      display: none !important;
+    }
+    @media print {
+      .atteka-print-toolbar { display: none !important; }
+      .atteka-print-sheet { padding: 0 !important; }
+    }
+  `;
+}
+
+/**
+ * Print only the report/table content (not dashboard shell or card chrome).
+ * Prefer `[data-print-root]` → clean table report layouts.
+ */
+export function printScoped(options?: {
+  title?: string;
+  selector?: string;
+  autoPrint?: boolean;
+  /** Table sheet layout — auto picks landscape for wide tables */
+  layout?: PrintTableLayout;
+}) {
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
   const title = options?.title || document.title || "Print";
@@ -121,6 +484,9 @@ export function printScoped(options?: { title?: string; selector?: string; autoP
   const selector = options?.selector || "[data-print-root]";
 
   let source = document.querySelector(selector) as HTMLElement | null;
+
+  // Explicit non-default selectors (e.g. .docket-print-sheet) are used as-is.
+  const usingDefaultRoot = !options?.selector || options.selector === "[data-print-root]";
 
   if (!source) {
     const candidates = Array.from(
@@ -144,15 +510,29 @@ export function printScoped(options?: { title?: string; selector?: string; autoP
     return;
   }
 
-  const clone = source.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll("[data-print-hide], .no-print, [class*='print:hidden']").forEach((n) => {
-    n.remove();
-  });
+  let clone: HTMLElement;
+  let layout: Exclude<PrintTableLayout, "auto"> = "report";
+
+  if (usingDefaultRoot) {
+    const built = buildPrintFragment(source, options?.layout || "auto");
+    clone = built.fragment;
+    layout = built.layout;
+  } else {
+    clone = source.cloneNode(true) as HTMLElement;
+    layout = options?.layout && options.layout !== "auto" ? options.layout : "report";
+  }
+  scrubPrintClone(clone);
+
   // Hidden print sheets (e.g. display:none until print) must be visible in the iframe.
   clone.style.display = "block";
   clone.style.visibility = "visible";
   clone.style.position = "static";
   clone.style.width = "100%";
+  clone.style.maxWidth = "100%";
+  clone.style.minWidth = "0";
+  clone.style.overflow = "visible";
+  clone.style.boxShadow = "none";
+  clone.style.borderRadius = "0";
   clone.removeAttribute("hidden");
 
   const frameId = "atteka-scoped-print-frame";
@@ -176,11 +556,14 @@ export function printScoped(options?: { title?: string; selector?: string; autoP
     return;
   }
 
-  const headExtras = Array.from(
-    document.querySelectorAll('link[rel="stylesheet"], style')
-  )
-    .map((n) => n.outerHTML)
-    .join("\n");
+  const layoutLabel =
+    layout === "landscape"
+      ? "Landscape report"
+      : layout === "dot-matrix"
+        ? "Dot-matrix"
+        : layout === "compact"
+          ? "Compact"
+          : "Report";
 
   doc.open();
   doc.write(`<!DOCTYPE html>
@@ -188,43 +571,19 @@ export function printScoped(options?: { title?: string; selector?: string; autoP
   <head>
     <meta charset="utf-8" />
     <title>${escapeHtml(title)}</title>
-    ${headExtras}
     <style>
-      @page { margin: 10mm; }
-      html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
-      [data-print-hide], .no-print, [class*="print:hidden"] { display: none !important; }
-      .atteka-print-toolbar {
-        position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between;
-        align-items: center; gap: 12px; background: #0f172a; color: #fff; padding: 10px 16px;
-      }
-      .atteka-print-toolbar button {
-        border: 0; border-radius: 6px; padding: 7px 14px; font-weight: 700; cursor: pointer; font-size: 12px;
-      }
-      .atteka-print-toolbar .print { background: #0171d3; color: #fff; }
-      .atteka-print-toolbar .close { background: #334155; color: #fff; }
-      .atteka-print-sheet { padding: 12px; }
-      /* Interactive controls belong to the app UI, not the printed document */
-      .atteka-print-sheet button,
-      .atteka-print-sheet input,
-      .atteka-print-sheet select,
-      .atteka-print-sheet textarea {
-        display: none !important;
-      }
-      @media print {
-        .atteka-print-toolbar { display: none !important; }
-        .atteka-print-sheet { padding: 0 !important; }
-      }
+      ${tablePrintLayoutCss(layout)}
     </style>
   </head>
   <body>
     <div class="atteka-print-toolbar">
-      <span><strong>Atteka Logistics ERP</strong> &bull; ${escapeHtml(title)}</span>
+      <span><strong>Atteka Logistics ERP</strong> &bull; ${escapeHtml(title)} &bull; ${layoutLabel}</span>
       <span style="display:flex;gap:8px;">
         <button class="print" type="button" onclick="window.print()">Print Document</button>
         <button class="close" type="button" onclick="parent.document.getElementById('${frameId}')?.remove()">Close</button>
       </span>
     </div>
-    <div class="atteka-print-sheet">${clone.outerHTML}</div>
+    <div class="atteka-print-sheet layout-${layout}">${clone.outerHTML}</div>
   </body>
 </html>`);
   doc.close();
@@ -238,7 +597,7 @@ export function printScoped(options?: { title?: string; selector?: string; autoP
     }
   };
 
-  // Wait for cloned stylesheets to settle, then print.
+  // Wait for layout CSS to settle, then print.
   setTimeout(kickPrint, 350);
 }
 

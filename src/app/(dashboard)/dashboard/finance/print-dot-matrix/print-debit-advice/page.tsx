@@ -120,7 +120,10 @@ export default function PrintDebitAdvicePage() {
       return;
     }
     toast.success(`${selected.size} Debit Advice(s) sent to Dot-Matrix printer (demo)`);
-    printScoped();
+    printScoped({
+      title: "Print Debit Advice [Dot-Matrix]",
+      layout: "dot-matrix"
+    });
   };
 
   return (
