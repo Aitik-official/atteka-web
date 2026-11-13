@@ -8,6 +8,7 @@
  */
 
 import JsBarcode from "jsbarcode";
+import { toast } from "@/lib/toastBus";
 
 const A4_CSS = `
   @page { size: A4; margin: 10mm; }
@@ -262,7 +263,7 @@ export function printDocumentSheet(title: string, css: string, contentHtml: stri
   const doc = win?.document;
   if (!doc || !win) {
     iframe.remove();
-    alert("Could not initialize print engine.");
+    toast.error("Could not initialize print engine.");
     return;
   }
 

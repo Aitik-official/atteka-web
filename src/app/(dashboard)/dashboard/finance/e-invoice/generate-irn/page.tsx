@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Search } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { EInvoiceAuthGate } from "@/components/finance/EInvoiceAuthGate";
 
 type IrnBill = {
   id: string;
@@ -149,8 +150,19 @@ export default function GenerateIrnPage() {
             : r
         )
       );
-      toast.success("Demo IRN stub saved — GST / NIC IRP integration pending");
-      window.alert(`IRN: ${data.data?.irn}\nAck No: ${data.data?.ackNo}\n\nGST integration pending.`);
+      if (data.data?.irn) {
+        toast.document("IRN generated successfully (demo). GST / NIC IRP integration pending.", {
+          title: "Generate IRN",
+          code: data.data.irn
+        });
+      } else {
+        toast.success("IRN generated successfully (demo). GST / NIC IRP integration pending.", {
+          title: "Generate IRN"
+        });
+      }
+      if (data.data?.ackNo) {
+        toast.info(`Ack No: ${data.data.ackNo}`, { durationMs: 5000 });
+      }
     } catch {
       toast.error("IRN generation request failed");
     } finally {
@@ -159,6 +171,7 @@ export default function GenerateIrnPage() {
   };
 
   return (
+    <EInvoiceAuthGate moduleLabel="Generate IRN">
     <div className="space-y-4 max-w-7xl mx-auto pb-10">
       {step === "filter" && (
         <div className="bg-white border border-slate-300 shadow-sm overflow-hidden max-w-3xl mx-auto">
@@ -396,5 +409,6 @@ export default function GenerateIrnPage() {
         </div>
       )}
     </div>
+    </EInvoiceAuthGate>
   );
 }

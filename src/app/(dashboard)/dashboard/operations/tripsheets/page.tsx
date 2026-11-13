@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { Truck, FileCheck, MapPin, Plus, CheckCircle2, ArrowRight, X, FileText, ClipboardList } from "lucide-react";
-import { PageHeader } from "@/components/common/PageHeader";
 import { ResponsiveTableWrapper } from "@/components/common/ResponsiveTableWrapper";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { WcvActionCard, WcvRibbonHeader } from "@/components/common/WcvActionCard";

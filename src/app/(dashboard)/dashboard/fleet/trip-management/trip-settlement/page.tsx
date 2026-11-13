@@ -183,7 +183,7 @@ export default function TripSettlementPage() { const [vehicles, setVehicles] = u
       if (!res.ok) { toast.error(data.error || "Failed to save trip settlement");
         return;
       }
-      toast.sticky(`Trip settlement approved for ${selected.tripsheetNo}`, { type: "success",
+      toast.document(`Trip settlement approved for ${selected.tripsheetNo}`, {
         title: data.isMemoryStore ? "Settlement (Memory)" : "Trip Settlement",
         code: data.data?.documentNo || selected.tripsheetNo
       });

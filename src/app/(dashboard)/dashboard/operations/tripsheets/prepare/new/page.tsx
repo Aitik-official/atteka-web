@@ -253,9 +253,9 @@ export default function PrepareLoadingSlipPage() {
           type: "success",
           message: `${data.message}. They now appear on Bill Generation — upload POD before confirming the bill.`
         });
-        toast.sticky(
+        toast.document(
           `${data.message}. Dockets are ready on Bill Generation — upload POD before confirming the bill.`,
-          { type: "success", title: "Trip Sheet No", code: tripNo }
+          { title: "Trip Sheet No", code: tripNo }
         );
         // Remove assigned from local pools
         const assigned = new Set(selected.map((d) => d.docketNo));

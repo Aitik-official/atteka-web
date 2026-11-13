@@ -88,7 +88,7 @@ export default function CustomerGstPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [showAddForm, setShowAddForm] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [showCustomerLookup, setShowCustomerLookup] = useState(false);
   const [lookupSearch, setLookupSearch] = useState("");
   const [isEditing, setIsEditing] = useState(false);

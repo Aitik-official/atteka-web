@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Search } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { EInvoiceAuthGate } from "@/components/finance/EInvoiceAuthGate";
 
 type CnRow = {
   id: string;
@@ -145,10 +146,19 @@ export default function GenerateCreditNoteIrnPage() {
             : r
         )
       );
-      toast.success("Demo Credit Note IRN stub saved — GST / NIC IRP pending");
-      window.alert(
-        `Credit Note IRN: ${data.data?.irn}\nAck No: ${data.data?.ackNo}\n\nGST integration pending.`
-      );
+      if (data.data?.irn) {
+        toast.document("Credit Note IRN generated successfully (demo). GST / NIC IRP pending.", {
+          title: "Credit Note IRN",
+          code: data.data.irn
+        });
+      } else {
+        toast.success("Credit Note IRN generated successfully (demo). GST / NIC IRP pending.", {
+          title: "Credit Note IRN"
+        });
+      }
+      if (data.data?.ackNo) {
+        toast.info(`Ack No: ${data.data.ackNo}`, { durationMs: 5000 });
+      }
     } catch {
       toast.error("Credit Note IRN request failed");
     } finally {
@@ -157,6 +167,7 @@ export default function GenerateCreditNoteIrnPage() {
   };
 
   return (
+    <EInvoiceAuthGate moduleLabel="Generate Credit Note IRN">
     <div className="space-y-4 max-w-7xl mx-auto pb-10">
       {step === "filter" && (
         <div className="bg-white border border-slate-300 shadow-sm overflow-hidden max-w-3xl mx-auto">
@@ -395,5 +406,6 @@ export default function GenerateCreditNoteIrnPage() {
         </div>
       )}
     </div>
+    </EInvoiceAuthGate>
   );
 }

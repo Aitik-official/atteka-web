@@ -294,11 +294,16 @@ export default function BpclSaleTransactionPage() {
         toast.error(data.error || "Failed to save transaction");
         return;
       }
-      toast.sticky("BPCL transaction saved", {
-        type: "success",
-        title: data.isMemoryStore ? "BPCL (Memory)" : "BPCL Sale",
-        code: data.data?.transactionId
-      });
+      if (data.data?.transactionId) {
+        toast.document("BPCL transaction saved", {
+          title: data.isMemoryStore ? "BPCL (Memory)" : "BPCL Sale",
+          code: data.data.transactionId
+        });
+      } else {
+        toast.success("BPCL transaction saved", {
+          title: data.isMemoryStore ? "BPCL (Memory)" : "BPCL Sale"
+        });
+      }
       setShowEdit(false);
       setForm({ ...emptyForm, vehicleNo: vehicleNo || "" });
       if (step === "report") await loadReport();

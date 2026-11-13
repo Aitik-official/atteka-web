@@ -8,6 +8,7 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { MobileActionFooter } from "@/components/common/MobileActionFooter";
 import { formatGstr1OfflineJson } from "@/lib/gstr1Exporter";
+import { toast } from "@/lib/toastBus";
 
 export default function CustomerBillingPage() {
   const [consignments, setConsignments] = useState<any[]>([]);
@@ -246,7 +247,7 @@ export default function CustomerBillingPage() {
             type="button"
             onClick={() => {
               if (generatedBills.length === 0) {
-                alert("No bills available to export.");
+                toast.warning("No bills available to export.");
                 return;
               }
               const gstr1Data = formatGstr1OfflineJson(

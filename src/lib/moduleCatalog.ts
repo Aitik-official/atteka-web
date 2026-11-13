@@ -131,6 +131,14 @@ export const MODULE_SEARCH_CATALOG: ModuleSearchItem[] = [
   { id: "C117H", label: "Edit Billing Party/Branch/Po NO", code: "C117", route: "/dashboard/exceptional/operation/edit-billing-party-branch-po", group: "Exceptional" },
   { id: "C117I", label: "Edit From & To location", code: "C117", route: "/dashboard/exceptional/operation/edit-from-to-location", group: "Exceptional" },
   { id: "C132", label: "Finance", code: "C132", route: "/dashboard/exceptional/finance", group: "Exceptional", keywords: ["fin"] },
+  {
+    id: "C132A",
+    label: "Edit PDC Advance Payable Branch",
+    code: "C132",
+    route: "/dashboard/exceptional/finance/edit-pdc-advance-payable-branch",
+    group: "Exceptional",
+    keywords: ["fin", "pdc", "advance", "payable branch", "assign advance"]
+  },
   { id: "C520", label: "Bank Reconciliation Statment", code: "C520", route: "/dashboard/exceptional/brs", group: "Exceptional" },
   { id: "C588", label: "Company Vechicle Exceptional", code: "C588", route: "/dashboard/exceptional/vehicle", group: "Exceptional" },
   {

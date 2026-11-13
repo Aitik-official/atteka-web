@@ -30,9 +30,9 @@ type CardDef = {
 const CARDS: CardDef[] = [
   {
     title: "Edit PDC Advance Payable Branch",
+    description: "Assign Advance Payment Branch",
     icon: Building,
-    unavailable: true,
-    unavailableReason: "Finance override screen not built — was dumping to billing"
+    href: "/dashboard/exceptional/finance/edit-pdc-advance-payable-branch"
   },
   {
     title: "Edit PDC Balance Payable Branch",

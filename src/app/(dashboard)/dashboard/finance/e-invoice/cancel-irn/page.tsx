@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { EInvoiceAuthGate } from "@/components/finance/EInvoiceAuthGate";
+import { useEInvoiceAuthSession } from "@/hooks/useEInvoiceAuthSession";
 
 type CancelRow = {
   documentType: string;
@@ -18,11 +20,13 @@ type CancelRow = {
 };
 
 export default function CancelIrnPage() {
+  const { isAuthenticated, ready } = useEInvoiceAuthSession();
   const [rows, setRows] = useState<CancelRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (!isAuthenticated) return;
     setLoading(true);
     try {
       const res = await fetch("/api/finance/cancel-irn");
@@ -37,14 +41,18 @@ export default function CancelIrnPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!ready || !isAuthenticated) {
+      setRows([]);
+      return;
+    }
     void load();
-  }, [load]);
+  }, [ready, isAuthenticated, load]);
 
   const handleCancel = async (row: CancelRow) => {
-    const ok = window.confirm(
+    const ok = toast.confirm(
       `Cancel IRN for ${row.documentNo}?\n\nIRN: ${row.irnNo}\n\nGST integration is pending — this saves a demo cancel stub.`
     );
     if (!ok) return;
@@ -65,8 +73,10 @@ export default function CancelIrnPage() {
         toast.error(data.error || "Cancel IRN failed");
         return;
       }
-      toast.success("Demo IRN cancel stub saved — GST / NIC IRP pending");
-      window.alert("IRN Cancelled Sucessfully!!!\n\nGST integration pending.");
+      toast.document("IRN cancelled successfully (demo). GST / NIC IRP pending.", {
+        title: "Cancel IRN",
+        code: row.irnNo
+      });
       await load();
     } catch {
       toast.error("Cancel IRN request failed");
@@ -76,6 +86,7 @@ export default function CancelIrnPage() {
   };
 
   return (
+    <EInvoiceAuthGate moduleLabel="Cancel IRN">
     <div className="space-y-4 max-w-7xl mx-auto pb-10">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
@@ -182,5 +193,6 @@ export default function CancelIrnPage() {
         </div>
       </div>
     </div>
+    </EInvoiceAuthGate>
   );
 }

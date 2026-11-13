@@ -98,7 +98,7 @@ export default function CustomerMasterPage() {
   const [search, setSearch] = useState("");
   const [formData, setFormData] = useState<CustomerFormData>(INITIAL_FORM);
   const [isEditing, setIsEditing] = useState(false);
-  const [isFormOpen, setIsFormOpen] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
   const [dashboardCustomer, setDashboardCustomer] = useState<any | null>(null);

@@ -378,8 +378,7 @@ export default function CompanyAdvancePaymentEntryPage() {
           remarks: `Company Advance ${savedNo} / ${selected.vehicleNo} / ${voucherType}`
         })
       });
-      toast.sticky(`Company advance saved for ${selected.vehicleNo}`, {
-        type: "success",
+      toast.document(`Company advance saved for ${selected.vehicleNo}`, {
         title: data.isMemoryStore ? "Advance (Memory)" : "Advance Payment",
         code: savedNo
       });

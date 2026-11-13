@@ -549,8 +549,7 @@ export default function TransportBillPage() {
           type: "success",
           message: `Transport Bill generated successfully for ${chargeRows.length} CN(s).`
         });
-        toast.sticky(`Transport Bill generated for ${chargeRows.length} CN(s). Keep this number for reference.`, {
-          type: "success",
+        toast.document(`Transport Bill generated for ${chargeRows.length} CN(s). Keep this number for reference.`, {
           title: "Bill Number",
           code: billNo
         });

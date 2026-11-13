@@ -182,7 +182,7 @@ export default function VoucherPaymentPage() { const [vendors, setVendors] = use
         })
       });
 
-      toast.sticky(`Voucher payment submitted`, { type: "success",
+      toast.document(`Voucher payment submitted`, {
         title: data.isMemoryStore ? "Voucher (Memory)" : "Voucher Payment",
         code: voucherNo
       });

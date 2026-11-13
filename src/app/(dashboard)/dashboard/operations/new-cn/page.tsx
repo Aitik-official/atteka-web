@@ -1028,11 +1028,9 @@ actions={
                 onChange={(e) => {
                   const phone = e.target.value;
                   setDriverNo(phone);
+                  // Keep Type of FTL unchanged — driver pick must not overwrite FTL.
                   const match = vehiclesDirectory.find((v) => v.driverPhone === phone);
-                  if (match) {
-                    setVehicleNo(match.vehicleNumber);
-                    if (match.vehicleType) setTypeOfFtl(match.vehicleType);
-                  }
+                  if (match?.vehicleNumber) setVehicleNo(match.vehicleNumber);
                 }}
                 className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
