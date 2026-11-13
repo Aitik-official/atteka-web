@@ -21,12 +21,9 @@ import {
 export default function AccountsReportsHubPage() {
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-10">
-      {/* Authentic WebCoreVision Ribbon Header matching image */}
       <WcvRibbonHeader title="Accounts" />
 
-      {/* 12 Action Cards matching exact screenshot */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Row 1 */}
         <WcvActionCard
           title="Cash and Bank Transaction Statement"
           description="Cash and Bank Transaction Statement"
@@ -52,7 +49,6 @@ export default function AccountsReportsHubPage() {
           icon={FileText}
         />
 
-        {/* Row 2 */}
         <WcvActionCard
           title="Branch P&L Report"
           description="Branch Profit and Loss Report"
@@ -61,84 +57,84 @@ export default function AccountsReportsHubPage() {
         />
         <WcvActionCard
           title="Negative Cash Balance Statement"
-          description="Negative Cash Balance Statement"
-          href="/dashboard/finance/cash-bank-statement"
+          description="Cash & Bank statement view"
+          href="/dashboard/reports/accounts/cash-bank-statement"
           icon={AlertTriangle}
         />
         <WcvActionCard
           title="Debit Advice Report"
-          description="Debit Advice Report"
-          href="/dashboard/finance/print-dot-matrix"
+          description="Print Debit Advice"
+          href="/dashboard/finance/print-dot-matrix/print-debit-advice"
           icon={Receipt}
         />
         <WcvActionCard
           title="TDS Report"
-          description="TDS Report"
-          href="/dashboard/finance/e-invoice"
+          description="Needs tax / TDS register — not GST e-invoice"
+          unavailable
+          unavailableReason="No TDS register screen yet (GST credentials not required for this link fix)"
           icon={FileSpreadsheet}
         />
 
-        {/* Row 3 */}
         <WcvActionCard
           title="Issued Cheques"
-          description="Listing of all Cheques issued in a given time period"
-          href="/dashboard/finance/cheque-management"
+          description="Cheque book / issue entry"
+          href="/dashboard/finance/cheque-management/assign-cheque-book"
           icon={CreditCard}
         />
         <WcvActionCard
           title="Received Cheques"
-          description="Listing of all Cheques received in a given time period"
-          href="/dashboard/finance/cheque-management"
+          description="On-account cheque receipt"
+          href="/dashboard/finance/cheque-management/on-account-cheque-receipt"
           icon={CreditCard}
         />
         <WcvActionCard
           title="Cash & Bank Report"
-          description="Cash & Bank Report"
+          description="Cash & Bank Statement hub"
           href="/dashboard/finance/cash-bank-statement"
           icon={DollarSign}
         />
         <WcvActionCard
           title="Voucher Approvals"
-          description="Voucher Approvals"
-          href="/dashboard/finance/vouchers"
+          description="View / print vouchers"
+          href="/dashboard/finance/vouchers/view-print-vouchers"
           icon={FileCheck2}
         />
 
-        {/* Row 4 (matching Image 1 scrolled view) */}
         <WcvActionCard
           title="Voucher Approval All"
-          description="Voucher Approval All"
-          href="/dashboard/finance/vouchers"
+          description="View / cancel vouchers"
+          href="/dashboard/finance/vouchers/view-cancel-vouchers"
           icon={FileCheck2}
         />
         <WcvActionCard
           title="GST Report"
-          description="GST Report"
-          href="/dashboard/finance/e-invoice"
+          description="Live GST / NIC not configured"
+          unavailable
+          unavailableReason="Blocked without GST credentials — not routed to e-invoice"
           icon={ShieldCheck}
         />
         <WcvActionCard
           title="GST OutPut Register"
-          description="GST OutPut Register"
-          href="/dashboard/finance/e-invoice"
+          description="Live GST / NIC not configured"
+          unavailable
+          unavailableReason="Blocked without GST credentials — not routed to e-invoice"
           icon={FileSpreadsheet}
         />
         <WcvActionCard
           title="GSTR1 Report"
-          description="GSTR1 Report"
-          href="/dashboard/finance/e-invoice"
+          description="Live GST / NIC not configured"
+          unavailable
+          unavailableReason="Blocked without GST credentials — not routed to e-invoice"
           icon={Receipt}
         />
 
-        {/* Row 5 */}
         <WcvActionCard
           title="Bill Edit Register"
-          description="Bill Edit Register"
-          href="/dashboard/finance/billing"
+          description="View / print customer bills"
+          href="/dashboard/finance/customer-billing/view-print-bills"
           icon={Edit3}
         />
       </div>
     </div>
   );
 }
-

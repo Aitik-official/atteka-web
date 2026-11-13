@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { WcvActionCard, WcvRibbonHeader } from "@/components/common/WcvActionCard";
 import {
   Edit3,
@@ -13,281 +14,262 @@ import {
   CreditCard,
   FileSpreadsheet,
   AlertOctagon,
-  CheckCircle2,
   X,
   FileMinus
 } from "lucide-react";
 
-export default function ExceptionalFinanceHubPage() {
-  const [activeModal, setActiveModal] = useState<string | null>(null);
+type CardDef = {
+  title: string;
+  description?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href?: string;
+  unavailable?: boolean;
+  unavailableReason?: string;
+};
 
-  const openAction = (name: string) => {
-    setActiveModal(name);
-  };
+const CARDS: CardDef[] = [
+  {
+    title: "Edit PDC Advance Payable Branch",
+    icon: Building,
+    unavailable: true,
+    unavailableReason: "Finance override screen not built — was dumping to billing"
+  },
+  {
+    title: "Edit PDC Balance Payable Branch",
+    icon: Building,
+    unavailable: true,
+    unavailableReason: "Finance override screen not built — was dumping to billing"
+  },
+  {
+    title: "Edit PDC Vendor/Date/Vehicle",
+    description: "Exceptional Operation module",
+    icon: Edit3,
+    href: "/dashboard/exceptional/operation/edit-pdc-vendor-date-vehicle"
+  },
+  {
+    title: "Cancel PDC Advance Entry",
+    icon: XCircle,
+    unavailable: true,
+    unavailableReason: "Cancel advance entry screen not built"
+  },
+  {
+    title: "Cancel Multiple PDC Advance Entry",
+    icon: XCircle,
+    unavailable: true,
+    unavailableReason: "Cancel advance entry screen not built"
+  },
+  {
+    title: "Edit Bill Collection Branch",
+    icon: Building,
+    unavailable: true,
+    unavailableReason: "Bill branch override screen not built"
+  },
+  {
+    title: "Edit Bill Remark and Bill Address",
+    icon: Edit3,
+    unavailable: true,
+    unavailableReason: "Bill remark override screen not built"
+  },
+  {
+    title: "Edit Bill Amount",
+    icon: DollarSign,
+    unavailable: true,
+    unavailableReason: "Bill amount override screen not built"
+  },
+  {
+    title: "Edit Billing Party",
+    description: "Exceptional Operation module",
+    icon: Users,
+    href: "/dashboard/exceptional/operation/edit-billing-party"
+  },
+  {
+    title: "Edit Bill Date",
+    icon: Calendar,
+    unavailable: true,
+    unavailableReason: "Bill date override screen not built"
+  },
+  {
+    title: "Cancel Bill",
+    description: "View / print bills (cancel from billing suite later)",
+    icon: XCircle,
+    href: "/dashboard/finance/customer-billing/view-print-bills"
+  },
+  {
+    title: "Cancel MR",
+    description: "View / print MR",
+    icon: XCircle,
+    href: "/dashboard/finance/mr-entry/view-print-mr"
+  },
+  {
+    title: "Edit MR Bank Account",
+    icon: CreditCard,
+    unavailable: true,
+    unavailableReason: "MR bank override screen not built"
+  },
+  {
+    title: "Edit Manual document Number",
+    description: "Exceptional Operation module",
+    icon: FileText,
+    href: "/dashboard/exceptional/operation/edit-manual-document-number"
+  },
+  {
+    title: "Edit Voucher Date",
+    icon: Calendar,
+    unavailable: true,
+    unavailableReason: "Voucher date override screen not built"
+  },
+  {
+    title: "Edit Cheque No & Date",
+    description: "Cheque management hub",
+    icon: CreditCard,
+    href: "/dashboard/finance/cheque-management"
+  },
+  {
+    title: "Cancel Cheque",
+    description: "Cheque management hub",
+    icon: XCircle,
+    href: "/dashboard/finance/cheque-management"
+  },
+  {
+    title: "Cancel Voucher",
+    description: "View / cancel vouchers",
+    icon: XCircle,
+    href: "/dashboard/finance/vouchers/view-cancel-vouchers"
+  },
+  {
+    title: "Edit Account Head",
+    icon: Edit3,
+    unavailable: true,
+    unavailableReason: "Account head override screen not built"
+  },
+  {
+    title: "Edit Docket",
+    description: "Dockets list",
+    icon: FileSpreadsheet,
+    href: "/dashboard/operations/dockets"
+  },
+  {
+    title: "Edit Narration",
+    icon: Edit3,
+    unavailable: true,
+    unavailableReason: "Narration override screen not built"
+  },
+  {
+    title: "Edit Voucher Amount",
+    icon: DollarSign,
+    unavailable: true,
+    unavailableReason: "Voucher amount override screen not built"
+  },
+  {
+    title: "Edit PDC Non-Financial to Financial",
+    icon: Edit3,
+    unavailable: true,
+    unavailableReason: "PDC financial flag override not built"
+  },
+  {
+    title: "Update Vendor PAN NUMBER",
+    description: "Vendor master",
+    icon: CreditCard,
+    href: "/dashboard/masters/vendors"
+  },
+  {
+    title: "Cancel Vendor Invoice",
+    description: "Cancel vendor invoice",
+    icon: XCircle,
+    href: "/dashboard/finance/vouchers/cancel-vendor-invoice"
+  },
+  {
+    title: "Cancel Vendor Payment",
+    description: "Cancel vendor payment",
+    icon: XCircle,
+    href: "/dashboard/finance/vouchers/cancel-vendor-payment"
+  },
+  {
+    title: "Edit Other Bill Amount",
+    description: "Other bill entry",
+    icon: DollarSign,
+    href: "/dashboard/finance/customer-billing/other-bill"
+  },
+  {
+    title: "Update Vendor TDS Aplicable",
+    description: "Vendor master",
+    icon: FileMinus,
+    href: "/dashboard/masters/vendors"
+  },
+  {
+    title: "Edit Dedicated Bill Amount",
+    icon: DollarSign,
+    unavailable: true,
+    unavailableReason: "Dedicated bill amount override not built"
+  }
+];
+
+export default function ExceptionalFinanceHubPage() {
+  const router = useRouter();
+  const [notice, setNotice] = useState<string | null>(null);
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-10">
-      {/* Authentic WebCoreVision Ribbon Header matching image */}
       <WcvRibbonHeader title="Finance" />
 
-      {/* 29 Action Cards matching exact screenshots (Image 3 + Image 4) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Row 1 */}
-        <div onClick={() => openAction("Edit PDC Advance Payable Branch")}>
+        {CARDS.map((card) => (
           <WcvActionCard
-            title="Edit PDC Advance Payable Branch"
-            description="Edit PDC Advance Payable Branch"
-            icon={Building}
+            key={card.title}
+            title={card.title}
+            description={card.description || card.title}
+            icon={card.icon}
+            href={card.href}
+            unavailable={card.unavailable}
+            unavailableReason={card.unavailableReason}
+            onClick={
+              card.href
+                ? undefined
+                : card.unavailable
+                  ? () => setNotice(card.title)
+                  : undefined
+            }
           />
-        </div>
-        <div onClick={() => openAction("Edit PDC Balance Payable Branch")}>
-          <WcvActionCard
-            title="Edit PDC Balance Payable Branch"
-            description="Edit PDC Balance Payable Branch"
-            icon={Building}
-          />
-        </div>
-        <div onClick={() => openAction("Edit PDC Vendor/Date/Vehicle")}>
-          <WcvActionCard
-            title="Edit PDC Vendor/Date/Vehicle"
-            description="Edit PDC Vendor/Date/Vehicle"
-            icon={Edit3}
-          />
-        </div>
-        <div onClick={() => openAction("Cancel PDC Advance Entry")}>
-          <WcvActionCard
-            title="Cancel PDC Advance Entry"
-            description="Cancel PDC Advance Entry"
-            icon={XCircle}
-          />
-        </div>
-
-        {/* Row 2 */}
-        <div onClick={() => openAction("Cancel Multiple PDC Advance Entry")}>
-          <WcvActionCard
-            title="Cancel Multiple PDC Advance Entry"
-            description="Cancel Multiple PDC Advance Entry"
-            icon={XCircle}
-          />
-        </div>
-        <div onClick={() => openAction("Edit Bill Collection Branch")}>
-          <WcvActionCard
-            title="Edit Bill Collection Branch"
-            description="Edit Bill Collection Branch"
-            icon={Building}
-          />
-        </div>
-        <div onClick={() => openAction("Edit Bill Remark and Bill Address")}>
-          <WcvActionCard
-            title="Edit Bill Remark and Bill Address"
-            description="Edit Bill Remark and Bill Address"
-            icon={Edit3}
-          />
-        </div>
-        <div onClick={() => openAction("Edit Bill Amount")}>
-          <WcvActionCard
-            title="Edit Bill Amount"
-            description="Edit Bill Amount"
-            icon={DollarSign}
-          />
-        </div>
-
-        {/* Row 3 */}
-        <div onClick={() => openAction("Edit Billing Party")}>
-          <WcvActionCard
-            title="Edit Billing Party"
-            description="Edit Billing Party"
-            icon={Users}
-          />
-        </div>
-        <div onClick={() => openAction("Edit Bill Date")}>
-          <WcvActionCard
-            title="Edit Bill Date"
-            description="Edit Bill Date"
-            icon={Calendar}
-          />
-        </div>
-        <div onClick={() => openAction("Cancel Bill")}>
-          <WcvActionCard
-            title="Cancel Bill"
-            description="Cancel Bill"
-            icon={XCircle}
-          />
-        </div>
-        <div onClick={() => openAction("Cancel MR")}>
-          <WcvActionCard
-            title="Cancel MR"
-            description="Cancel MR"
-            icon={XCircle}
-          />
-        </div>
-
-        {/* Row 4 */}
-        <div onClick={() => openAction("Edit MR Bank Account")}>
-          <WcvActionCard
-            title="Edit MR Bank Account"
-            description="Edit MR Bank Account"
-            icon={CreditCard}
-          />
-        </div>
-        <div onClick={() => openAction("Edit Manual document Number")}>
-          <WcvActionCard
-            title="Edit Manual document Number"
-            description="Edit Manual document Number"
-            icon={FileText}
-          />
-        </div>
-        <div onClick={() => openAction("Edit Voucher Date")}>
-          <WcvActionCard
-            title="Edit Voucher Date"
-            description="Edit Voucher Date"
-            icon={Calendar}
-          />
-        </div>
-        <div onClick={() => openAction("Edit Cheque No & Date")}>
-          <WcvActionCard
-            title="Edit Cheque No & Date"
-            description="Edit Cheque No & Date"
-            icon={CreditCard}
-          />
-        </div>
-
-        {/* Row 5 */}
-        <div onClick={() => openAction("Cancel Cheque")}>
-          <WcvActionCard
-            title="Cancel Cheque"
-            description="Cancel Cheque"
-            icon={XCircle}
-          />
-        </div>
-        <div onClick={() => openAction("Cancel Voucher")}>
-          <WcvActionCard
-            title="Cancel Voucher"
-            description="Cancel Voucher"
-            icon={XCircle}
-          />
-        </div>
-        <div onClick={() => openAction("Edit Account Head")}>
-          <WcvActionCard
-            title="Edit Account Head"
-            description="Edit Account Head"
-            icon={Edit3}
-          />
-        </div>
-        <WcvActionCard
-          title="Edit Docket"
-          description="Edit Docket"
-          href="/dashboard/operations/dockets"
-          icon={FileSpreadsheet}
-        />
-
-        {/* Row 6 */}
-        <div onClick={() => openAction("Edit Narration")}>
-          <WcvActionCard
-            title="Edit Narration"
-            description="Edit Narration"
-            icon={Edit3}
-          />
-        </div>
-        <div onClick={() => openAction("Edit Voucher Amount")}>
-          <WcvActionCard
-            title="Edit Voucher Amount"
-            description="Edit Voucher Amount"
-            icon={DollarSign}
-          />
-        </div>
-        <div onClick={() => openAction("Edit PDC Non-Financial to Financial")}>
-          <WcvActionCard
-            title="Edit PDC Non-Financial to Financial"
-            description="Edit PDC Non-Financial to Financial"
-            icon={Edit3}
-          />
-        </div>
-        <div onClick={() => openAction("Update Vendor PAN NUMBER")}>
-          <WcvActionCard
-            title="Update Vendor PAN NUMBER"
-            description="Update Vendor PAN NUMBER"
-            icon={CreditCard}
-          />
-        </div>
-
-        {/* Row 7 */}
-        <div onClick={() => openAction("Cancel Vendor Invoice")}>
-          <WcvActionCard
-            title="Cancel Vendor Invoice"
-            description="Cancel Vendor Invoice"
-            icon={XCircle}
-          />
-        </div>
-        <div onClick={() => openAction("Cancel Vendor Payment")}>
-          <WcvActionCard
-            title="Cancel Vendor Payment"
-            description="Cancel Vendor Payment"
-            icon={XCircle}
-          />
-        </div>
-        <div onClick={() => openAction("Edit Other Bill Amount")}>
-          <WcvActionCard
-            title="Edit Other Bill Amount"
-            description="QryOtherBill,EditOtherBill"
-            icon={DollarSign}
-          />
-        </div>
-        <div onClick={() => openAction("Update Vendor TDS Aplicable")}>
-          <WcvActionCard
-            title="Update Vendor TDS Aplicable"
-            description="Update Vendor TDS Aplicable"
-            icon={FileMinus}
-          />
-        </div>
-
-        {/* Row 8 */}
-        <div onClick={() => openAction("Edit Dedicated Bill Amount")}>
-          <WcvActionCard
-            title="Edit Dedicated Bill Amount"
-            description="Edit Dedicated Bill Amount"
-            icon={DollarSign}
-          />
-        </div>
+        ))}
       </div>
 
-      {/* Interactive Exceptional Override Modal */}
-      {activeModal && (
+      {notice && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 border border-slate-200 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 border border-slate-200">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <AlertOctagon className="w-5 h-5 text-amber-500" />
-                <h3 className="font-bold text-slate-800 text-sm">Exceptional Finance Override</h3>
+                <h3 className="font-bold text-slate-800 text-sm">Not linked yet</h3>
               </div>
               <button
-                onClick={() => setActiveModal(null)}
+                type="button"
+                onClick={() => setNotice(null)}
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-md"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-slate-600 mb-2">
-              Action selected: <strong>{activeModal}</strong>
-            </p>
-            <p className="text-xs text-slate-500 mb-4 bg-amber-50 p-3 rounded-lg border border-amber-200">
-              This operation requires Administrator / Head Office accounting approval. Any modification creates an audit record logged under operator ID AL002.
+            <p className="text-xs text-slate-600 mb-4">
+              <strong>{notice}</strong> has no dedicated exceptional screen. It no longer redirects to
+              Customer Billing.
             </p>
             <div className="flex justify-end gap-2 text-xs">
               <button
-                onClick={() => setActiveModal(null)}
+                type="button"
+                onClick={() => setNotice(null)}
                 className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg font-medium hover:bg-slate-50"
               >
-                Cancel
+                Close
               </button>
               <button
+                type="button"
                 onClick={() => {
-                  setActiveModal(null);
-                  window.location.href = "/dashboard/finance/billing";
+                  setNotice(null);
+                  router.push("/dashboard/exceptional/operation");
                 }}
                 className="px-3 py-1.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
               >
-                Proceed to Financial Ledger ➔
+                Open Exceptional Operation
               </button>
             </div>
           </div>
@@ -296,4 +278,3 @@ export default function ExceptionalFinanceHubPage() {
     </div>
   );
 }
-

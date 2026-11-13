@@ -14,10 +14,8 @@ import {
 export default function PrintDotMatrixHubPage() {
   return (
     <div className="space-y-4 max-w-6xl mx-auto pb-10">
-      {/* Authentic WebCoreVision Ribbon Header matching image */}
       <WcvRibbonHeader title="Print Document [Dot-Matrix ]" />
 
-      {/* 6 Action Cards matching exact screenshot */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <WcvActionCard
           title="PDC Freight Memo"
@@ -27,8 +25,8 @@ export default function PrintDotMatrixHubPage() {
         />
         <WcvActionCard
           title="PDC Advance Voucher"
-          description="PDC Advance Voucher"
-          href="/dashboard/finance/bank-payment"
+          description="Print vouchers (advance / payment)"
+          href="/dashboard/finance/print-dot-matrix/print-vouchers"
           icon={Receipt}
         />
         <WcvActionCard
@@ -45,8 +43,8 @@ export default function PrintDotMatrixHubPage() {
         />
         <WcvActionCard
           title="Print Journal Voucher"
-          description="Print Journal Voucher"
-          href="/dashboard/finance/bank-payment"
+          description="View journal vouchers"
+          href="/dashboard/finance/vouchers/view-journal-vouchers"
           icon={FileCheck}
         />
         <WcvActionCard
@@ -59,4 +57,3 @@ export default function PrintDotMatrixHubPage() {
     </div>
   );
 }
-

@@ -19,12 +19,9 @@ import {
 export default function FinanceReportsHubPage() {
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-10">
-      {/* Authentic WebCoreVision Ribbon Header matching image */}
       <WcvRibbonHeader title="Finance" />
 
-      {/* 20 Action Cards matching exact screenshots (Image 3 + Image 4) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Row 1 */}
         <WcvActionCard
           title="CN Register With Freight Details"
           description="Consignment Register With Freight Details"
@@ -50,7 +47,6 @@ export default function FinanceReportsHubPage() {
           icon={FileSpreadsheet}
         />
 
-        {/* Row 2 */}
         <WcvActionCard
           title="Voucher Wise Invoice Report"
           description="Voucher Wise Invoice Report"
@@ -76,7 +72,6 @@ export default function FinanceReportsHubPage() {
           icon={CheckCircle}
         />
 
-        {/* Row 3 */}
         <WcvActionCard
           title="Submitted O/S Detail"
           description="Submitted O/S Detail"
@@ -102,7 +97,6 @@ export default function FinanceReportsHubPage() {
           icon={Building}
         />
 
-        {/* Row 4 */}
         <WcvActionCard
           title="Submitted O/S Party wise ageing"
           description="Submitted O/S Customer wise ageing"
@@ -111,8 +105,8 @@ export default function FinanceReportsHubPage() {
         />
         <WcvActionCard
           title="Submitted O/S PDD Report"
-          description="Submitted O/S PDD Report"
-          href="/dashboard/finance/billing"
+          description="Uses Submitted O/S Detail until a dedicated PDD report is built"
+          href="/dashboard/reports/finance/submitted-os-detail"
           icon={FileText}
         />
         <WcvActionCard
@@ -129,38 +123,36 @@ export default function FinanceReportsHubPage() {
         />
         <WcvActionCard
           title="BILL wise Collection Report"
-          description="BILL wise Collection Reportnull"
-          href="/dashboard/finance/billing"
+          description="Bill register with collection details"
+          href="/dashboard/reports/finance/bill-register-collection"
           icon={Receipt}
         />
 
-        {/* Row 5 */}
         <WcvActionCard
           title="THC/PDC Financial updation Pending"
-          description="THC/PDC Financial updation Pending"
-          href="/dashboard/operations/tripsheets"
+          description="Opens vendor billing PDC advance / balance suite"
+          href="/dashboard/finance/vendor-billing"
           icon={Layers}
         />
         <WcvActionCard
           title="Unadjusted Cheque Report"
-          description="Unadjusted Cheque Report"
+          description="Opens cheque management hub"
           href="/dashboard/finance/cheque-management"
           icon={CreditCard}
         />
         <WcvActionCard
           title="Customer Un-Billed CN Registred"
           description="Both Financially Completed and Financially Un-Completed"
-          href="/dashboard/finance/billing"
+          href="/dashboard/reports/finance/unbilled-cn-register"
           icon={AlertCircle}
         />
         <WcvActionCard
           title="Bill Wise O/S Detail"
-          description="Bill Wise O/S Detail"
-          href="/dashboard/finance/billing"
+          description="Submitted O/S Detail"
+          href="/dashboard/reports/finance/submitted-os-detail"
           icon={FileSpreadsheet}
         />
       </div>
     </div>
   );
 }
-

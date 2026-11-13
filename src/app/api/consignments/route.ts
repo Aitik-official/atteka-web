@@ -4,6 +4,7 @@ import { Consignment } from "@/models/Consignment";
 import { ConsignmentSchema } from "@/lib/validations";
 import { memoryStore } from "@/lib/memoryStore";
 import { postConsignmentLedger } from "@/lib/booksEngine";
+import { RBAC, requireApiSession } from "@/lib/rbac";
 
 function applyListFilters(list: any[], search: string, status: string | null) {
   let next = [...list];
@@ -82,6 +83,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireApiSession(req, RBAC.opsWrite);
+    if ("error" in gate) return gate.error;
+
     const body = await req.json();
     const parsed = ConsignmentSchema.safeParse(body);
     if (!parsed.success) {

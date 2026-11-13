@@ -311,6 +311,17 @@ function titleCaseSegment(seg: string) {
     .join(" ");
 }
 
+/** Runtime ids (docket nos, mongo ids, slugs) — not named route folders. */
+function looksLikeDynamicId(seg: string) {
+  if (!seg) return false;
+  if (SEGMENT_LABELS[seg] || PARENT_SHORT_LABELS[seg]) return false;
+  if (seg.startsWith("[") && seg.endsWith("]")) return true;
+  // codes with digits (ALC126…, TS…, SAMPLE123) or long opaque tokens
+  if (/\d/.test(seg) && !seg.includes("-")) return true;
+  if (/^[a-f0-9]{16,}$/i.test(seg)) return true;
+  return false;
+}
+
 function catalogLabel(path: string): string | null {
   if (CATALOG_PATH_LABELS[path]) return CATALOG_PATH_LABELS[path];
   let best: { route: string; label: string } | null = null;
@@ -349,11 +360,20 @@ export function resolveBreadcrumbs(pathname: string): BreadcrumbItem[] {
 
   const crumbs: BreadcrumbItem[] = [];
   let acc = "/dashboard";
+  let parentPath = "/dashboard";
 
   parts.forEach((seg, idx) => {
-    // skip dynamic id segments like [id] literal folders already resolved in URL
     acc += `/${seg}`;
     const isLast = idx === parts.length - 1;
+    const isDynamic = looksLikeDynamicId(seg);
+
+    // Skip intermediate dynamic ids so crumbs stay Admin > Company Structure style
+    // e.g. /operations/dockets/ALC123/print → Operations > Consignments & Dockets > Print
+    if (isDynamic && !isLast) {
+      parentPath = parentPath; // keep previous real hub as parent for next crumb
+      return;
+    }
+
     const pathLabel = PATH_LABELS[acc] || CATALOG_PATH_LABELS[acc];
     const shortParent = !isLast ? PARENT_SHORT_LABELS[seg] : undefined;
     const catalog = catalogLabel(acc);
@@ -362,12 +382,16 @@ export function resolveBreadcrumbs(pathname: string): BreadcrumbItem[] {
     const label =
       pathLabel ||
       shortParent ||
-      (isLast ? catalog || segmentLabel || titleCaseSegment(seg) : segmentLabel || catalog || titleCaseSegment(seg));
+      (isLast
+        ? catalog || segmentLabel || (isDynamic ? "Details" : titleCaseSegment(seg))
+        : segmentLabel || catalog || titleCaseSegment(seg));
 
     crumbs.push({
       label,
-      href: resolveHref(acc, seg, isLast)
+      href: isLast ? undefined : resolveHref(acc, seg, false) || parentPath
     });
+
+    parentPath = acc;
   });
 
   return crumbs;

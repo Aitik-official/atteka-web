@@ -3,6 +3,8 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { CustomerBill } from "@/models/CustomerBill";
 import { Consignment } from "@/models/Consignment";
 import { memoryStore } from "@/lib/memoryStore";
+import { postBillLedger } from "@/lib/booksEngine";
+import { RBAC, requireApiSession } from "@/lib/rbac";
 
 const SAMPLE_BILLS = [
   {
@@ -175,6 +177,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireApiSession(req, RBAC.financeWrite);
+    if ("error" in gate) return gate.error;
+
     const body = await req.json();
     const {
       customerCode,
@@ -313,10 +318,20 @@ export async function POST(req: NextRequest) {
         { $set: { status: "BILLED" } }
       );
 
+      await postBillLedger({
+        billNumber: billRecord.billNumber,
+        customerName: billRecord.customerName,
+        totalFreight: billRecord.totalFreight,
+        taxAmount: billRecord.taxAmount,
+        grandTotal: billRecord.grandTotal,
+        branchCode: billRecord.billingBranch
+      });
+
       return NextResponse.json({
         success: true,
         message: "Transport bill generated",
-        data: newBill
+        data: newBill,
+        ledgerPosted: true
       }, { status: 201 });
     } catch {
       const memoryBill = { ...billRecord, _id: `b-${Date.now()}` };
@@ -329,11 +344,21 @@ export async function POST(req: NextRequest) {
         if (idx !== -1) cns[idx].status = "BILLED";
       });
 
+      await postBillLedger({
+        billNumber: billRecord.billNumber,
+        customerName: billRecord.customerName,
+        totalFreight: billRecord.totalFreight,
+        taxAmount: billRecord.taxAmount,
+        grandTotal: billRecord.grandTotal,
+        branchCode: billRecord.billingBranch
+      });
+
       return NextResponse.json({
         success: true,
         message: "Transport bill generated (Memory Store)",
         data: memoryBill,
-        isMemoryStore: true
+        isMemoryStore: true,
+        ledgerPosted: true
       }, { status: 201 });
     }
   } catch (error: any) {

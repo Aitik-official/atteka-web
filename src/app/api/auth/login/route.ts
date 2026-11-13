@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         role: "ADMIN",
         branchCode: "MUM",
         operatingLocation: "HEAD OFFICE",
-        financialYear: "2024-2025"
+        financialYear: "2026-2027"
       };
     }
 
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
           role: cleanUsername === "ADMIN01" ? "ADMIN" : "OPERATOR",
           branchCode: "MUM",
           operatingLocation: "MUMBAI CENTRAL",
-          financialYear: "2024-2025"
+          financialYear: "2026-2027"
         };
       } else {
         return NextResponse.json({ error: "Invalid Login ID or Password." }, { status: 401 });
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       name: user.name,
       role: user.role,
       branchCode: user.branchCode || "MUM",
-      financialYear: user.financialYear || "2024-2025"
+      financialYear: user.financialYear || "2026-2027"
     };
 
     const token = signToken(sessionPayload);

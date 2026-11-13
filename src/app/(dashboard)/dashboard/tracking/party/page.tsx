@@ -74,8 +74,8 @@ export default function TrackCustomerVendorHubPage() {
         />
         <WcvActionCard
           title="Customer GST Registration Report"
-          description="E-Invoice and state GSTIN master registers"
-          href="/dashboard/finance/e-invoice"
+          description="Customer GSTIN master register"
+          href="/dashboard/masters/customer-gst"
           icon={ShieldCheck}
         />
       </div>

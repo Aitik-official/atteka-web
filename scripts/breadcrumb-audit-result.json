@@ -1,0 +1,62 @@
+{
+  "totalNonHome": 170,
+  "emptyCount": 0,
+  "empty": [],
+  "badParentsCount": 0,
+  "badParents": [],
+  "samples": {
+    "/dashboard/admin": [
+      {
+        "label": "Admin"
+      }
+    ],
+    "/dashboard/admin/company-structure": [
+      {
+        "label": "Admin",
+        "href": "/dashboard/admin"
+      },
+      {
+        "label": "Company Structure"
+      }
+    ],
+    "/dashboard/exceptional/operation/edit-billing-party": [
+      {
+        "label": "Exceptional",
+        "href": "/dashboard/exceptional"
+      },
+      {
+        "label": "Operation",
+        "href": "/dashboard/exceptional/operation"
+      },
+      {
+        "label": "Edit Billing Party"
+      }
+    ],
+    "/dashboard/exceptional/operation/edit-billing-party-branch-po": [
+      {
+        "label": "Exceptional",
+        "href": "/dashboard/exceptional"
+      },
+      {
+        "label": "Operation",
+        "href": "/dashboard/exceptional/operation"
+      },
+      {
+        "label": "Assign Billing Branch / Party / PO"
+      }
+    ],
+    "/dashboard/operations/dockets/SAMPLE123/print": [
+      {
+        "label": "Operations",
+        "href": "/dashboard/operations"
+      },
+      {
+        "label": "Consignments & Dockets",
+        "href": "/dashboard/operations/dockets"
+      },
+      {
+        "label": "Print"
+      }
+    ]
+  }
+}

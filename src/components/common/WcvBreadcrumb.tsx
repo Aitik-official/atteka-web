@@ -10,8 +10,8 @@ type Props = {
 };
 
 /**
- * WebCoreVision-style crumbs: Finance > MR > Generate Bill MR.
- * Parents: dark slate links. Current: blue.
+ * WebCoreVision-style crumbs: Admin > Company Structure
+ * Parents: blue underlined links. Current: blue (no underline).
  */
 export function WcvBreadcrumb({ items, className = "" }: Props) {
   if (!items.length) return null;
@@ -28,11 +28,7 @@ export function WcvBreadcrumb({ items, className = "" }: Props) {
             {idx > 0 && <span className="text-slate-400 select-none px-0.5">&gt;</span>}
             {isLast || !item.href ? (
               <span
-                className={
-                  isLast
-                    ? "text-[#0171d3] font-medium truncate max-w-[280px] sm:max-w-none"
-                    : "text-slate-700 truncate max-w-[200px]"
-                }
+                className="text-[#0171d3] font-medium truncate max-w-[280px] sm:max-w-none"
                 aria-current={isLast ? "page" : undefined}
                 title={item.label}
               >
@@ -41,7 +37,7 @@ export function WcvBreadcrumb({ items, className = "" }: Props) {
             ) : (
               <Link
                 href={item.href}
-                className="text-slate-700 hover:text-[#0171d3] hover:underline truncate max-w-[200px]"
+                className="text-[#0171d3] underline underline-offset-2 hover:text-blue-800 truncate max-w-[200px]"
                 title={item.label}
               >
                 {item.label}

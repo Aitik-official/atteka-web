@@ -129,6 +129,7 @@ class MemoryStore {
   consignments: MockConsignment[] = [...initialConsignments];
   bills: any[] = [];
   receipts: any[] = [];
+  ledgerEntries: any[] = [];
   bankOps: any[] = [];
   tripSheets: any[] = [];
   branches: any[] = [];

@@ -14,12 +14,9 @@ import {
 export default function TrackingDocumentsHubPage() {
   return (
     <div className="space-y-4 max-w-6xl mx-auto pb-10">
-      {/* Authentic WebCoreVision Ribbon Header matching image */}
       <WcvRibbonHeader title="Tracking" />
 
-      {/* 6 Action Cards matching exact screenshot */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Row 1 */}
         <WcvActionCard
           title="Docket Tracking"
           description="Track CN by Docket / Invoice / DN No"
@@ -34,8 +31,8 @@ export default function TrackingDocumentsHubPage() {
         />
         <WcvActionCard
           title="Track CN Expense"
-          description="Track CN Expense"
-          href="/dashboard/finance/vendor-billing"
+          description="Opens vendor invoice payment view"
+          href="/dashboard/finance/vouchers/view-vendor-invoice-payment"
           icon={DollarSign}
         />
         <WcvActionCard
@@ -45,21 +42,19 @@ export default function TrackingDocumentsHubPage() {
           icon={Layers}
         />
 
-        {/* Row 2 */}
         <WcvActionCard
           title="View Pod Scan"
-          description="View Pod Scan"
-          href="/dashboard/operations/dockets"
+          description="Scan POD report"
+          href="/dashboard/reports/operations/scan-pod"
           icon={Camera}
         />
         <WcvActionCard
           title="Bill Genrated Details"
-          description="Bill Genrated Details"
-          href="/dashboard/finance/billing"
+          description="Bills generated report"
+          href="/dashboard/reports/finance/bills-generated"
           icon={Receipt}
         />
       </div>
     </div>
   );
 }
-

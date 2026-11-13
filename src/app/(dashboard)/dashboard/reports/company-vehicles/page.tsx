@@ -19,84 +19,78 @@ import {
 export default function CompanyVehicleReportsHubPage() {
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-10">
-      {/* Authentic WebCoreVision Ribbon Header matching image */}
       <WcvRibbonHeader title="Company Vechicle Reports" />
 
-      {/* 11 Action Cards matching exact screenshot */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Row 1 */}
         <WcvActionCard
           title="Pending for Trip Settlement"
-          description="Pending for Trip Settlement"
-          href="/dashboard/fleet/trip-management"
+          description="Trip settlement"
+          href="/dashboard/fleet/trip-management/trip-settlement"
           icon={Clock}
         />
         <WcvActionCard
           title="Pending for Trip Advance"
-          description="Pending for Trip Advance"
-          href="/dashboard/fleet/trip-management"
+          description="Voucher / trip advance payment"
+          href="/dashboard/fleet/trip-management/voucher-payment"
           icon={CreditCard}
         />
         <WcvActionCard
           title="Trip Register"
-          description="Trip Register"
+          description="Tripsheets hub"
           href="/dashboard/operations/tripsheets"
           icon={FileText}
         />
         <WcvActionCard
           title="Trip wise Income Vs. Expense"
-          description="Trip wise Income Vs. Expense"
-          href="/dashboard/reports"
+          unavailable
+          unavailableReason="Dedicated trip P&L report page not built yet"
           icon={DollarSign}
         />
 
-        {/* Row 2 */}
         <WcvActionCard
           title="Vehicle Wise Income Vs. Expense"
-          description="Vehicle Wise Income Vs. Expense"
-          href="/dashboard/reports"
+          unavailable
+          unavailableReason="Dedicated vehicle P&L report page not built yet"
           icon={TrendingUp}
         />
         <WcvActionCard
           title="Stock Report"
-          description="Stock Report"
+          description="Vehicle master stock list"
           href="/dashboard/masters/vehicles"
           icon={Package}
         />
         <WcvActionCard
           title="GIN Register"
-          description="GIN Register"
-          href="/dashboard/masters/vehicles"
+          unavailable
+          unavailableReason="GIN register screen not built — was wrongly linked to vehicle master"
           icon={Layers}
         />
         <WcvActionCard
           title="New Tyre Register Report"
-          description="New Tyre Register Report"
-          href="/dashboard/masters/vehicles"
+          unavailable
+          unavailableReason="Tyre register screens not built — was wrongly linked to vehicle master"
           icon={CircleDot}
         />
 
-        {/* Row 3 */}
         <WcvActionCard
           title="Old Tyre Register Report"
-          description="Old Tyre Register Report"
-          href="/dashboard/masters/vehicles"
+          unavailable
+          unavailableReason="Tyre register screens not built — was wrongly linked to vehicle master"
           icon={RotateCcw}
         />
         <WcvActionCard
           title="Claim Tyre Register Report"
-          description="Claim Tyre Register Report"
-          href="/dashboard/masters/vehicles"
+          unavailable
+          unavailableReason="Tyre register screens not built — was wrongly linked to vehicle master"
           icon={AlertOctagon}
         />
         <WcvActionCard
           title="Remould Tyre Report"
-          description="Remould Tyre Report"
-          href="/dashboard/masters/vehicles"
+          unavailable
+          unavailableReason="Tyre register screens not built — was wrongly linked to vehicle master"
           icon={Wrench}
         />
       </div>
     </div>
   );
 }
-

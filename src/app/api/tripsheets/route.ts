@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { TripSheet } from "@/models/TripSheet";
 import { Consignment } from "@/models/Consignment";
 import { memoryStore } from "@/lib/memoryStore";
+import { RBAC, requireApiSession } from "@/lib/rbac";
 
 function buildCnPatch(payload: any, docketLine?: any) {
   const party = String(payload.customerName || "").trim();
@@ -107,6 +108,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireApiSession(req, RBAC.opsWrite);
+    if ("error" in gate) return gate.error;
+
     const body = await req.json();
     const dockets = Array.isArray(body.dockets) ? body.dockets : [];
     const docketNos = dockets
