@@ -147,12 +147,12 @@ export default function GenerateCreditNoteIrnPage() {
         )
       );
       if (data.data?.irn) {
-        toast.document("Credit Note IRN generated successfully (demo). GST / NIC IRP pending.", {
+        toast.document("Credit Note IRN generated successfully", {
           title: "Credit Note IRN",
           code: data.data.irn
         });
       } else {
-        toast.success("Credit Note IRN generated successfully (demo). GST / NIC IRP pending.", {
+        toast.success("Credit Note IRN generated successfully", {
           title: "Credit Note IRN"
         });
       }

@@ -6,10 +6,69 @@ import { ArrowLeft, MoreHorizontal } from "lucide-react";
 import type { MasterOption } from "@/lib/masterOptions";
 
 export const wcvPillBtn =
-  "h-9 min-w-[110px] px-6 rounded-full border border-[#7eb6e8] bg-white text-[#0171d3] text-sm font-semibold hover:bg-[#e8f1fb] disabled:opacity-50 inline-flex items-center justify-center gap-1.5";
+  "h-9 min-w-[110px] px-6 rounded-full border border-[#7eb6e8] bg-white text-[#0171d3] text-sm font-semibold hover:bg-[#e8f1fb] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5";
 
 export const wcvInputCls =
-  "h-9 px-3 border border-[#7eb6e8] rounded-md text-[13px] text-slate-800 bg-white focus:outline-none focus:border-[#0171d3] disabled:bg-slate-50";
+  "h-9 px-3 border border-[#7eb6e8] rounded-md text-[13px] text-slate-800 bg-white focus:outline-none focus:border-[#0171d3] focus:ring-2 focus:ring-[#0171d3]/15 disabled:bg-slate-50 transition-[border-color,box-shadow]";
+
+export const wcvInputErrorCls =
+  "border-rose-400 focus:border-rose-500 focus:ring-rose-200/60";
+
+export function WcvFieldLabel({
+  children,
+  required,
+  htmlFor
+}: {
+  children: React.ReactNode;
+  required?: boolean;
+  htmlFor?: string;
+}) {
+  return (
+    <label htmlFor={htmlFor} className="text-[13px] font-semibold text-slate-800 inline-flex items-center gap-1">
+      {children}
+      {required ? <span className="text-rose-500" title="Required">*</span> : null}
+    </label>
+  );
+}
+
+export function WcvFieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="mt-1 text-[11px] text-rose-600 leading-snug">{message}</p>;
+}
+
+export function WcvSubmitButton({
+  children,
+  disabled,
+  loading,
+  onClick,
+  type = "button",
+  className = ""
+}: {
+  children: React.ReactNode;
+  disabled?: boolean;
+  loading?: boolean;
+  onClick?: () => void;
+  type?: "button" | "submit";
+  className?: string;
+}) {
+  return (
+    <button
+      type={type}
+      disabled={disabled || loading}
+      onClick={onClick}
+      className={`min-w-[160px] h-10 px-6 rounded-lg bg-[#0171d3] hover:bg-[#015fae] text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 ${className}`}
+    >
+      {loading ? (
+        <>
+          <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+          Saving…
+        </>
+      ) : (
+        children
+      )}
+    </button>
+  );
+}
 
 export function WcvBackLink({ href = "/dashboard/exceptional/operation" }: { href?: string }) {
   return (
@@ -58,19 +117,27 @@ export function WcvFieldRow({
   label,
   children,
   labelWidth = "w-[150px]",
-  labelClassName = "text-slate-800"
+  labelClassName = "text-slate-800",
+  required,
+  error
 }: {
   label: string;
   children: React.ReactNode;
   labelWidth?: string;
   labelClassName?: string;
+  required?: boolean;
+  error?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-      <span className={`text-[13px] font-semibold ${labelClassName} ${labelWidth} shrink-0`}>
+    <div className="flex flex-wrap items-start gap-2 sm:gap-3">
+      <span className={`text-[13px] font-semibold ${labelClassName} ${labelWidth} shrink-0 pt-2 inline-flex items-center gap-1`}>
         {label}
+        {required ? <span className="text-rose-500" title="Required">*</span> : null}
       </span>
-      <div className="flex-1 min-w-[180px] flex flex-wrap items-center gap-2">{children}</div>
+      <div className="flex-1 min-w-[180px]">
+        <div className="flex flex-wrap items-center gap-2">{children}</div>
+        <WcvFieldError message={error} />
+      </div>
     </div>
   );
 }
@@ -82,7 +149,10 @@ export function WcvSelect({
   placeholder = "---Select---",
   includeEmpty = false,
   disabled,
-  className = ""
+  className = "",
+  error,
+  required,
+  id
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -91,13 +161,19 @@ export function WcvSelect({
   includeEmpty?: boolean;
   disabled?: boolean;
   className?: string;
+  error?: boolean;
+  required?: boolean;
+  id?: string;
 }) {
   return (
     <select
+      id={id}
       value={value}
       disabled={disabled}
+      required={required}
+      aria-invalid={error || undefined}
       onChange={(e) => onChange(e.target.value)}
-      className={`${wcvInputCls} min-w-[200px] ${className}`}
+      className={`${wcvInputCls} min-w-[200px] ${error ? wcvInputErrorCls : ""} ${className}`}
     >
       {includeEmpty && <option value="">{placeholder}</option>}
       {options.map((o) => (
@@ -115,7 +191,11 @@ export function WcvTextInput({
   placeholder,
   upperCase = true,
   className = "",
-  onEnter
+  onEnter,
+  error,
+  required,
+  id,
+  disabled
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -123,11 +203,19 @@ export function WcvTextInput({
   upperCase?: boolean;
   className?: string;
   onEnter?: () => void;
+  error?: boolean;
+  required?: boolean;
+  id?: string;
+  disabled?: boolean;
 }) {
   return (
     <input
+      id={id}
       value={value}
       placeholder={placeholder}
+      disabled={disabled}
+      required={required}
+      aria-invalid={error || undefined}
       onChange={(e) => onChange(upperCase ? e.target.value.toUpperCase() : e.target.value)}
       onKeyDown={(e) => {
         if (e.key === "Enter" && onEnter) {
@@ -135,7 +223,7 @@ export function WcvTextInput({
           onEnter();
         }
       }}
-      className={`${wcvInputCls} ${className}`}
+      className={`${wcvInputCls} ${error ? wcvInputErrorCls : ""} ${className}`}
     />
   );
 }

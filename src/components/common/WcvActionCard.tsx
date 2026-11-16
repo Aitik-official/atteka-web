@@ -121,15 +121,17 @@ export function WcvActionCard({
 
 export function WcvRibbonHeader({
   title,
-  subtitle
+  subtitle,
+  action
 }: {
   title: string;
   subtitle?: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200/90 p-4 mb-5 shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-[#0171d3] text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
           AL
         </div>
         <div>
@@ -140,6 +142,7 @@ export function WcvRibbonHeader({
         </div>
       </div>
       <div className="flex items-center gap-2 self-start sm:self-auto">
+        {action}
         <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-semibold">
           Active Module
         </span>

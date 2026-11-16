@@ -5,17 +5,15 @@ import {
   ArrowLeft,
   Calendar,
   ChevronDown,
-  Columns3,
-  Copy,
   Eye,
-  FileSpreadsheet,
-  LayoutGrid,
   Printer,
-  Search,
   Table2
 } from "lucide-react";
 import { toast } from "@/lib/toastBus";
 import { printScoped } from "@/lib/printEngine";
+import { ListToolbar } from "@/components/common/ListToolbar";
+import { EmptyState, TableEmptyRow } from "@/components/common/EmptyState";
+import { TableSkeleton } from "@/components/common/TableSkeleton";
 
 type VoucherRow = {
   srNo: number;
@@ -71,7 +69,6 @@ export default function ViewPrintVouchersPage() {
   const [pageSize, setPageSize] = useState(10);
   const [tableSearch, setTableSearch] = useState("");
   const [cardView, setCardView] = useState(false);
-  const [showColumnsMenu, setShowColumnsMenu] = useState(false);
   const [visibleCols, setVisibleCols] = useState<Record<ColKey, boolean>>(
     Object.fromEntries(COLS.map((c) => [c.key, true])) as Record<ColKey, boolean>
   );
@@ -326,103 +323,48 @@ export default function ViewPrintVouchersPage() {
             <h2 className="text-sm font-semibold tracking-wide">View / Print Bills</h2>
           </div>
 
-          <div className="px-4 py-3 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowColumnsMenu((v) => !v)}
-                  className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5"
-                >
-                  <Columns3 className="w-3.5 h-3.5" /> Column visibility
-                </button>
-                {showColumnsMenu && (
-                  <div className="absolute z-20 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg p-2 text-xs max-h-64 overflow-y-auto">
-                    {COLS.map((c) => (
-                      <label
-                        key={c.key}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={visibleCols[c.key]}
-                          onChange={() =>
-                            setVisibleCols((prev) => ({ ...prev, [c.key]: !prev[c.key] }))
-                          }
-                        />
-                        <span>{c.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={copyTable}
-                className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5"
-              >
-                <Copy className="w-3.5 h-3.5" /> Copy
-              </button>
-              <button
-                type="button"
-                onClick={exportExcel}
-                className="px-3 py-1.5 text-xs font-semibold border border-emerald-200 text-emerald-800 bg-emerald-50 rounded-lg inline-flex items-center gap-1.5"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
-              </button>
-              <button
-                type="button"
-                onClick={() => printScoped()}
-                className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5"
-              >
-                <Printer className="w-3.5 h-3.5" /> Print
-              </button>
-              <button
-                type="button"
-                onClick={() => setCardView((v) => !v)}
-                className={`px-3 py-1.5 text-xs font-semibold border rounded-lg inline-flex items-center gap-1.5 ${
-                  cardView ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200"
-                }`}
-              >
-                <LayoutGrid className="w-3.5 h-3.5" /> CARD VIEW
-              </button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              <label className="text-slate-600">
-                Show{" "}
+          <ListToolbar
+            title="View / Print Vouchers"
+            columns={COLS.map((c) => ({ key: c.key, label: c.label }))}
+            visibleCols={visibleCols}
+            onToggleColumn={(key) =>
+              setVisibleCols((prev) => ({ ...prev, [key]: !prev[key as ColKey] }))
+            }
+            onCopy={copyTable}
+            onExcel={exportExcel}
+            onPrint={() => printScoped()}
+            cardView={cardView}
+            onToggleCardView={() => setCardView((v) => !v)}
+            search={tableSearch}
+            onSearchChange={(v) => {
+              setTableSearch(v);
+              setPage(1);
+            }}
+            searchPlaceholder="Search vouchers…"
+            right={
+              <label className="text-xs text-slate-600 inline-flex items-center gap-1.5">
+                Show
                 <select
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value));
                     setPage(1);
                   }}
-                  className="mx-1 h-8 px-2 border border-slate-200 rounded-md"
+                  className="h-8 px-2 border border-slate-200 rounded-md"
                 >
                   {[10, 25, 50, 100].map((n) => (
                     <option key={n} value={n}>
                       {n}
                     </option>
                   ))}
-                </select>{" "}
-                entries
+                </select>
               </label>
-              <div className="relative w-44">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-                <input
-                  value={tableSearch}
-                  onChange={(e) => {
-                    setTableSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search:"
-                  className="w-full h-8 pl-8 pr-3 border border-slate-200 rounded-md text-xs"
-                />
-              </div>
-            </div>
-          </div>
+            }
+          />
 
-          {!cardView ? (
+          {loading ? (
+            <TableSkeleton rows={8} cols={6} />
+          ) : !cardView ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs min-w-[1000px]">
                 <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
@@ -468,11 +410,13 @@ export default function ViewPrintVouchersPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {paged.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-10 text-center text-slate-400">
-                        No data available in table
-                      </td>
-                    </tr>
+                    <TableEmptyRow
+                      colSpan={7}
+                      title="No vouchers found"
+                      description="Try a wider date range, or create a debit voucher."
+                      actionLabel="New Debit Voucher"
+                      actionHref="/dashboard/finance/vouchers/debit-voucher"
+                    />
                   ) : (
                     paged.map((r, idx) => (
                       <tr key={r.voucherNumber} className="hover:bg-slate-50/80 odd:bg-white even:bg-slate-50/40">
@@ -519,23 +463,35 @@ export default function ViewPrintVouchersPage() {
             </div>
           ) : (
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {paged.map((r) => (
-                <div key={r.voucherNumber} className="border border-slate-200 rounded-xl p-3 text-xs space-y-1">
-                  <div className="font-mono font-bold text-blue-700">{r.voucherNumber}</div>
-                  <div className="font-medium truncate">{r.payTo}</div>
-                  <div className="text-slate-500">
-                    {r.voucherDate} · {r.branch}
-                  </div>
-                  <div className="font-mono font-semibold">{fmtAmt(r.totalAccountedAmount)}</div>
-                  <button
-                    type="button"
-                    onClick={() => void openView(r.voucherNumber)}
-                    className="text-blue-600 font-semibold"
-                  >
-                    View
-                  </button>
+              {paged.length === 0 ? (
+                <div className="col-span-full">
+                  <EmptyState
+                    compact
+                    title="No vouchers found"
+                    description="Try a wider date range, or create a debit voucher."
+                    actionLabel="New Debit Voucher"
+                    actionHref="/dashboard/finance/vouchers/debit-voucher"
+                  />
                 </div>
-              ))}
+              ) : (
+                paged.map((r) => (
+                  <div key={r.voucherNumber} className="border border-slate-200 rounded-xl p-3 text-xs space-y-1">
+                    <div className="font-mono font-bold text-blue-700">{r.voucherNumber}</div>
+                    <div className="font-medium truncate">{r.payTo}</div>
+                    <div className="text-slate-500">
+                      {r.voucherDate} · {r.branch}
+                    </div>
+                    <div className="font-mono font-semibold">{fmtAmt(r.totalAccountedAmount)}</div>
+                    <button
+                      type="button"
+                      onClick={() => void openView(r.voucherNumber)}
+                      className="text-blue-600 font-semibold"
+                    >
+                      View
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           )}
 

@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Users2,
   Landmark,
@@ -37,6 +38,7 @@ interface ModuleCard {
 }
 
 export default function DashboardHome() {
+  const router = useRouter();
   const { canPath, canModule, role } = useRbac();
   // Start with all cards collapsed so the dashboard grid remains clean on refresh/login
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
@@ -172,50 +174,101 @@ export default function DashboardHome() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-5 pb-10">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">
-          Signed in as <span className="font-mono font-semibold text-slate-700">{role}</span>
-          {role === "GUEST" ? " — read-only access" : null}
-        </p>
+      <div className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#0171d3]">
+            Atteka Logistics ERP
+          </p>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
+            Home
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Signed in as <span className="font-mono font-semibold text-slate-700">{role}</span>
+            {role === "GUEST" ? " — read-only access" : null}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {canPath("/dashboard/operations/new-cn") ? (
+            <Link
+              href="/dashboard/operations/new-cn"
+              className="h-9 px-4 rounded-full bg-[#0171d3] text-white text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-[#015fae] shadow-sm"
+            >
+              New CN Booking
+            </Link>
+          ) : null}
+          {canPath("/dashboard/finance/vouchers/debit-voucher") ? (
+            <Link
+              href="/dashboard/finance/vouchers/debit-voucher"
+              className="h-9 px-4 rounded-full border border-[#0171d3] text-[#0171d3] text-xs font-semibold inline-flex items-center hover:bg-[#e8f1fb]"
+            >
+              Debit Voucher
+            </Link>
+          ) : null}
+        </div>
       </div>
-      {/* Top Quick KPI Row (Modular & Responsive) */}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           title="Active Consignments"
           value="1,428"
-          subtitle="All corridors active"
+          subtitle="Open dockets across corridors"
           icon={FileText}
           trend="+8.4%"
           trendDirection="up"
           color="blue"
+          onClick={
+            canPath("/dashboard/operations/dockets")
+              ? () => router.push("/dashboard/operations/dockets")
+              : undefined
+          }
         />
         <StatCard
           title="Fleet in Transit"
           value="42"
-          subtitle="GPS tracking live"
+          subtitle="Vehicles on road"
           icon={Truck}
           trend="+3 new"
           trendDirection="up"
           color="emerald"
+          onClick={
+            canPath("/dashboard/fleet/trip-management")
+              ? () => router.push("/dashboard/fleet/trip-management")
+              : undefined
+          }
         />
         <StatCard
           title="Pending Billing"
           value="₹ 14.8 L"
-          subtitle="24 dockets to bill"
+          subtitle="Dockets ready to bill"
           icon={DollarSign}
           color="amber"
+          onClick={
+            canPath("/dashboard/finance/customer-billing")
+              ? () => router.push("/dashboard/finance/customer-billing")
+              : undefined
+          }
         />
         <StatCard
-          title="IRP / NIC Engine"
-          value="Online"
-          subtitle="Sandbox connected"
+          title="E-Invoice"
+          value="Ready"
+          subtitle="Generate IRN from Finance"
           icon={ShieldCheck}
-          trend="99.9%"
           color="indigo"
+          onClick={
+            canPath("/dashboard/finance/e-invoice")
+              ? () => router.push("/dashboard/finance/e-invoice")
+              : undefined
+          }
         />
       </div>
 
-      {/* Main 3-Column / Responsive Card Grid */}
+      <div className="flex items-end justify-between gap-3 px-0.5">
+        <div>
+          <h2 className="text-sm font-bold text-slate-800">Modules</h2>
+          <p className="text-[11px] text-slate-500">Open a module, then pick a submodule</p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 items-start">
         {modules.map((mod) => {
           const Icon = mod.icon;

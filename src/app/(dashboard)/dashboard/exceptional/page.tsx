@@ -7,6 +7,12 @@ export default function ExceptionalHubPage() {
   return (
     <SectionHub
       title="Exceptional"
+      subtitle="Controlled corrections & exceptions"
+      description="Use Operation for document fixes. Finance exceptions stay locked until your role allows them."
+      primaryAction={{
+        label: "Operation",
+        href: "/dashboard/exceptional/operation"
+      }}
       cards={[
         {
           title: "Operation",

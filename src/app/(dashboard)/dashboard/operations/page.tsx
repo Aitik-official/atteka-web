@@ -7,6 +7,12 @@ export default function OperationsHubPage() {
   return (
     <SectionHub
       title="Operations"
+      subtitle="Booking, tripsheets & documents"
+      description="Book a consignment first, then move through tripsheets and view/print when you need paper."
+      primaryAction={{
+        label: "New CN Booking",
+        href: "/dashboard/operations/new-cn"
+      }}
       cards={[
         {
           title: "Freight Booking",

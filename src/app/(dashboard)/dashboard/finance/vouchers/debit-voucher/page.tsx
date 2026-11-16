@@ -6,17 +6,17 @@ import {
   Ban,
   Calendar,
   ChevronDown,
-  Columns3,
   Copy,
-  FileSpreadsheet,
   FileText,
-  LayoutGrid,
   Pencil,
   Plus,
-  Search,
   Table2
 } from "lucide-react";
 import { toast } from "@/lib/toastBus";
+import { ListToolbar } from "@/components/common/ListToolbar";
+import { EmptyState, TableEmptyRow } from "@/components/common/EmptyState";
+import { TableSkeleton } from "@/components/common/TableSkeleton";
+import { WcvSubmitButton } from "@/components/common/WcvFormPrimitives";
 
 type VoucherRow = {
   srNo: number;
@@ -195,10 +195,10 @@ export default function DebitVoucherPage() {
   const [pageSize, setPageSize] = useState(10);
   const [tableSearch, setTableSearch] = useState("");
   const [cardView, setCardView] = useState(false);
-  const [showColumnsMenu, setShowColumnsMenu] = useState(false);
   const [visibleCols, setVisibleCols] = useState<Record<ColKey, boolean>>(
     Object.fromEntries(COLS.map((c) => [c.key, true])) as Record<ColKey, boolean>
   );
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [colFilters, setColFilters] = useState<Record<string, string>>(
     Object.fromEntries(COLS.map((c) => [c.key, ""]))
   );
@@ -381,9 +381,21 @@ export default function DebitVoucherPage() {
     }
   };
 
+  const validateForm = () => {
+    const next: Record<string, string> = {};
+    if (!form.paidTo.trim()) next.paidTo = "Paid To is required";
+    if (!form.location.trim()) next.location = "Location is required";
+    if (!form.baseAmount || form.baseAmount <= 0) next.baseAmount = "Enter a base amount greater than zero";
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const formValid =
+    !!form.paidTo.trim() && !!form.location.trim() && !!form.baseAmount && form.baseAmount > 0;
+
   const submitVoucher = async () => {
-    if (!form.paidTo.trim()) {
-      toast.error("Enter Paid To");
+    if (!validateForm()) {
+      toast.error("Fix the highlighted fields");
       return;
     }
     setSaving(true);
@@ -407,6 +419,7 @@ export default function DebitVoucherPage() {
         return;
       }
       toast.success(`Debit voucher ${data.data?.voucherNumber} saved`);
+      setFieldErrors({});
       setRows((prev) => [
         {
           srNo: 1,
@@ -471,8 +484,13 @@ export default function DebitVoucherPage() {
   };
 
   const fieldCls =
-    "w-full h-9 px-2.5 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:border-blue-400";
+    "w-full h-9 px-2.5 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:border-[#0171d3] focus:ring-2 focus:ring-[#0171d3]/15 transition-[border-color,box-shadow]";
+  const fieldErrCls = "border-rose-400 focus:border-rose-500 focus:ring-rose-200/60";
   const labelCls = "block text-[11px] font-semibold text-slate-600 mb-1";
+  const setFieldClear = (key: string, value: unknown) => {
+    setField(key as keyof typeof form, value as never);
+    if (fieldErrors[key]) setFieldErrors((prev) => ({ ...prev, [key]: "" }));
+  };
 
   return (
     <div className="space-y-4 pb-16 max-w-7xl mx-auto">
@@ -564,110 +582,57 @@ export default function DebitVoucherPage() {
 
       {step === "report" && (
         <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setStep("filter")}
-                className="h-8 w-8 border border-slate-200 rounded-lg inline-flex items-center justify-center hover:bg-slate-50"
-                title="Back to filters"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <div className="relative">
+          <ListToolbar
+            onBack={() => setStep("filter")}
+            title="Debit Voucher"
+            columns={COLS.map((c) => ({ key: c.key, label: c.label }))}
+            visibleCols={visibleCols}
+            onToggleColumn={(key) =>
+              setVisibleCols((prev) => ({ ...prev, [key]: !prev[key as ColKey] }))
+            }
+            onCopy={copyTable}
+            onExcel={exportExcel}
+            cardView={cardView}
+            onToggleCardView={() => setCardView((v) => !v)}
+            search={tableSearch}
+            onSearchChange={(v) => {
+              setTableSearch(v);
+              setPage(1);
+            }}
+            searchPlaceholder="Search vouchers…"
+            right={
+              <>
                 <button
                   type="button"
-                  onClick={() => setShowColumnsMenu((v) => !v)}
-                  className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg bg-white hover:bg-slate-50 inline-flex items-center gap-1.5"
+                  onClick={openNew}
+                  className="h-8 px-3 rounded-lg bg-[#0171d3] text-white font-semibold text-xs inline-flex items-center gap-1.5 hover:bg-[#015fae]"
                 >
-                  <Columns3 className="w-3.5 h-3.5" /> Column visibility
+                  <Plus className="w-3.5 h-3.5" /> Add New
                 </button>
-                {showColumnsMenu && (
-                  <div className="absolute z-20 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg p-2 text-xs max-h-64 overflow-y-auto">
-                    {COLS.map((c) => (
-                      <label
-                        key={c.key}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={visibleCols[c.key]}
-                          onChange={() =>
-                            setVisibleCols((prev) => ({ ...prev, [c.key]: !prev[c.key] }))
-                          }
-                        />
-                        <span>{c.label}</span>
-                      </label>
+                <label className="text-xs text-slate-600 inline-flex items-center gap-1.5">
+                  Show
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="h-8 px-2 border border-slate-200 rounded-md"
+                  >
+                    {[10, 25, 50].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
                     ))}
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={copyTable}
-                className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5"
-              >
-                <Copy className="w-3.5 h-3.5" /> Copy
-              </button>
-              <button
-                type="button"
-                onClick={exportExcel}
-                className="px-3 py-1.5 text-xs font-semibold border border-emerald-200 text-emerald-800 rounded-lg bg-emerald-50 inline-flex items-center gap-1.5"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
-              </button>
-              <button
-                type="button"
-                onClick={() => setCardView((v) => !v)}
-                className={`px-3 py-1.5 text-xs font-semibold border rounded-lg inline-flex items-center gap-1.5 ${
-                  cardView ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200"
-                }`}
-              >
-                <LayoutGrid className="w-3.5 h-3.5" /> CARD VIEW
-              </button>
-            </div>
+                  </select>
+                </label>
+              </>
+            }
+          />
 
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              <button
-                type="button"
-                onClick={openNew}
-                className="h-8 px-3 rounded-lg bg-blue-600 text-white font-semibold inline-flex items-center gap-1.5 hover:bg-blue-700"
-              >
-                <Plus className="w-3.5 h-3.5" /> Add New
-              </button>
-              <label className="text-slate-600">
-                Show{" "}
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="mx-1 h-8 px-2 border border-slate-200 rounded-md"
-                >
-                  {[10, 25, 50].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="relative w-44">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-                <input
-                  value={tableSearch}
-                  onChange={(e) => {
-                    setTableSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Search:"
-                  className="w-full h-8 pl-8 pr-3 border border-slate-200 rounded-md text-xs"
-                />
-              </div>
-            </div>
-          </div>
-
-          {!cardView ? (
+          {loading ? (
+            <TableSkeleton rows={8} cols={7} />
+          ) : !cardView ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs min-w-[1200px]">
                 <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
@@ -707,11 +672,13 @@ export default function DebitVoucherPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {paged.length === 0 ? (
-                    <tr>
-                      <td colSpan={11} className="py-10 text-center text-slate-400">
-                        No data available in table
-                      </td>
-                    </tr>
+                    <TableEmptyRow
+                      colSpan={11}
+                      title="No debit vouchers yet"
+                      description="Create a debit voucher to start this list."
+                      actionLabel="Add New"
+                      onAction={openNew}
+                    />
                   ) : (
                     paged.map((r, idx) => (
                       <tr key={r.voucherNumber} className="hover:bg-slate-50/80">
@@ -784,27 +751,39 @@ export default function DebitVoucherPage() {
             </div>
           ) : (
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {paged.map((r) => (
-                <div key={r.voucherNumber} className="border border-slate-200 rounded-xl p-3 text-xs space-y-1.5">
-                  <div className="font-mono font-bold text-blue-700">{r.voucherNumber}</div>
-                  <div className="font-medium">{r.payTo}</div>
-                  <div className="text-slate-500">
-                    {r.voucherDate} · {r.branch}
-                  </div>
-                  <div className="font-mono font-semibold">{fmtAmt(r.totalAccountedAmount)}</div>
-                  <div className="flex gap-2 pt-1">
-                    <button type="button" onClick={() => openCopy(r)} className="text-blue-600 font-semibold">
-                      Copy
-                    </button>
-                    <button type="button" onClick={() => openEdit(r)} className="text-blue-600 font-semibold">
-                      Edit
-                    </button>
-                    <button type="button" onClick={() => cancelRow(r)} className="text-blue-600 font-semibold">
-                      Cancel
-                    </button>
-                  </div>
+              {paged.length === 0 ? (
+                <div className="col-span-full">
+                  <EmptyState
+                    compact
+                    title="No debit vouchers yet"
+                    description="Create a debit voucher to start this list."
+                    actionLabel="Add New"
+                    onAction={openNew}
+                  />
                 </div>
-              ))}
+              ) : (
+                paged.map((r) => (
+                  <div key={r.voucherNumber} className="border border-slate-200 rounded-xl p-3 text-xs space-y-1.5">
+                    <div className="font-mono font-bold text-blue-700">{r.voucherNumber}</div>
+                    <div className="font-medium">{r.payTo}</div>
+                    <div className="text-slate-500">
+                      {r.voucherDate} · {r.branch}
+                    </div>
+                    <div className="font-mono font-semibold">{fmtAmt(r.totalAccountedAmount)}</div>
+                    <div className="flex gap-2 pt-1">
+                      <button type="button" onClick={() => openCopy(r)} className="text-blue-600 font-semibold">
+                        Copy
+                      </button>
+                      <button type="button" onClick={() => openEdit(r)} className="text-blue-600 font-semibold">
+                        Edit
+                      </button>
+                      <button type="button" onClick={() => cancelRow(r)} className="text-blue-600 font-semibold">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
@@ -875,11 +854,14 @@ export default function DebitVoucherPage() {
                 />
               </div>
               <div>
-                <label className={labelCls}>Locations</label>
+                <label className={labelCls}>
+                  Locations <span className="text-rose-500">*</span>
+                </label>
                 <select
                   value={form.location}
-                  onChange={(e) => setField("location", e.target.value)}
-                  className={fieldCls}
+                  onChange={(e) => setFieldClear("location", e.target.value)}
+                  className={`${fieldCls} ${fieldErrors.location ? fieldErrCls : ""}`}
+                  aria-invalid={!!fieldErrors.location}
                 >
                   <option value="">---Select---</option>
                   {lists.locations.map((l) => (
@@ -888,6 +870,9 @@ export default function DebitVoucherPage() {
                     </option>
                   ))}
                 </select>
+                {fieldErrors.location ? (
+                  <p className="mt-1 text-[11px] text-rose-600">{fieldErrors.location}</p>
+                ) : null}
               </div>
               <div>
                 <label className={labelCls}>Projects Name</label>
@@ -922,12 +907,18 @@ export default function DebitVoucherPage() {
                 />
               </div>
               <div>
-                <label className={labelCls}>Paid To</label>
+                <label className={labelCls}>
+                  Paid To <span className="text-rose-500">*</span>
+                </label>
                 <input
                   value={form.paidTo}
-                  onChange={(e) => setField("paidTo", e.target.value)}
-                  className={fieldCls}
+                  onChange={(e) => setFieldClear("paidTo", e.target.value)}
+                  className={`${fieldCls} ${fieldErrors.paidTo ? fieldErrCls : ""}`}
+                  aria-invalid={!!fieldErrors.paidTo}
                 />
+                {fieldErrors.paidTo ? (
+                  <p className="mt-1 text-[11px] text-rose-600">{fieldErrors.paidTo}</p>
+                ) : null}
               </div>
               <div>
                 <label className={labelCls}>Party Code</label>
@@ -1012,13 +1003,19 @@ export default function DebitVoucherPage() {
                 </div>
               </div>
               <div>
-                <label className={labelCls}>Base Amount (₹)</label>
+                <label className={labelCls}>
+                  Base Amount (₹) <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="number"
                   value={form.baseAmount}
-                  onChange={(e) => setField("baseAmount", Number(e.target.value) || 0)}
-                  className={fieldCls}
+                  onChange={(e) => setFieldClear("baseAmount", Number(e.target.value) || 0)}
+                  className={`${fieldCls} ${fieldErrors.baseAmount ? fieldErrCls : ""}`}
+                  aria-invalid={!!fieldErrors.baseAmount}
                 />
+                {fieldErrors.baseAmount ? (
+                  <p className="mt-1 text-[11px] text-rose-600">{fieldErrors.baseAmount}</p>
+                ) : null}
               </div>
             </div>
           </section>
@@ -1258,15 +1255,15 @@ export default function DebitVoucherPage() {
             </p>
           </section>
 
-          <div className="flex justify-center pb-4">
-            <button
-              type="button"
-              disabled={saving}
-              onClick={submitVoucher}
-              className="min-w-[180px] h-10 px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50"
-            >
-              {saving ? "Saving..." : "Submit Voucher"}
-            </button>
+          <div className="flex flex-col items-center gap-2 pb-4">
+            {!formValid ? (
+              <p className="text-[11px] text-slate-500">
+                Fill Location, Paid To, and Base Amount to enable submit
+              </p>
+            ) : null}
+            <WcvSubmitButton disabled={!formValid} loading={saving} onClick={() => void submitVoucher()}>
+              Submit Voucher
+            </WcvSubmitButton>
           </div>
         </div>
       )}

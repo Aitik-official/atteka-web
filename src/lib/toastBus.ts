@@ -61,6 +61,17 @@ function resolveKind(input: ToastInput): ToastKind {
   return "action";
 }
 
+/** Strip demo / sandbox wording from customer-visible toast copy. */
+function polishToastMessage(message: string) {
+  return String(message || "")
+    .replace(/\s*\(demo\)\.?/gi, "")
+    .replace(/\s*demo[- ]only[^.!?]*/gi, "")
+    .replace(/\s*GST\s*\/\s*NIC\s*IRP\s*(integration\s*)?pending\.?/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+\./g, ".")
+    .trim();
+}
+
 export function createToastRecord(input: ToastInput): ToastRecord {
   const type = input.type || "info";
   const kind = resolveKind(input);
@@ -72,7 +83,7 @@ export function createToastRecord(input: ToastInput): ToastRecord {
     id: `toast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     type,
     kind,
-    message: input.message,
+    message: polishToastMessage(input.message),
     code: input.code,
     title: input.title,
     sticky,

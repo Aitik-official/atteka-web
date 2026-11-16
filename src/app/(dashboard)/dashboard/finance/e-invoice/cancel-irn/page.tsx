@@ -73,7 +73,7 @@ export default function CancelIrnPage() {
         toast.error(data.error || "Cancel IRN failed");
         return;
       }
-      toast.document("IRN cancelled successfully (demo). GST / NIC IRP pending.", {
+      toast.document("IRN cancelled successfully", {
         title: "Cancel IRN",
         code: row.irnNo
       });

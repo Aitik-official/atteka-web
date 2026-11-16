@@ -5,17 +5,14 @@ import {
   ArrowLeft,
   Calendar,
   ChevronDown,
-  Columns3,
-  Copy,
-  FileSpreadsheet,
-  FileText,
-  LayoutGrid,
-  Printer,
   Table2,
   Upload
 } from "lucide-react";
 import { toast } from "@/lib/toastBus";
 import { printScoped } from "@/lib/printEngine";
+import { ListToolbar } from "@/components/common/ListToolbar";
+import { EmptyState, TableEmptyRow } from "@/components/common/EmptyState";
+import { TableSkeleton } from "@/components/common/TableSkeleton";
 
 type StatementRow = {
   id: string;
@@ -127,7 +124,6 @@ export default function ViewBankStatementPage() {
   const [pageSize, setPageSize] = useState(10);
   const [tableSearch, setTableSearch] = useState("");
   const [cardView, setCardView] = useState(false);
-  const [showColumnsMenu, setShowColumnsMenu] = useState(false);
   const [visibleCols, setVisibleCols] = useState<Record<ColKey, boolean>>(
     Object.fromEntries(COLS.map((c) => [c.key, true])) as Record<ColKey, boolean>
   );
@@ -362,90 +358,39 @@ export default function ViewBankStatementPage() {
             <h2 className="text-sm font-semibold tracking-wide">Bank Statement</h2>
           </div>
 
-          <div className="px-4 py-3 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1.5 text-xs font-semibold border border-blue-300 bg-blue-50 text-blue-800 rounded-lg">
-                Bank Statement
-              </span>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowColumnsMenu((v) => !v)}
-                  className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5"
-                >
-                  <Columns3 className="w-3.5 h-3.5" /> Column visibility
-                </button>
-                {showColumnsMenu && (
-                  <div className="absolute z-20 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg p-2 text-xs max-h-64 overflow-y-auto">
-                    {COLS.map((c) => (
-                      <label
-                        key={c.key}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={visibleCols[c.key]}
-                          onChange={() =>
-                            setVisibleCols((prev) => ({ ...prev, [c.key]: !prev[c.key] }))
-                          }
-                        />
-                        <span>{c.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
+          <ListToolbar
+            title="Bank Statement"
+            columns={COLS.map((c) => ({ key: c.key, label: c.label }))}
+            visibleCols={visibleCols}
+            onToggleColumn={(key) =>
+              setVisibleCols((prev) => ({ ...prev, [key]: !prev[key as ColKey] }))
+            }
+            onCopy={() => void copyTable()}
+            onExcel={exportExcel}
+            onPdf={() => {
+              printScoped();
+              toast.info("Print dialog opened");
+            }}
+            onPrint={() => printScoped()}
+            cardView={cardView}
+            onToggleCardView={() => setCardView((v) => !v)}
+            search={tableSearch}
+            onSearchChange={(v) => {
+              setTableSearch(v);
+              setPage(1);
+            }}
+            searchPlaceholder="Search statement…"
+            right={
               <button
                 type="button"
-                onClick={() => void copyTable()}
-                className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5"
+                onClick={() => void importStatement()}
+                className="h-8 px-4 rounded-full border border-[#0171d3] text-[#0171d3] text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-[#e8f1fb]"
               >
-                <Copy className="w-3.5 h-3.5" /> Copy
+                <Upload className="w-3.5 h-3.5" />
+                Import
               </button>
-              <button
-                type="button"
-                onClick={exportExcel}
-                className="px-3 py-1.5 text-xs font-semibold border border-emerald-200 text-emerald-800 bg-emerald-50 rounded-lg inline-flex items-center gap-1.5"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  printScoped();
-                  toast.info("PDF / Print dialog opened");
-                }}
-                className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5"
-              >
-                <FileText className="w-3.5 h-3.5" /> PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => printScoped()}
-                className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5"
-              >
-                <Printer className="w-3.5 h-3.5" /> Print
-              </button>
-              <button
-                type="button"
-                onClick={() => setCardView((v) => !v)}
-                className={`px-3 py-1.5 text-xs font-semibold border rounded-lg inline-flex items-center gap-1.5 ${
-                  cardView ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200"
-                }`}
-              >
-                <LayoutGrid className="w-3.5 h-3.5" /> CARD VIEW
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => void importStatement()}
-              className="h-9 px-4 rounded-full border border-[#0171d3] text-[#0171d3] text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-[#e8f1fb]"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Import Bank Statement
-            </button>
-          </div>
+            }
+          />
 
           <div className="px-4 py-2 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
             <label className="inline-flex items-center gap-2 text-slate-600">
@@ -466,20 +411,11 @@ export default function ViewBankStatementPage() {
               </select>
               entries
             </label>
-            <label className="inline-flex items-center gap-2 text-slate-600">
-              Search:
-              <input
-                value={tableSearch}
-                onChange={(e) => {
-                  setTableSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="h-8 px-2 border border-slate-200 rounded-md min-w-[180px]"
-              />
-            </label>
           </div>
 
-          {!cardView ? (
+          {loading ? (
+            <TableSkeleton rows={8} cols={Math.min(visibleColList.length, 6)} />
+          ) : !cardView ? (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-[11px] min-w-[1200px]">
                 <thead>
@@ -521,14 +457,11 @@ export default function ViewBankStatementPage() {
                     </tr>
                   ))}
                   {pageRows.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={Math.max(visibleColList.length, 1)}
-                        className="border border-slate-200 px-3 py-10 text-center text-slate-500"
-                      >
-                        No data available in table
-                      </td>
-                    </tr>
+                    <TableEmptyRow
+                      colSpan={Math.max(visibleColList.length, 1)}
+                      title="No statement rows"
+                      description="Widen the date range, pick another bank, or import a statement file."
+                    />
                   )}
                 </tbody>
               </table>
@@ -550,7 +483,13 @@ export default function ViewBankStatementPage() {
                 </div>
               ))}
               {pageRows.length === 0 && (
-                <p className="text-slate-500 col-span-full text-center py-8 text-xs">No data available in table</p>
+                <div className="col-span-full">
+                  <EmptyState
+                    compact
+                    title="No statement rows"
+                    description="Widen the date range or import a statement file."
+                  />
+                </div>
               )}
             </div>
           )}

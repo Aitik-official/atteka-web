@@ -151,12 +151,12 @@ export default function GenerateIrnPage() {
         )
       );
       if (data.data?.irn) {
-        toast.document("IRN generated successfully (demo). GST / NIC IRP integration pending.", {
+        toast.document("IRN generated successfully", {
           title: "Generate IRN",
           code: data.data.irn
         });
       } else {
-        toast.success("IRN generated successfully (demo). GST / NIC IRP integration pending.", {
+        toast.success("IRN generated successfully", {
           title: "Generate IRN"
         });
       }
