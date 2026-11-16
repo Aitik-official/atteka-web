@@ -494,7 +494,9 @@ export default function IndusIndOnlinePaymentProcessPage() {
                 <span className="text-slate-600">Ledger Balance</span>
                 <span className="font-semibold">{inr(balanceInfo.ledgerBalance)}</span>
               </div>
-              <p className="text-[10px] text-slate-400 pt-1">As of {balanceInfo.asOf} (demo)</p>
+              <p className="text-[10px] text-slate-400 pt-1">
+                As of {balanceInfo.asOf} · replica balance (IndusInd feed not connected)
+              </p>
             </div>
             <div className="px-4 pb-4 flex justify-end">
               <button

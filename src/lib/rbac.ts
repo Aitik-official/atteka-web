@@ -1,31 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, type UserSession } from "@/lib/auth";
+import {
+  type AppRole,
+  type Permission,
+  WRITE_FINANCE,
+  WRITE_OPS,
+  WRITE_MASTERS,
+  WRITE_ADMIN,
+  WRITE_EXCEPTIONAL,
+  READ_ANY,
+  normalizeRole,
+  canAccess,
+  hasPermission,
+  canAccessDashboardPath,
+  canAccessApiPath,
+  canMutate,
+  permissionsForRole
+} from "@/lib/rbacPolicy";
 
-export type AppRole = "ADMIN" | "OPERATOR" | "ACCOUNTS" | "MANAGER" | "GUEST";
+export type { AppRole, Permission };
+export {
+  normalizeRole,
+  canAccess,
+  hasPermission,
+  canAccessDashboardPath,
+  canAccessApiPath,
+  canMutate,
+  permissionsForRole,
+  WRITE_FINANCE,
+  WRITE_OPS,
+  WRITE_MASTERS,
+  WRITE_ADMIN,
+  WRITE_EXCEPTIONAL,
+  READ_ANY
+};
 
-/** Replica: OPERATOR may bill/collect; GUEST is read-only. */
-const WRITE_FINANCE: AppRole[] = ["ADMIN", "ACCOUNTS", "MANAGER", "OPERATOR"];
-const WRITE_OPS: AppRole[] = ["ADMIN", "OPERATOR", "MANAGER", "ACCOUNTS"];
-const WRITE_MASTERS: AppRole[] = ["ADMIN", "MANAGER"];
-
+/** Named allow-lists for existing / new requireApiSession call sites. */
 export const RBAC = {
   financeWrite: WRITE_FINANCE,
   opsWrite: WRITE_OPS,
   mastersWrite: WRITE_MASTERS,
-  anyAuth: ["ADMIN", "OPERATOR", "ACCOUNTS", "MANAGER", "GUEST"] as AppRole[]
+  adminWrite: WRITE_ADMIN,
+  exceptionalWrite: WRITE_EXCEPTIONAL,
+  anyAuth: READ_ANY
 };
-
-function normalizeRole(role: string): AppRole {
-  const r = String(role || "OPERATOR").toUpperCase() as AppRole;
-  if (["ADMIN", "OPERATOR", "ACCOUNTS", "MANAGER", "GUEST"].includes(r)) return r;
-  return "OPERATOR";
-}
-
-export function canAccess(role: string, allowed: AppRole[]): boolean {
-  const r = normalizeRole(role);
-  if (r === "ADMIN") return true;
-  return allowed.includes(r);
-}
 
 /** API guard: valid JWT session + optional role allow-list. */
 export async function requireApiSession(
@@ -47,6 +65,33 @@ export async function requireApiSession(
         {
           success: false,
           error: `Forbidden — role ${session.role} cannot perform this action`
+        },
+        { status: 403 }
+      )
+    };
+  }
+  return { session };
+}
+
+/** API guard by permission key (preferred for new routes). */
+export async function requirePermission(
+  permission: Permission
+): Promise<{ session: UserSession } | { error: NextResponse }> {
+  const session = await getSession();
+  if (!session) {
+    return {
+      error: NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 }
+      )
+    };
+  }
+  if (!hasPermission(session.role, permission)) {
+    return {
+      error: NextResponse.json(
+        {
+          success: false,
+          error: `Forbidden — role ${session.role} lacks ${permission}`
         },
         { status: 403 }
       )

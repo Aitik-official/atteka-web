@@ -329,3 +329,369 @@ export async function buildTrialBalanceFromLedger(opts?: {
 
   return { accounts, source: "ledger", count: all.length };
 }
+
+function toIsoDate(d?: Date | string | null) {
+  if (!d) return "";
+  const dt = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(dt.getTime())) return "";
+  return dt.toISOString().slice(0, 10);
+}
+
+async function loadLedgerRows(opts?: {
+  from?: string | null;
+  to?: string | null;
+  branch?: string;
+  accountCode?: string;
+  accountCodes?: string[];
+  nameContains?: string;
+  beforeFromOnly?: boolean;
+}) {
+  const branch = (opts?.branch || "").trim().toUpperCase();
+  const from = opts?.from ? new Date(opts.from) : null;
+  const to = opts?.to ? new Date(opts.to) : null;
+  if (to) to.setHours(23, 59, 59, 999);
+
+  let rows: any[] = [];
+  try {
+    await connectToDatabase();
+    const q: any = {};
+    if (branch) q.branchCode = branch;
+    if (opts?.accountCode) q.accountCode = opts.accountCode;
+    if (opts?.accountCodes?.length) q.accountCode = { $in: opts.accountCodes };
+    if (opts?.nameContains) {
+      q.accountName = { $regex: opts.nameContains, $options: "i" };
+    }
+    if (opts?.beforeFromOnly && from) {
+      q.entryDate = { $lt: from };
+    } else if (from || to) {
+      q.entryDate = {};
+      if (from) q.entryDate.$gte = from;
+      if (to) q.entryDate.$lte = to;
+    }
+    rows = await LedgerEntry.find(q).sort({ entryDate: 1 }).lean();
+  } catch {
+    rows = [];
+  }
+
+  const mem = memoryStore.ledgerEntries.filter((e) => {
+    if (branch && String(e.branchCode || "").toUpperCase() !== branch) return false;
+    if (opts?.accountCode && String(e.accountCode) !== opts.accountCode) return false;
+    if (opts?.accountCodes?.length && !opts.accountCodes.includes(String(e.accountCode))) return false;
+    if (opts?.nameContains) {
+      const n = String(e.accountName || "").toLowerCase();
+      if (!n.includes(opts.nameContains.toLowerCase())) return false;
+    }
+    const d = new Date(e.entryDate || Date.now());
+    if (opts?.beforeFromOnly && from) return d < from;
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  });
+
+  return [...rows, ...mem].sort(
+    (a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime()
+  );
+}
+
+export async function listLedgerAccounts() {
+  const rows = await loadLedgerRows({});
+  const map = new Map<string, { code: string; label: string; name: string; group: string }>();
+  for (const a of Object.values(COA)) {
+    map.set(a.code, { code: a.code, label: `${a.code} - ${a.name}`, name: a.name, group: a.group });
+  }
+  for (const e of rows) {
+    const code = String(e.accountCode || "MISC");
+    const name = String(e.accountName || code);
+    if (!map.has(code)) {
+      map.set(code, {
+        code,
+        label: `${code} - ${name}`,
+        name,
+        group: String(e.accountGroup || "")
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code));
+}
+
+export async function buildGeneralLedger(opts: {
+  from?: string;
+  to?: string;
+  branch?: string;
+  accountCode: string;
+}) {
+  const openingRows = await loadLedgerRows({
+    branch: opts.branch,
+    accountCode: opts.accountCode,
+    beforeFromOnly: true,
+    from: opts.from
+  });
+  const periodRows = await loadLedgerRows({
+    from: opts.from,
+    to: opts.to,
+    branch: opts.branch,
+    accountCode: opts.accountCode
+  });
+  const openingDebit = openingRows.reduce((s, e) => s + Number(e.debit || 0), 0);
+  const openingCredit = openingRows.reduce((s, e) => s + Number(e.credit || 0), 0);
+  const txns = periodRows.map((e) => ({
+    branch: String(e.branchCode || "ALC1"),
+    date: (() => {
+      const iso = toIsoDate(e.entryDate);
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+    })(),
+    particular: String(e.narration || e.accountName || ""),
+    debit: Number(e.debit || 0),
+    credit: Number(e.credit || 0),
+    voucherRef: String(e.entryNumber || ""),
+    docRef: String(e.referenceId || ""),
+    narration: String(e.narration || ""),
+    payto: "",
+    expenseBranch: String(e.branchCode || "ALC1")
+  }));
+  return {
+    openingDebit: Number(openingDebit.toFixed(2)),
+    openingCredit: Number(openingCredit.toFixed(2)),
+    txns,
+    source: periodRows.length || openingRows.length ? ("db" as const) : ("empty" as const)
+  };
+}
+
+export async function buildCustomerLedger(opts: {
+  from?: string;
+  to?: string;
+  customerCode?: string;
+  customerName?: string;
+}) {
+  const q = String(opts.customerCode || opts.customerName || "").trim();
+  const openingRows = await loadLedgerRows({
+    beforeFromOnly: true,
+    from: opts.from,
+    nameContains: q || undefined,
+    accountCode: q ? undefined : COA.DEBTORS.code
+  });
+  const periodRows = await loadLedgerRows({
+    from: opts.from,
+    to: opts.to,
+    nameContains: q || undefined,
+    accountCode: q ? undefined : COA.DEBTORS.code
+  }).then((rows) =>
+    rows.filter(
+      (e) =>
+        String(e.accountCode) === COA.DEBTORS.code ||
+        String(e.accountName || "").toLowerCase().includes("debtor") ||
+        (q && String(e.accountName || "").toLowerCase().includes(q.toLowerCase()))
+    )
+  );
+
+  let opening = 0;
+  for (const e of openingRows.filter(
+    (r) =>
+      String(r.accountCode) === COA.DEBTORS.code ||
+      String(r.accountName || "").toLowerCase().includes("debtor") ||
+      (q && String(r.accountName || "").toLowerCase().includes(q.toLowerCase()))
+  )) {
+    opening += Number(e.debit || 0) - Number(e.credit || 0);
+  }
+
+  let bal = opening;
+  const txns = periodRows.map((e) => {
+    const debit = Number(e.debit || 0);
+    const credit = Number(e.credit || 0);
+    bal += debit - credit;
+    return {
+      date: (() => {
+        const iso = toIsoDate(e.entryDate);
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return iso;
+        return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+      })(),
+      particular: String(e.narration || e.accountName || ""),
+      voucherType: String(e.referenceType || "JOURNAL"),
+      voucherRef: String(e.entryNumber || ""),
+      docRef: String(e.referenceId || ""),
+      narration: String(e.narration || ""),
+      debit,
+      credit,
+      balance: Number(bal.toFixed(2))
+    };
+  });
+
+  return {
+    opening: Number(opening.toFixed(2)),
+    txns,
+    source: txns.length || opening ? ("db" as const) : ("empty" as const)
+  };
+}
+
+export async function buildCashBankStatement(opts: {
+  from?: string;
+  to?: string;
+  accountCode?: string;
+  branch?: string;
+}) {
+  const cashBankCodes = [COA.CASH.code, COA.HDFC.code];
+  const accounts = await listLedgerAccounts();
+  const cashBankAccounts = accounts.filter(
+    (a) =>
+      cashBankCodes.includes(a.code) ||
+      /cash|bank/i.test(a.group) ||
+      /cash|bank|hdfc|icici|sbi|axis/i.test(a.name)
+  );
+  const code = opts.accountCode || cashBankAccounts[0]?.code || COA.CASH.code;
+
+  const openingRows = await loadLedgerRows({
+    accountCode: code,
+    branch: opts.branch,
+    beforeFromOnly: true,
+    from: opts.from
+  });
+  const periodRows = await loadLedgerRows({
+    accountCode: code,
+    branch: opts.branch,
+    from: opts.from,
+    to: opts.to
+  });
+
+  let opening = 0;
+  for (const e of openingRows) opening += Number(e.debit || 0) - Number(e.credit || 0);
+
+  let bal = opening;
+  const txns = periodRows.map((e) => {
+    const debit = Number(e.debit || 0);
+    const credit = Number(e.credit || 0);
+    bal += debit - credit;
+    return {
+      date: toIsoDate(e.entryDate),
+      particulars: String(e.narration || e.accountName || ""),
+      voucherNo: String(e.entryNumber || ""),
+      documentNo: String(e.referenceId || ""),
+      chequeNo: "",
+      debit,
+      credit,
+      balance: Number(bal.toFixed(2))
+    };
+  });
+
+  return {
+    accounts: cashBankAccounts.length
+      ? cashBankAccounts
+      : [
+          { code: COA.CASH.code, name: COA.CASH.name, label: `${COA.CASH.code} - ${COA.CASH.name}` },
+          { code: COA.HDFC.code, name: COA.HDFC.name, label: `${COA.HDFC.code} - ${COA.HDFC.name}` }
+        ],
+    accountCode: code,
+    opening: Number(opening.toFixed(2)),
+    txns,
+    closing: Number(bal.toFixed(2)),
+    source: txns.length || opening ? ("db" as const) : ("empty" as const)
+  };
+}
+
+export async function buildBranchProfitLoss(opts: {
+  from?: string;
+  to?: string;
+  branch?: string;
+}) {
+  const rows = await loadLedgerRows({
+    from: opts.from,
+    to: opts.to,
+    branch: opts.branch
+  });
+
+  const lines: {
+    category: "INCOME" | "EXPENSE";
+    ledgerGroup: string;
+    ledger: string;
+    amount: number;
+  }[] = [];
+
+  const byKey = new Map<string, { category: "INCOME" | "EXPENSE"; ledgerGroup: string; ledger: string; amount: number }>();
+  for (const e of rows) {
+    const g = String(e.accountGroup || "");
+    const label = groupLabel(g);
+    if (label !== "INCOME" && label !== "EXPENSE") continue;
+    const category = label as "INCOME" | "EXPENSE";
+    const debit = Number(e.debit || 0);
+    const credit = Number(e.credit || 0);
+    const amount = category === "INCOME" ? Math.max(0, credit - debit) : Math.max(0, debit - credit);
+    if (amount <= 0) continue;
+    const key = `${category}|${g}|${e.accountName}`;
+    const existing = byKey.get(key) || {
+      category,
+      ledgerGroup: g || (category === "INCOME" ? "Operating Income" : "Operating Expenses"),
+      ledger: String(e.accountName || e.accountCode || ""),
+      amount: 0
+    };
+    existing.amount += amount;
+    byKey.set(key, existing);
+  }
+
+  for (const v of byKey.values()) {
+    lines.push({ ...v, amount: Number(v.amount.toFixed(2)) });
+  }
+
+  const totalIncome = lines.filter((l) => l.category === "INCOME").reduce((s, l) => s + l.amount, 0);
+  const totalExpense = lines.filter((l) => l.category === "EXPENSE").reduce((s, l) => s + l.amount, 0);
+
+  return {
+    lines,
+    totalIncome: Number(totalIncome.toFixed(2)),
+    totalExpense: Number(totalExpense.toFixed(2)),
+    profitLoss: Number((totalIncome - totalExpense).toFixed(2)),
+    source: lines.length ? ("db" as const) : ("empty" as const)
+  };
+}
+
+export async function buildSubsidiaryLedger(opts: {
+  from?: string;
+  to?: string;
+  branch?: string;
+  accountHead?: string;
+  partyName?: string;
+}) {
+  const nameQ = String(opts.partyName || opts.accountHead || "").trim();
+  const openingRows = await loadLedgerRows({
+    branch: opts.branch,
+    beforeFromOnly: true,
+    from: opts.from,
+    nameContains: nameQ && !/^show all$/i.test(nameQ) ? nameQ : undefined
+  });
+  const periodRows = await loadLedgerRows({
+    from: opts.from,
+    to: opts.to,
+    branch: opts.branch,
+    nameContains: nameQ && !/^show all$/i.test(nameQ) ? nameQ : undefined
+  });
+
+  const openingDebit = openingRows.reduce((s, e) => s + Number(e.debit || 0), 0);
+  const openingCredit = openingRows.reduce((s, e) => s + Number(e.credit || 0), 0);
+
+  const txns = periodRows.map((e) => ({
+    branch: String(e.branchCode || "ALC1"),
+    date: (() => {
+      const iso = toIsoDate(e.entryDate);
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    })(),
+    particular: String(e.narration || e.accountName || ""),
+    debit: Number(e.debit || 0),
+    credit: Number(e.credit || 0),
+    voucherRef: String(e.entryNumber || ""),
+    docRef: String(e.referenceId || ""),
+    narration: String(e.narration || ""),
+    chequeNo: "",
+    chequeDate: "",
+    costCenter: String(e.branchCode || "")
+  }));
+
+  return {
+    openingDebit: Number(openingDebit.toFixed(2)),
+    openingCredit: Number(openingCredit.toFixed(2)),
+    txns,
+    source: txns.length || openingDebit || openingCredit ? ("db" as const) : ("empty" as const)
+  };
+}

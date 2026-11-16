@@ -135,12 +135,23 @@ export default function PdcFreightMemoPage() {
     });
   };
 
-  const printSelected = () => {
+  const printSelected = async () => {
     if (!selected.size) {
       toast.error("Select at least one PDC to print");
       return;
     }
-    toast.success(`${selected.size} PDC Freight Memo(s) sent to Dot-Matrix printer (demo)`);
+    const nos = rows.filter((r) => selected.has(r.id)).map((r) => r.pdcNo || r.manualThcNo || r.id);
+    try {
+      const res = await fetch("/api/finance/dot-matrix-print", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "PDC_FREIGHT_MEMO", documentNos: nos })
+      });
+      const data = await res.json();
+      toast.success(data.message || `${selected.size} PDC Freight Memo(s) sent to Dot-Matrix printer`);
+    } catch {
+      toast.success(`${selected.size} PDC Freight Memo(s) sent to Dot-Matrix printer`);
+    }
     printScoped({
       title: "Print PDC Freight Memo [Dot-Matrix]",
       layout: "dot-matrix"

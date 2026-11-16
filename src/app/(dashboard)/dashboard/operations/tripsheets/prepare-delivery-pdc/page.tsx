@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
@@ -62,6 +63,7 @@ const field =
   "w-full h-10 px-3 border border-[#7eb6e8] rounded-md text-[13px] bg-white focus:outline-none focus:border-[#0171d3]";
 
 export default function PrepareDeliveryPdcPage() {
+  const router = useRouter();
   const [step, setStep] = useState<"filter" | "entry">("filter");
   const [fromDate, setFromDate] = useState(toInputDate(new Date()));
   const [toDate, setToDate] = useState(toInputDate(new Date()));
@@ -348,7 +350,11 @@ export default function PrepareDeliveryPdcPage() {
                             <button
                               type="button"
                               className="text-[#0171d3] font-semibold hover:underline"
-                              onClick={() => toast.success(`Docket ${r.docketNo} (demo)`)}
+                              onClick={() =>
+                                router.push(
+                                  `/dashboard/operations/dockets?docketNo=${encodeURIComponent(r.docketNo)}`
+                                )
+                              }
                             >
                               {r.docketNo}
                             </button>
@@ -556,7 +562,13 @@ export default function PrepareDeliveryPdcPage() {
                         type="button"
                         className="absolute right-1.5 top-1.5 h-7 w-7 rounded-full border border-[#7eb6e8] text-[#0171d3] inline-flex items-center justify-center"
                         title="Lookup branch"
-                        onClick={() => toast.success("Branch lookup (demo)")}
+                        onClick={() => {
+                          const branches = ["ALC1", "ALC2", "ALC3", "MUM"];
+                          const idx = branches.indexOf(financialBranch.split(":")[0].trim().toUpperCase());
+                          const next = branches[(idx + 1) % branches.length];
+                          setFinancialBranch(next);
+                          toast.success(`Financial branch set to ${next}`);
+                        }}
                       >
                         <MoreHorizontal className="w-3.5 h-3.5" />
                       </button>

@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
@@ -85,6 +86,7 @@ function cellText(r: Row, key: ColKey, sno: number) {
 }
 
 export default function PrepareLoadingSlipHubPage() {
+  const router = useRouter();
   const [step, setStep] = useState<"filter" | "report">("filter");
   const [fromDate, setFromDate] = useState(toInputDate(new Date()));
   const [toDate, setToDate] = useState(toInputDate(new Date()));
@@ -181,7 +183,7 @@ export default function PrepareLoadingSlipHubPage() {
     a.download = `view-print-loading-sheet-${fromDate}-to-${toDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Excel download started (demo)");
+    toast.success("Excel download started");
   };
 
   const btn =
@@ -388,10 +390,13 @@ export default function PrepareLoadingSlipHubPage() {
                           {c.key === "view" ? (
                             <button
                               type="button"
-                              title="View / Print"
-                              onClick={() =>
-                                toast.success(`Loading slip ${row.tripSheetNo || row.docketNo} (demo)`)
-                              }
+                              title="Open loading slip"
+                              onClick={() => {
+                                const no = row.tripSheetNo || row.docketNo;
+                                router.push(
+                                  `/dashboard/operations/tripsheets/prepare/new?tripSheetNo=${encodeURIComponent(no)}`
+                                );
+                              }}
                               className="h-7 w-7 inline-flex items-center justify-center rounded text-[#0171d3] hover:bg-[#e8f1fb]"
                             >
                               <Printer className="w-3.5 h-3.5" />

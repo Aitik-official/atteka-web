@@ -418,7 +418,7 @@ export default function ViewPrintDeliveryPdcPage() {
               type="button"
               onClick={() => {
                 exportCsv(`view-print-delivery-pdc-${fromDate}-to-${toDate}.xls`);
-                toast.success("Excel download started (demo)");
+                toast.success("Excel download started");
               }}
               className={btn}
             >

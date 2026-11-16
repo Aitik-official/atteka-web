@@ -170,68 +170,51 @@ export async function GET(req: NextRequest) {
     let rows = docs.map(mapDoc);
 
     if (!rows.length) {
-      let demo = DEMO_ROWS;
-      if (docketNos.length) {
-        demo = DEMO_ROWS.filter((r) => docketNos.some((d) => r.docketNo.includes(d)));
-      } else if (from || to) {
-        demo = DEMO_ROWS.filter((r) => {
-          if (from && r.docketDate < from) return false;
-          if (to && r.docketDate > to) return false;
-          return true;
-        });
-        if (!demo.length) demo = DEMO_ROWS;
-      }
-      return NextResponse.json({ success: true, data: demo, total: demo.length, source: "demo" });
+      const { ensureExceptionalSeedData } = await import("@/lib/exceptionalOpsEngine");
+      await ensureExceptionalSeedData();
+      const seeded = await Consignment.find(query).sort({ bookingDate: -1 }).limit(300);
+      rows = seeded.map(mapDoc);
     }
 
     return NextResponse.json({ success: true, data: rows, total: rows.length, source: "db" });
-  } catch {
-    let demo = DEMO_ROWS;
-    if (docketNos.length) {
-      demo = DEMO_ROWS.filter((r) => docketNos.some((d) => r.docketNo.includes(d)));
-    } else if (from || to) {
-      demo = DEMO_ROWS.filter((r) => {
-        if (from && r.docketDate < from) return false;
-        if (to && r.docketDate > to) return false;
-        return true;
-      });
-      if (!demo.length) demo = DEMO_ROWS;
-    }
-    return NextResponse.json({ success: true, data: demo, total: demo.length, source: "demo" });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || "Failed to load dockets", data: [], total: 0, source: "db" },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const { RBAC, requireApiSession } = await import("@/lib/rbac");
+    const gate = await requireApiSession(req, RBAC.opsWrite);
+    if ("error" in gate) return gate.error;
+
     const body = await req.json();
-    const selected = Array.isArray(body.selected) ? body.selected : [];
+    const { createDeliveryPdc } = await import("@/lib/operationsPdcEngine");
+    const result = await createDeliveryPdc({
+      selected: Array.isArray(body.selected) ? body.selected : [],
+      vendor: body.vendor,
+      vehicleNo: body.vehicleNo,
+      manualPdcNo: body.manualPdcNo,
+      pdcDate: body.pdcDate,
+      pdcTime: body.pdcTime,
+      deliveryBy: body.deliveryBy,
+      deliveryLocation: body.deliveryLocation,
+      remark: body.remark
+    });
 
-    if (!selected.length) {
-      return NextResponse.json({ error: "Select at least one docket" }, { status: 400 });
-    }
-    if (!String(body.vendor || "").trim() && !String(body.vehicleNo || "").trim()) {
-      return NextResponse.json({ error: "Enter Vendor or Vehicle No." }, { status: 400 });
-    }
-
-    const pdcNo = `DPDC/ALC1/${Date.now().toString().slice(-8)}`;
     return NextResponse.json({
       success: true,
-      message: `Delivery PDC ${pdcNo} prepared with ${selected.length} docket(s) (demo)`,
-      data: {
-        pdcNo,
-        manualPdcNo: body.manualPdcNo || "",
-        pdcDate: body.pdcDate || "",
-        pdcTime: body.pdcTime || "",
-        vendor: body.vendor || "",
-        vehicleNo: body.vehicleNo || "",
-        deliveryBy: body.deliveryBy || "",
-        selected
-      }
+      message: result.message,
+      data: result,
+      source: "db"
     });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || "Failed to prepare Delivery PDC" },
-      { status: 500 }
+      { status: Number(error?.status) || 500 }
     );
   }
 }

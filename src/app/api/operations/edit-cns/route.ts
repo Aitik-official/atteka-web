@@ -164,35 +164,28 @@ export async function GET(req: NextRequest) {
     }
 
     if (!rows.length) {
-      let demo = DEMO_ROWS;
+      const { ensureExceptionalSeedData } = await import("@/lib/exceptionalOpsEngine");
+      await ensureExceptionalSeedData();
+      const seeded = await Consignment.find(query).sort({ bookingDate: -1 }).limit(200);
+      rows = seeded.map(mapDoc);
       if (mode === "cnno" && cnNo) {
-        demo = DEMO_ROWS.filter((r) => r.cnNo.includes(cnNo));
+        rows = rows.filter((r) => r.cnNo.includes(cnNo));
       } else if (fromDate || toDate) {
-        demo = DEMO_ROWS.filter((r) => inRange(r.labelsGenDateRaw, fromDate, toDate));
-        if (!demo.length) demo = DEMO_ROWS;
+        rows = rows.filter((r) => inRange(r.labelsGenDateRaw, fromDate, toDate));
       }
-      return NextResponse.json({
-        success: true,
-        data: demo,
-        total: demo.length,
-        source: "demo"
-      });
     }
 
     return NextResponse.json({ success: true, data: rows, total: rows.length, source: "db" });
-  } catch {
-    let demo = DEMO_ROWS;
-    if (mode === "cnno" && cnNo) {
-      demo = DEMO_ROWS.filter((r) => r.cnNo.includes(cnNo));
-    } else if (fromDate || toDate) {
-      demo = DEMO_ROWS.filter((r) => inRange(r.labelsGenDateRaw, fromDate, toDate));
-      if (!demo.length) demo = DEMO_ROWS;
-    }
-    return NextResponse.json({
-      success: true,
-      data: demo,
-      total: demo.length,
-      source: "demo"
-    });
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        error: error?.message || "Failed to load CNs",
+        success: false,
+        data: [],
+        total: 0,
+        source: "db"
+      },
+      { status: 500 }
+    );
   }
 }

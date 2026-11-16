@@ -169,7 +169,7 @@ export default function ApiBankStatementPage() {
       setMeta(data.meta || null);
       setFetched(true);
       setViewTab("table");
-      toast.success(`Fetched ${data.count || 0} transaction(s) via API (demo)`);
+      toast.success(data.message || `Fetched ${data.count || 0} transaction(s) via API`);
     } catch {
       toast.error("Failed to fetch statement from bank API");
     } finally {
@@ -189,7 +189,8 @@ export default function ApiBankStatementPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "save",
-          bankAccount,
+          accountCode: bankAccount,
+          account: bankAccount,
           from: fromDate,
           to: toDate
         })
@@ -243,7 +244,7 @@ export default function ApiBankStatementPage() {
     a.download = `api-bank-statement-${fromDate}-to-${toDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Download started (demo CSV)");
+    toast.success("Download started (CSV)");
   };
 
   return (

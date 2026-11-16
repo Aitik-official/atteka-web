@@ -138,7 +138,7 @@ export default function OnlinePaymentReportPage() {
 
       if (mode === "excel") {
         exportCsv(data.data || []);
-        toast.success("Excel (CSV) download started (demo)");
+        toast.success("Excel (CSV) download started");
       } else if (mode === "chart") {
         toast.info("Chart view ready");
       } else if (mode === "edit") {
@@ -366,7 +366,7 @@ export default function OnlinePaymentReportPage() {
                 onClick={() => {
                   exportCsv(rows);
                   setViewMode("excel");
-                  toast.success("Excel (CSV) download started (demo)");
+                  toast.success("Excel (CSV) download started");
                 }}
                 className={actionBtn}
               >

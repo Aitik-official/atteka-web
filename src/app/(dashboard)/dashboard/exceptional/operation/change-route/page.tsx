@@ -90,7 +90,7 @@ export default function ChangeRoutePage() {
         return;
       }
       setRow(data.data as ThcRow);
-      toast.success(`Route updated for ${row.documentNo} (demo)`);
+      toast.success(data.message || `Route updated for ${row.documentNo}`);
     } catch {
       toast.error("Route update failed");
     } finally {
@@ -118,7 +118,7 @@ export default function ChangeRoutePage() {
             </button>
           </div>
           <WcvDemoHint
-            label="Demo THC Nos"
+            label="Sample Doc Nos"
             values={["THCALC12600110", "THCALC12600111", "THCALC12600112"]}
           />
         </WcvFormCard>

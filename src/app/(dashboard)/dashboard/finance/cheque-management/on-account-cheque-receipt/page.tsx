@@ -43,9 +43,27 @@ export default function OnAccountChequeReceiptPage() {
     }
     setSaving(true);
     try {
-      // Demo-only — no ledger / cheque register posting.
-      await new Promise((r) => setTimeout(r, 350));
-      toast.success(`On Account cheque ${chequeUtrNo.trim().toUpperCase()} saved (demo)`);
+      const res = await fetch("/api/finance/on-account-cheque-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chequeUtrNo,
+          chequeUtrDate,
+          amount,
+          bankName,
+          bankBranch,
+          receivedFrom,
+          customerName,
+          narration,
+          chequeReceivedAt
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to save cheque receipt");
+        return;
+      }
+      toast.success(data.message || `On Account cheque ${chequeUtrNo.trim().toUpperCase()} saved`);
       setChequeUtrNo("");
       setAmount(0);
       setBankName("");

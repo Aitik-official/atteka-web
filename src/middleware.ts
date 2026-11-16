@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyTokenEdge } from "@/lib/jwtEdge";
+import { canAccessApiPath, canAccessDashboardPath } from "@/lib/rbacPolicy";
 
 const PUBLIC_PATHS = new Set(["/login", "/api/auth/login", "/api/auth/logout"]);
 
@@ -51,6 +52,27 @@ export async function middleware(req: NextRequest) {
       maxAge: 0
     });
     return res;
+  }
+
+  // Role gate — APIs
+  if (pathname.startsWith("/api/")) {
+    if (!canAccessApiPath(session.role, pathname, req.method)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Forbidden — role ${session.role} cannot access ${req.method} ${pathname}`
+        },
+        { status: 403 }
+      );
+    }
+  }
+
+  // Role gate — dashboard pages
+  if (pathname.startsWith("/dashboard") && !canAccessDashboardPath(session.role, pathname)) {
+    const denied = req.nextUrl.clone();
+    denied.pathname = "/dashboard/access-denied";
+    denied.searchParams.set("from", pathname);
+    return NextResponse.redirect(denied);
   }
 
   const headers = new Headers(req.headers);

@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-
-/** Fabricated demo bills for MR selection — not client production data. */
-const DEMO_CUSTOMERS = [
-  { code: "CUS0001", name: "NORTHBOUND FREIGHT PVT LTD" },
-  { code: "CUS0002", name: "COASTAL CARGO SOLUTIONS" },
-  { code: "CUS0003", name: "METRO LOGISTICS PARTNERS" },
-  { code: "CUS0004", name: "GATEWAY DISTRIBUTION CO" }
-];
-
-const BILL_TYPES = ["Freight", "Supplementary", "Octroi", "Demurrage"];
+import { RBAC, requireApiSession } from "@/lib/rbac";
+import { generateBillMr, listBillingParties, listBillsForMr } from "@/lib/customerBillingMrEngine";
 
 function parseIso(s: string | null, fallback: string) {
   if (!s) return fallback;
@@ -22,136 +14,82 @@ function addDays(iso: string, n: number) {
   return d.toISOString().slice(0, 10);
 }
 
-function fmtDate(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function buildDemoBills() {
-  const today = new Date().toISOString().slice(0, 10);
-  const bills: {
-    billNumber: string;
-    manualBillNumber: string;
-    billingBranch: string;
-    partyCode: string;
-    partyName: string;
-    billType: string;
-    billAmount: number;
-    unadjustedAmount: number;
-    generationDate: string;
-    generationDateIso: string;
-    dueDate: string;
-  }[] = [];
-
-  for (let i = 0; i < 28; i++) {
-    const cust = DEMO_CUSTOMERS[i % DEMO_CUSTOMERS.length];
-    const genIso = addDays(today, -((i % 20) + 1));
-    const amount = Number((18500 + (i % 11) * 8750 + (i % 5) * 1250.5).toFixed(2));
-    const billNumber = `BLALC${String(12605000 + i)}`;
-    bills.push({
-      billNumber,
-      manualBillNumber: billNumber,
-      billingBranch: "ALC1 : Ateka Logistics",
-      partyCode: cust.code,
-      partyName: `${cust.code} : ${cust.name}`,
-      billType: BILL_TYPES[i % BILL_TYPES.length],
-      billAmount: amount,
-      unadjustedAmount: amount,
-      generationDate: fmtDate(genIso),
-      generationDateIso: genIso,
-      dueDate: i % 4 === 0 ? fmtDate(addDays(genIso, 30)) : ""
-    });
-  }
-  return bills;
-}
-
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const gate = await requireApiSession(req, RBAC.anyAuth);
+  if ("error" in gate) return gate.error;
 
-  if (searchParams.get("lists") === "1") {
-    return NextResponse.json({
-      success: true,
-      data: {
-        customers: DEMO_CUSTOMERS.map((c) => ({
-          code: c.code,
-          name: c.name,
-          label: `${c.code} - ${c.name}`
-        })),
-        billTypes: ["Show All", ...BILL_TYPES]
-      }
-    });
-  }
-
-  const today = new Date().toISOString().slice(0, 10);
-  const from = parseIso(searchParams.get("from"), addDays(today, -29));
-  const to = parseIso(searchParams.get("to"), today);
-  const customer = (searchParams.get("customer") || "").trim().toUpperCase();
-  const billType = (searchParams.get("billType") || "Show All").trim();
-  const manualBills = (searchParams.get("manualBills") || "")
-    .split(/[,;\n]+/)
-    .map((s) => s.trim().toUpperCase())
-    .filter(Boolean);
-  const mode = (searchParams.get("mode") || "filter").trim(); // manual | filter
-
-  let bills = buildDemoBills();
-
-  if (mode === "manual" && manualBills.length) {
-    bills = bills.filter(
-      (b) =>
-        manualBills.some(
-          (m) =>
-            b.billNumber.includes(m) ||
-            b.manualBillNumber.includes(m) ||
-            m.includes(b.billNumber.slice(-6))
-        )
-    );
-    // If no match, synthesize rows from entered bill numbers so UX still works
-    if (!bills.length) {
-      bills = manualBills.map((m, i) => {
-        const cust = DEMO_CUSTOMERS[i % DEMO_CUSTOMERS.length];
-        const amount = Number((25000 + i * 3500).toFixed(2));
-        const billNumber = m.startsWith("BL") ? m : `BLALC${m.replace(/\D/g, "").padStart(8, "0")}`;
-        return {
-          billNumber,
-          manualBillNumber: billNumber,
-          billingBranch: "ALC1 : Ateka Logistics",
-          partyCode: cust.code,
-          partyName: `${cust.code} : ${cust.name}`,
-          billType: "Freight",
-          billAmount: amount,
-          unadjustedAmount: amount,
-          generationDate: fmtDate(today),
-          generationDateIso: today,
-          dueDate: ""
-        };
+  try {
+    const { searchParams } = new URL(req.url);
+    if (searchParams.get("lists") === "1") {
+      const customers = await listBillingParties();
+      return NextResponse.json({
+        success: true,
+        data: {
+          customers,
+          billTypes: ["Show All", "Freight", "Supplementary", "Other Bill", "Customer Invoice"]
+        },
+        source: "db"
       });
     }
-  } else {
-    bills = bills.filter((b) => b.generationDateIso >= from && b.generationDateIso <= to);
-    if (customer) {
-      bills = bills.filter(
-        (b) =>
-          b.partyCode.includes(customer) ||
-          b.partyName.toUpperCase().includes(customer) ||
-          customer.includes(b.partyCode)
-      );
-    }
-    if (billType && !/^show all$/i.test(billType)) {
-      bills = bills.filter((b) => b.billType.toLowerCase() === billType.toLowerCase());
-    }
-  }
 
-  return NextResponse.json({
-    success: true,
-    count: bills.length,
-    data: bills,
-    meta: {
+    const today = new Date().toISOString().slice(0, 10);
+    const from = parseIso(searchParams.get("from"), addDays(today, -29));
+    const to = parseIso(searchParams.get("to"), today);
+    const customer = (searchParams.get("customer") || "").trim();
+    const billType = (searchParams.get("billType") || "Show All").trim();
+    const manualBills = (searchParams.get("manualBills") || "")
+      .split(/[,;\n]+/)
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+    const mode = (searchParams.get("mode") || "filter").trim();
+
+    const bills = await listBillsForMr({
       from,
       to,
-      customer: customer || null,
+      customer: customer || undefined,
       billType,
+      manualBills,
       mode
-    }
-  });
+    });
+
+    return NextResponse.json({
+      success: true,
+      count: bills.length,
+      data: bills,
+      source: "db",
+      meta: { from, to, customer: customer || null, billType, mode }
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Failed to load bills" }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const gate = await requireApiSession(req, RBAC.financeWrite);
+  if ("error" in gate) return gate.error;
+
+  try {
+    const body = await req.json();
+    const billNumbers: string[] = Array.isArray(body.billNumbers)
+      ? body.billNumbers.map(String)
+      : Array.isArray(body.ids)
+        ? body.ids.map(String)
+        : [];
+    const data = await generateBillMr({
+      billNumbers,
+      withRebate: Boolean(body.withRebate),
+      rebatePercent: Number(body.rebatePercent || 0) || undefined
+    });
+    return NextResponse.json({
+      success: true,
+      message: data.message,
+      data,
+      source: "db"
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || "Failed to generate Bill MR" },
+      { status: Number(error?.status) || 500 }
+    );
+  }
 }

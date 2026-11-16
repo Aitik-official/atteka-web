@@ -1,26 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-
-/** Fabricated demo vouchers for View / Print Bills — not client production data. */
-type VoucherRow = {
-  voucherNumber: string;
-  voucherDate: string;
-  voucherDateIso: string;
-  voucherType: string;
-  branch: string;
-  payTo: string;
-  totalAccountedAmount: number;
-};
-
-const DEMO_PAYEES = [
-  "NORTHBOUND FREIGHT PVT LTD",
-  "METRO LOGISTICS PARTNERS",
-  "COASTAL CARGO SOLUTIONS",
-  "GATEWAY DISTRIBUTION CO",
-  "ALPINE WORKSHOP SERVICES",
-  "ORBIT BANK CHARGES (DEMO)"
-];
-
-const VOUCHER_TYPES = ["Journal", "Debit", "Credit", "Contra", "Bank Payment"];
+import { RBAC, requireApiSession } from "@/lib/rbac";
+import { VOUCHER_MASTERS, getVoucherByNumber, listVouchers } from "@/lib/vouchersEngine";
 
 function parseIso(s: string | null, fallback: string) {
   if (!s) return fallback;
@@ -28,85 +8,47 @@ function parseIso(s: string | null, fallback: string) {
   return Number.isNaN(d.getTime()) ? fallback : s.slice(0, 10);
 }
 
-function addDays(iso: string, n: number) {
-  const d = new Date(iso);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-
-function fmtDate(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function buildDemoRows(): VoucherRow[] {
-  const today = new Date().toISOString().slice(0, 10);
-  const rows: VoucherRow[] = [];
-  for (let i = 0; i < 36; i++) {
-    const iso = addDays(today, -((i % 20) + (i % 4 === 0 ? 0 : 1)));
-    const amount = Number((1850 + (i % 11) * 1425 + (i % 7) * 88.5).toFixed(2));
-    rows.push({
-      voucherNumber: `JVALC1${String(26104000 + i)}`,
-      voucherDate: fmtDate(iso),
-      voucherDateIso: iso,
-      voucherType: VOUCHER_TYPES[i % VOUCHER_TYPES.length],
-      branch: i % 5 === 0 ? "ALC2" : "ALC1",
-      payTo: DEMO_PAYEES[i % DEMO_PAYEES.length],
-      totalAccountedAmount: amount
-    });
-  }
-  return rows;
-}
-
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const gate = await requireApiSession(req, RBAC.anyAuth);
+  if ("error" in gate) return gate.error;
 
-  if (searchParams.get("lists") === "1") {
-    return NextResponse.json({ success: true, data: { voucherTypes: VOUCHER_TYPES } });
+  try {
+    const { searchParams } = new URL(req.url);
+    if (searchParams.get("lists") === "1") {
+      return NextResponse.json({
+        success: true,
+        data: { voucherTypes: ["All", ...VOUCHER_MASTERS.viewTypes] },
+        source: "db"
+      });
+    }
+    if (searchParams.get("voucherNumber") && searchParams.get("detail") === "1") {
+      const one = await getVoucherByNumber(searchParams.get("voucherNumber") || "");
+      return NextResponse.json({ success: true, data: one, source: "db" });
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const from = parseIso(searchParams.get("from"), today);
+    const to = parseIso(searchParams.get("to"), today);
+    const voucherType = (searchParams.get("voucherType") || "").trim();
+    const voucherNumber = (searchParams.get("voucherNumber") || "").trim();
+
+    const rows = await listVouchers({
+      kinds: ["DEBIT", "CREDIT", "CONTRA", "JOURNAL", "VENDOR_INVOICE", "VENDOR_PAYMENT", "DEBIT_NOTE"],
+      from: voucherNumber ? undefined : from,
+      to: voucherNumber ? undefined : to,
+      voucherType: voucherType && voucherType !== "All" ? voucherType : undefined,
+      voucherNumber: voucherNumber || undefined,
+      includeCancelled: true
+    });
+
+    return NextResponse.json({
+      success: true,
+      count: rows.length,
+      data: rows,
+      source: "db",
+      meta: { from, to, voucherType: voucherType || null, voucherNumber: voucherNumber || null }
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Failed to load vouchers" }, { status: 500 });
   }
-
-  const today = new Date().toISOString().slice(0, 10);
-  const from = parseIso(searchParams.get("from"), today);
-  const to = parseIso(searchParams.get("to"), today);
-  const voucherType = (searchParams.get("voucherType") || "").trim();
-  const voucherNumber = (searchParams.get("voucherNumber") || "").trim().toUpperCase();
-
-  let rows = buildDemoRows();
-
-  if (voucherNumber) {
-    rows = rows.filter((r) => r.voucherNumber.toUpperCase().includes(voucherNumber));
-    if (!rows.length) {
-      rows = [
-        {
-          voucherNumber: voucherNumber.startsWith("JV")
-            ? voucherNumber
-            : `JVALC1${voucherNumber.replace(/\D/g, "").padStart(8, "0")}`,
-          voucherDate: fmtDate(today),
-          voucherDateIso: today,
-          voucherType: voucherType || "Journal",
-          branch: "ALC1",
-          payTo: DEMO_PAYEES[0],
-          totalAccountedAmount: 4750.5
-        }
-      ];
-    }
-  } else {
-    rows = rows.filter((r) => r.voucherDateIso >= from && r.voucherDateIso <= to);
-    if (voucherType) {
-      rows = rows.filter((r) => r.voucherType.toLowerCase() === voucherType.toLowerCase());
-    }
-  }
-
-  return NextResponse.json({
-    success: true,
-    count: rows.length,
-    data: rows.map((r, idx) => ({ srNo: idx + 1, ...r })),
-    meta: {
-      from,
-      to,
-      voucherType: voucherType || null,
-      voucherNumber: voucherNumber || null
-    }
-  });
 }

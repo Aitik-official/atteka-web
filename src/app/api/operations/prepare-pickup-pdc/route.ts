@@ -240,79 +240,57 @@ export async function GET(req: NextRequest) {
     }
 
     if (!rows.length) {
-      let demo = DEMO_CNS;
-      if (mode === "docket" && docketNos.length) {
-        demo = DEMO_CNS.filter((r) => docketNos.some((d) => r.cnNo.includes(d)));
-      } else if (from || to) {
-        demo = DEMO_CNS.filter((r) => {
-          if (from && r.cnDate < from) return false;
-          if (to && r.cnDate > to) return false;
-          return true;
-        });
-        if (!demo.length) demo = DEMO_CNS;
-      }
+      const { ensureExceptionalSeedData } = await import("@/lib/exceptionalOpsEngine");
+      await ensureExceptionalSeedData();
+      const seeded = await Consignment.find(query).sort({ bookingDate: -1 }).limit(200);
+      rows = seeded.map(mapCn);
       if (vendor) {
-        demo = demo.filter(
-          (r) =>
-            r.consignorName.toLowerCase().includes(vendor) ||
-            DEMO_VENDORS.some((v) => v.label.toLowerCase().includes(vendor))
-        );
-        if (!demo.length) demo = DEMO_CNS;
+        rows = rows.filter((r) => r.consignorName.toLowerCase().includes(vendor));
       }
-      return NextResponse.json({ success: true, data: demo, total: demo.length, source: "demo" });
     }
 
     return NextResponse.json({ success: true, data: rows, total: rows.length, source: "db" });
-  } catch {
-    let demo = DEMO_CNS;
-    if (mode === "docket" && docketNos.length) {
-      demo = DEMO_CNS.filter((r) => docketNos.some((d) => r.cnNo.includes(d)));
-    } else if (from || to) {
-      demo = DEMO_CNS.filter((r) => {
-        if (from && r.cnDate < from) return false;
-        if (to && r.cnDate > to) return false;
-        return true;
-      });
-      if (!demo.length) demo = DEMO_CNS;
-    }
-    return NextResponse.json({ success: true, data: demo, total: demo.length, source: "demo" });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || "Failed to load CNs", data: [], total: 0, source: "db" },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const { RBAC, requireApiSession } = await import("@/lib/rbac");
+    const gate = await requireApiSession(req, RBAC.opsWrite);
+    if ("error" in gate) return gate.error;
+
     const body = await req.json();
-    const selected = Array.isArray(body.selectedCnNos) ? body.selectedCnNos : [];
-    const vendor = String(body.vendor || "").trim();
+    const { createPickupPdc } = await import("@/lib/operationsPdcEngine");
+    const result = await createPickupPdc({
+      selectedCnNos: Array.isArray(body.selectedCnNos) ? body.selectedCnNos : [],
+      vendor: String(body.vendor || ""),
+      vehicleNo: body.vehicleNo,
+      manualPdcNo: body.manualPdcNo,
+      pdcDate: body.pdcDate,
+      pickup: body.pickup,
+      drop: body.drop,
+      distanceTraveled: Number(body.distanceTraveled || 0),
+      contractAmount: Number(body.contractAmount || 0),
+      remark: body.remark,
+      financialAt: body.financialAt,
+      financialType: body.financialType
+    });
 
-    if (!vendor) {
-      return NextResponse.json({ error: "Select / enter Vendor" }, { status: 400 });
-    }
-    if (!selected.length) {
-      return NextResponse.json({ error: "Select at least one CN" }, { status: 400 });
-    }
-
-    const pdcNo = `PPDC/ALC1/${Date.now().toString().slice(-8)}`;
     return NextResponse.json({
       success: true,
-      message: `Pickup PDC ${pdcNo} prepared with ${selected.length} CN(s) (demo)`,
-      data: {
-        pdcNo,
-        manualPdcNo: body.manualPdcNo || "",
-        vendor,
-        vehicleNo: body.vehicleNo || "",
-        pdcDate: body.pdcDate || "",
-        pdcType: "Pickup PDC",
-        financialType: body.financialType || "Financial",
-        selectedCnNos: selected,
-        contractAmount: Number(body.contractAmount || 0),
-        distanceTraveled: Number(body.distanceTraveled || 0)
-      }
+      message: result.message,
+      data: result,
+      source: "db"
     });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || "Failed to prepare Pickup PDC" },
-      { status: 500 }
+      { status: Number(error?.status) || 500 }
     );
   }
 }

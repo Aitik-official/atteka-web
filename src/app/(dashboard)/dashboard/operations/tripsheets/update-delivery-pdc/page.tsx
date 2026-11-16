@@ -257,7 +257,7 @@ export default function UpdateDeliveryPdcPage() {
     a.download = `update-delivery-pdc-${fromDate}-to-${toDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Excel (CSV) download started (demo)");
+    toast.success("Excel (CSV) download started");
   };
 
   const patchLine = (id: string, patch: Partial<LineEdit>) => {

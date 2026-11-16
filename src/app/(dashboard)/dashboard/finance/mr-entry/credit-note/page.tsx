@@ -153,7 +153,8 @@ export default function CreditNotePage() {
         return;
       }
       setCreditNoteNo(data.data?.creditNoteNo || creditNoteNo);
-      toast.success(`Credit Note ${data.data?.creditNoteNo} generated (demo)`);
+      toast.success(`Credit Note ${data.data?.creditNoteNo} generated`);
+      if (data.data?.irn) toast.info(`IRN stored: ${data.data.irn}`, { durationMs: 5000 });
     } catch {
       toast.error("Failed to generate credit note");
     } finally {

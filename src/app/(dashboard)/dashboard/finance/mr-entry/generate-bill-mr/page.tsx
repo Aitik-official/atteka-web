@@ -133,12 +133,37 @@ export default function GenerateBillMrPage() {
     });
   };
 
-  const confirmChecked = () => {
+  const [acting, setActing] = useState(false);
+
+  const confirmChecked = async () => {
     if (!selectedCount) {
       toast.error("Select at least one bill");
       return;
     }
-    toast.success(`${selectedCount} bill(s) confirmed for Generate Bill MR (demo)`);
+    setActing(true);
+    try {
+      const billNumbers = Object.entries(selected)
+        .filter(([, v]) => v)
+        .map(([k]) => k);
+      const res = await fetch("/api/finance/generate-bill-mr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billNumbers, withRebate: false })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Bill MR generation failed");
+        return;
+      }
+      toast.success(data.message || `Money Receipt generated for ${billNumbers.length} bill(s)`);
+      if (data.data?.mrNumber) toast.info(`MR ${data.data.mrNumber}`);
+      setRows((prev) => prev.filter((r) => !billNumbers.includes(r.billNumber)));
+      setSelected({});
+    } catch {
+      toast.error("Bill MR generation failed");
+    } finally {
+      setActing(false);
+    }
   };
 
   return (
@@ -396,10 +421,11 @@ export default function GenerateBillMrPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 border-t border-slate-200 text-[12px]">
               <button
                 type="button"
-                onClick={confirmChecked}
-                className="text-[#0171d3] font-semibold hover:underline"
+                disabled={acting || !selectedCount}
+                onClick={() => void confirmChecked()}
+                className="text-[#0171d3] font-semibold hover:underline disabled:opacity-50"
               >
-                Click Here to Confirm the Check bills
+                {acting ? "Posting MR..." : "Click Here to Confirm the Check bills"}
               </button>
 
               <div className="flex items-center gap-1">

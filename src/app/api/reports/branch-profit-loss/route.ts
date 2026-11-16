@@ -1,41 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-type Line = {
-  category: "INCOME" | "EXPENSE";
-  ledgerGroup: string;
-  ledger: string;
-  amount: number;
-};
-
-/** Fabricated demo Branch P&L — column structure only; not client production figures. */
-function demoLines(): Line[] {
-  return [
-    { category: "INCOME", ledgerGroup: "Non-Operating Income", ledger: "INSURANCE CLAIM RECEIVABLE", amount: 45000 },
-    { category: "INCOME", ledgerGroup: "Non-Operating Income", ledger: "MISCELLANEOUS INCOME - OTHER", amount: 28500 },
-    { category: "INCOME", ledgerGroup: "Operating Income", ledger: "FREIGHT INCOME (CN BOOKING - TBB)", amount: 1850000 },
-    { category: "INCOME", ledgerGroup: "Operating Income", ledger: "FREIGHT INCOME (CN BOOKING - TO PAY)", amount: 125000 },
-    { category: "INCOME", ledgerGroup: "Operating Income", ledger: "OTHER CHARGES (INCOME)", amount: 8500 },
-    { category: "INCOME", ledgerGroup: "Operating Income", ledger: "VEHICLE DEMOBILIZATION CHARGES", amount: 42000 },
-
-    { category: "EXPENSE", ledgerGroup: "Direct Expenses", ledger: "DRIVER SALARY", amount: 18500 },
-    { category: "EXPENSE", ledgerGroup: "Financial Cost", ledger: "BANK CHARGES", amount: 12500 },
-    { category: "EXPENSE", ledgerGroup: "Financial Cost", ledger: "INTEREST ON LOAN (EXPENSE)", amount: 35000 },
-    { category: "EXPENSE", ledgerGroup: "Indirect Expenses", ledger: "OTHER EXPENSES", amount: 48500 },
-    { category: "EXPENSE", ledgerGroup: "Indirect Expenses", ledger: "GENERAL EXPENSES", amount: 9200 },
-    { category: "EXPENSE", ledgerGroup: "Office & Admin Expenses", ledger: "OFFICE EXPENCE", amount: 28500 },
-    { category: "EXPENSE", ledgerGroup: "Operating Expenses - CCFF", ledger: "SERVICE CHARGE", amount: 55000 },
-    { category: "EXPENSE", ledgerGroup: "Operating Expenses - CCFF", ledger: "DOCUMENT CHARGES", amount: 12000 },
-    { category: "EXPENSE", ledgerGroup: "Other Operating Expenses", ledger: "DRIVER INCENTIVE", amount: 22500 },
-    { category: "EXPENSE", ledgerGroup: "Other Operating Expenses", ledger: "COURIER CHARGES", amount: 8500 },
-    { category: "EXPENSE", ledgerGroup: "Repairs & Maintenance", ledger: "COMPUTER SOFTWARE", amount: 20000 },
-    { category: "EXPENSE", ledgerGroup: "Vehicle Operation Cost", ledger: "DIESEL EXPENSES", amount: 420000 },
-    { category: "EXPENSE", ledgerGroup: "Vehicle Operation Cost", ledger: "TOLL EXPENSES", amount: 95000 },
-    { category: "EXPENSE", ledgerGroup: "Vehicle Operation Cost", ledger: "REPAIR & MAINTENANCE VEHICLE", amount: 185000 },
-    { category: "EXPENSE", ledgerGroup: "Vehicle Operation Cost", ledger: "TYRES & TUBES EXPENSES", amount: 28000 },
-    { category: "EXPENSE", ledgerGroup: "Vehicle Operation Cost", ledger: "SPARE PARTS EXPENSE", amount: 18500 },
-    { category: "EXPENSE", ledgerGroup: "Vehicle Operation Cost", ledger: "VEHICLE INSURANCE", amount: 38000 }
-  ];
-}
+import { buildBranchProfitLoss } from "@/lib/booksEngine";
 
 function parseIso(s: string | null, fallback: string) {
   if (!s) return fallback;
@@ -56,6 +20,10 @@ export async function GET(req: NextRequest) {
   const from = parseIso(searchParams.get("from"), `${fyStart}-04-01`);
   const to = parseIso(searchParams.get("to"), `${fyStart + 1}-03-31`);
   const branchRaw = (searchParams.get("branch") || "--Show All--").trim();
+  const branch =
+    !branchRaw || /select|show all/i.test(branchRaw)
+      ? ""
+      : (branchRaw.includes(" - ") ? branchRaw.split(" - ").pop()! : branchRaw).trim().toUpperCase();
 
   const branchLabel =
     !branchRaw || /select|show all/i.test(branchRaw)
@@ -64,10 +32,11 @@ export async function GET(req: NextRequest) {
         ? `${branchRaw.split(" - ").pop()!.trim()} - ${branchRaw.split(" - ")[0].trim()}`
         : `${branchRaw.toUpperCase()} - Ateka Logistics`;
 
-  const lines = demoLines();
-  const incomeTotal = lines.filter((l) => l.category === "INCOME").reduce((s, l) => s + l.amount, 0);
-  const expenseTotal = lines.filter((l) => l.category === "EXPENSE").reduce((s, l) => s + l.amount, 0);
-  const profit = Number((incomeTotal - expenseTotal).toFixed(2));
+  const built = await buildBranchProfitLoss({ from, to, branch });
+  const lines = built.lines;
+  const incomeTotal = built.totalIncome;
+  const expenseTotal = built.totalExpense;
+  const profit = built.profitLoss;
 
   type Row = {
     branch: string;
@@ -85,7 +54,7 @@ export async function GET(req: NextRequest) {
   let lastCategory = "";
   let lastGroup = "";
 
-  const pushLine = (line: Line) => {
+  const pushLine = (line: (typeof lines)[number]) => {
     const showCategory = line.category !== lastCategory;
     const showGroup = showCategory || line.ledgerGroup !== lastGroup;
     rows.push({
@@ -101,7 +70,18 @@ export async function GET(req: NextRequest) {
     lastGroup = line.ledgerGroup;
   };
 
-  for (const line of lines.filter((l) => l.category === "INCOME")) pushLine(line);
+  if (!lines.length) {
+    rows.push({
+      branch: branchLabel,
+      accountCategory: "INCOME",
+      ledgerGroup: "Operating Income",
+      ledger: "No income posts in period",
+      amount: 0,
+      total: null
+    });
+  } else {
+    for (const line of lines.filter((l) => l.category === "INCOME")) pushLine(line);
+  }
   rows.push({
     branch: "",
     accountCategory: "",
@@ -114,7 +94,18 @@ export async function GET(req: NextRequest) {
 
   lastCategory = "";
   lastGroup = "";
-  for (const line of lines.filter((l) => l.category === "EXPENSE")) pushLine(line);
+  if (lines.some((l) => l.category === "EXPENSE")) {
+    for (const line of lines.filter((l) => l.category === "EXPENSE")) pushLine(line);
+  } else {
+    rows.push({
+      branch: "",
+      accountCategory: "EXPENSE",
+      ledgerGroup: "Operating Expenses",
+      ledger: "No expense posts in period",
+      amount: 0,
+      total: null
+    });
+  }
   rows.push({
     branch: "",
     accountCategory: "",
@@ -138,6 +129,7 @@ export async function GET(req: NextRequest) {
     success: true,
     count: lines.length,
     data: rows,
+    source: built.source === "db" ? "db" : "empty",
     meta: {
       branch: branchRaw && !/show all/i.test(branchRaw) ? branchRaw : "--Show All--",
       branchDisplay: branchLabel,

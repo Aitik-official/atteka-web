@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { computeVehicleCompliance, generateWhatsAppExpiryMessage } from "@/lib/complianceEngine";
 import { searchModules, type ModuleSearchItem } from "@/lib/moduleCatalog";
+import { useRbac } from "@/components/rbac/RbacProvider";
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -34,6 +35,7 @@ interface HeaderProps {
     branchCode?: string;
     operatingLocation?: string;
     financialYear?: string;
+    role?: string;
   };
 }
 
@@ -48,6 +50,7 @@ const LOCATION_OPTIONS = [
 
 export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
   const router = useRouter();
+  const { canPath, canModule, role } = useRbac();
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -105,11 +108,11 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
   }, []);
 
   useEffect(() => {
-    const results = searchModules(searchQuery, 14);
+    const results = searchModules(searchQuery, 14, canPath, canModule);
     setSearchResults(results);
     setActiveResult(0);
     setSearchOpen(searchQuery.trim().length > 0 && results.length > 0);
-  }, [searchQuery]);
+  }, [searchQuery, canPath, canModule]);
 
   useEffect(() => {
     try {
@@ -129,7 +132,8 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
+    // Hard navigation clears cached dashboard shell / role context
+    window.location.assign("/login");
   };
 
   const toggleFullscreen = () => {
@@ -187,7 +191,7 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
       goToResult(searchResults[activeResult]);
       return;
     }
-    const fallback = searchModules(searchQuery, 1)[0];
+    const fallback = searchModules(searchQuery, 1, canPath, canModule)[0];
     if (fallback) goToResult(fallback);
   };
 
@@ -459,11 +463,17 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
               <User className="w-3 h-3" />
             </div>
             <span className="hidden sm:inline uppercase text-[11px]">{user.name || "ANISHA OZARKAR"}</span>
+            <span className="hidden md:inline rounded bg-white/20 px-1.5 py-0.5 text-[9px] font-mono tracking-wider">
+              {role}
+            </span>
             <ChevronDown className="w-3 h-3 text-white/80" />
           </button>
 
           {profileDropdown && (
             <div className="absolute right-0 mt-2 w-56 bg-[#2f3542] rounded-md shadow-2xl border border-slate-700/60 py-1.5 z-50 text-[12px] animate-in fade-in slide-in-from-top-1 text-slate-100">
+              <div className="px-3.5 py-2 border-b border-slate-600/50 text-[10px] text-slate-400 font-mono">
+                Role: <span className="text-emerald-400 font-semibold">{role}</span>
+              </div>
               <button
                 type="button"
                 onClick={() => {

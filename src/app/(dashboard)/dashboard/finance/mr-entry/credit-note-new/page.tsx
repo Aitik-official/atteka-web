@@ -135,7 +135,14 @@ export default function CreditNoteNewPage() {
       const res = await fetch("/api/finance/credit-note-new", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ billInvoiceNo: bill.billInvoiceNo })
+        body: JSON.stringify({
+          billInvoiceNo: bill.billInvoiceNo,
+          amount: bill.amount,
+          igst: bill.igst,
+          cgst: bill.cgst,
+          sgst: bill.sgst,
+          grossAmount: bill.grossAmount
+        })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -154,7 +161,13 @@ export default function CreditNoteNewPage() {
             : r
         )
       );
-      toast.success(`Credit Note ${data.data?.creditNoteNo} generated (demo)`);
+      toast.document(`Credit Note ${data.data?.creditNoteNo} generated`, {
+        code: data.data?.creditNoteNo,
+        title: "Credit Note"
+      });
+      if (data.data?.irn) {
+        toast.info(`IRN stored: ${data.data.irn}`, { durationMs: 5000 });
+      }
     } catch {
       toast.error("Credit Note generation failed");
     } finally {
@@ -321,7 +334,7 @@ export default function CreditNoteNewPage() {
               <div>
                 <h1 className="text-base font-bold text-slate-900">Credit Note New</h1>
                 <p className="text-[11px] text-slate-500">
-                  {rows.length} bill(s) · demo credit note / IRN stub
+                  {rows.length} bill(s) · IRN saved in replica DB (GST portal not connected)
                 </p>
               </div>
             </div>

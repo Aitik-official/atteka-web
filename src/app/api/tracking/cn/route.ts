@@ -51,7 +51,8 @@ function enrichRow(c: any, billByDocket: Map<string, any>) {
     consigneeName: c.consignee?.name || "",
     thcPdcNo: thcPdc,
     billNo: bill?.billNumber || c.billNo || "",
-    billAmount: Number(bill?.grandTotal ?? c.financials?.grandTotal ?? 0)
+    billAmount: Number(bill?.grandTotal ?? c.financials?.grandTotal ?? 0),
+    podUrl: c.podUrl || ""
   };
 }
 

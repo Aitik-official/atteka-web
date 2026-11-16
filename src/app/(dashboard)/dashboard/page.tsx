@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -14,12 +14,12 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
-  TrendingUp,
   FileText,
   DollarSign,
   ShieldCheck
 } from "lucide-react";
 import { StatCard } from "@/components/common/StatCard";
+import { useRbac } from "@/components/rbac/RbacProvider";
 
 interface SubCategory {
   title: string;
@@ -30,12 +30,14 @@ interface SubCategory {
 interface ModuleCard {
   id: string;
   name: string;
+  moduleKey: string;
   icon: any;
   image: string;
   subcategories: SubCategory[];
 }
 
 export default function DashboardHome() {
+  const { canPath, canModule, role } = useRbac();
   // Start with all cards collapsed so the dashboard grid remains clean on refresh/login
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
 
@@ -46,10 +48,11 @@ export default function DashboardHome() {
     }));
   };
 
-  const modules: ModuleCard[] = [
+  const allModules: ModuleCard[] = [
     {
       id: "C001",
       name: "Operations",
+      moduleKey: "operations",
       icon: Users2,
       image: "/images/cards/operations.jpg",
       subcategories: [
@@ -62,6 +65,7 @@ export default function DashboardHome() {
     {
       id: "C002",
       name: "Finance",
+      moduleKey: "finance",
       icon: Landmark,
       image: "/images/cards/finance.jpg",
       subcategories: [
@@ -78,6 +82,7 @@ export default function DashboardHome() {
     {
       id: "C003",
       name: "CRM",
+      moduleKey: "crm",
       icon: UserCheck,
       image: "/images/cards/crm.jpg",
       subcategories: [
@@ -89,6 +94,7 @@ export default function DashboardHome() {
     {
       id: "C158",
       name: "Fleet",
+      moduleKey: "fleet",
       icon: Truck,
       image: "/images/cards/fleet.jpg",
       subcategories: [
@@ -99,6 +105,7 @@ export default function DashboardHome() {
     {
       id: "C004",
       name: "Tracking",
+      moduleKey: "tracking",
       icon: MapPin,
       image: "/images/cards/tracking.jpg",
       subcategories: [
@@ -109,6 +116,7 @@ export default function DashboardHome() {
     {
       id: "C136",
       name: "Exceptional",
+      moduleKey: "exceptional",
       icon: ClipboardCheck,
       image: "/images/cards/exceptional.jpg",
       subcategories: [
@@ -121,6 +129,7 @@ export default function DashboardHome() {
     {
       id: "C006",
       name: "Reports",
+      moduleKey: "reports",
       icon: BarChart2,
       image: "/images/cards/reports.jpg",
       subcategories: [
@@ -136,6 +145,7 @@ export default function DashboardHome() {
     {
       id: "C007",
       name: "Admin",
+      moduleKey: "admin",
       icon: Settings,
       image: "/images/cards/admin.jpg",
       subcategories: [
@@ -148,8 +158,26 @@ export default function DashboardHome() {
     }
   ];
 
+  const modules = useMemo(
+    () =>
+      allModules
+        .filter((mod) => canModule(mod.moduleKey))
+        .map((mod) => ({
+          ...mod,
+          subcategories: mod.subcategories.filter((sub) => canPath(sub.route))
+        }))
+        .filter((mod) => mod.subcategories.length > 0),
+    [canPath, canModule]
+  );
+
   return (
     <div className="max-w-7xl mx-auto space-y-5 pb-10">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-500">
+          Signed in as <span className="font-mono font-semibold text-slate-700">{role}</span>
+          {role === "GUEST" ? " — read-only access" : null}
+        </p>
+      </div>
       {/* Top Quick KPI Row (Modular & Responsive) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard

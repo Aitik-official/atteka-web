@@ -59,8 +59,21 @@ export default function DocketPrintCnPage() {
     setMeta(info);
     // Allow React to paint the print sheet, then open the browser print dialog.
     setTimeout(() => {
-      printScoped({ title: "CN Number Print [Dot-Matrix]", selector: ".docket-print-sheet" });
-      toast.success(`${info.count} CN number(s) sent to Dot-Matrix printer (demo)`);
+      void (async () => {
+        try {
+          const res = await fetch("/api/finance/dot-matrix-print", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ kind: "DOCKET", documentNos: list, cnList: list })
+          });
+          const data = await res.json();
+          printScoped({ title: "CN Number Print [Dot-Matrix]", selector: ".docket-print-sheet" });
+          toast.success(data.message || `${info.count} CN number(s) sent to Dot-Matrix printer`);
+        } catch {
+          printScoped({ title: "CN Number Print [Dot-Matrix]", selector: ".docket-print-sheet" });
+          toast.success(`${info.count} CN number(s) sent to Dot-Matrix printer`);
+        }
+      })();
     }, 280);
   };
 

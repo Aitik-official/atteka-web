@@ -15,6 +15,7 @@ import {
   Search,
   Table2
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "@/lib/toastBus";
 import { printScoped } from "@/lib/printEngine";
 
@@ -71,6 +72,7 @@ function fmtAmt(n: number) {
 }
 
 export default function ViewPrintVouchersNewPage() {
+  const router = useRouter();
   const today = useMemo(() => toInputDate(new Date()), []);
   const [step, setStep] = useState<"filter" | "report">("filter");
   const [fromDate, setFromDate] = useState(today);
@@ -352,7 +354,7 @@ export default function ViewPrintVouchersNewPage() {
               </span>
               <button
                 type="button"
-                onClick={() => toast.info("Add New opens Debit Voucher (demo)")}
+                onClick={() => router.push("/dashboard/finance/vouchers/debit-voucher")}
                 className="h-8 px-3 rounded-lg bg-blue-600 text-white font-semibold inline-flex items-center gap-1.5"
               >
                 <Plus className="w-3.5 h-3.5" /> Add New

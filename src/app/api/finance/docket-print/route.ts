@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "CN To must be greater than or equal to From" }, { status: 400 });
     }
     if (to - from + 1 > 200) {
-      return NextResponse.json({ error: "Maximum 200 CN numbers per print job (demo)" }, { status: 400 });
+      return NextResponse.json({ error: "Maximum 200 CN numbers per print job" }, { status: 400 });
     }
 
     const branchCode = location.includes("-")

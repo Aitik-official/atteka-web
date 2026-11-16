@@ -1,78 +1,44 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { RBAC, requireApiSession } from "@/lib/rbac";
+import { bookGstr2b, listGstr2bPending } from "@/lib/vouchersEngine";
 
-/** Fabricated demo GSTR2B invoices — not client production data. */
-const DEMO_VENDORS = [
-  { code: "VND0001", name: "ATLAS SPARES TRADING", gstin: "27AABCA1001A1Z1" },
-  { code: "VND0002", name: "METRO TYRE SUPPLIES", gstin: "27AABCM2002B1Z2" },
-  { code: "VND0003", name: "COASTAL FUEL AGENCY", gstin: "27AABCC3003C1Z3" },
-  { code: "VND0004", name: "GATEWAY WORKSHOP SERVICES", gstin: "27AABCG4004D1Z4" }
-];
-
-const ACCOUNT_DESCS = [
-  "Purchase - Spares",
-  "Purchase - Tyres",
-  "Fuel Expense",
-  "Repair & Maintenance"
-];
-
-function addDays(iso: string, n: number) {
-  const d = new Date(iso);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+export async function GET(req: NextRequest) {
+  const gate = await requireApiSession(req, RBAC.anyAuth);
+  if ("error" in gate) return gate.error;
+  try {
+    const rows = await listGstr2bPending();
+    return NextResponse.json({
+      success: true,
+      count: rows.length,
+      data: rows,
+      source: "db",
+      meta: { gstPortal: "not_connected", note: "Replica booking store — live GSTR2B sync not wired" }
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Failed to load GSTR2B" }, { status: 500 });
+  }
 }
 
-function fmtDate(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-export async function GET() {
-  const today = new Date().toISOString().slice(0, 10);
-  const rows = Array.from({ length: 12 }, (_, i) => {
-    const vendor = DEMO_VENDORS[i % DEMO_VENDORS.length];
-    const iso = addDays(today, -((i % 8) + 1));
-    const taxable = Number((5200 + (i % 7) * 950 + (i % 4) * 125.5).toFixed(2));
-    const interState = i % 3 === 0;
-    const igst = interState ? Number((taxable * 0.18).toFixed(2)) : 0;
-    const cgst = interState ? 0 : Number((taxable * 0.09).toFixed(2));
-    const sgst = interState ? 0 : Number((taxable * 0.09).toFixed(2));
-    const cess = i % 5 === 0 ? Number((taxable * 0.01).toFixed(2)) : 0;
-    const invoiceAmount = Number((taxable + igst + cgst + sgst + cess).toFixed(2));
-    return {
-      id: `GSTR2B-${1001 + i}`,
-      invoiceDate: fmtDate(iso),
-      invoiceDateIso: iso,
-      invoiceNo: `G2B/INV/${String(2608000 + i).padStart(7, "0")}`,
-      gstin: vendor.gstin,
-      vendorCode: vendor.code,
-      vendorName: vendor.name,
-      taxableAmount: taxable,
-      igst,
-      cgst,
-      sgst,
-      cess,
-      invoiceAmount,
-      accountDesc: ACCOUNT_DESCS[i % ACCOUNT_DESCS.length]
-    };
-  });
-
-  return NextResponse.json({ success: true, count: rows.length, data: rows });
-}
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const gate = await requireApiSession(req, RBAC.financeWrite);
+  if ("error" in gate) return gate.error;
   try {
     const body = await req.json();
     const ids = Array.isArray(body.ids) ? body.ids.map(String) : [];
     if (!ids.length) {
       return NextResponse.json({ success: false, error: "Select at least one invoice" }, { status: 400 });
     }
+    const result = await bookGstr2b(ids);
     return NextResponse.json({
       success: true,
-      message: `${ids.length} GSTR2B invoice(s) booked (demo)`,
-      data: { bookedIds: ids, bookedAt: new Date().toISOString() }
+      message: result.message,
+      data: { ...result, bookedAt: new Date().toISOString() },
+      source: "db"
     });
-  } catch {
-    return NextResponse.json({ success: false, error: "Invalid request body" }, { status: 400 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error?.message || "Booking failed" },
+      { status: Number(error?.status) || 400 }
+    );
   }
 }

@@ -107,7 +107,7 @@ export default function EditFromToLocationPage() {
       setRow(data.data as DocRow);
       setFromLocation(data.data.fromLocation);
       setToLocation(data.data.toLocation);
-      toast.success(`Locations updated for ${row.documentNo} (demo)`);
+      toast.success(data.message || `Locations updated for ${row.documentNo}`);
     } catch {
       toast.error("Submit failed");
     } finally {
@@ -146,7 +146,7 @@ export default function EditFromToLocationPage() {
               {loading ? "Loading..." : "Submit"}
             </button>
           </div>
-          <WcvDemoHint label={`Demo ${docType} Nos`} values={demoValues} />
+          <WcvDemoHint label={`Sample ${docType} Nos`} values={demoValues} />
         </WcvFormCard>
       )}
 

@@ -100,12 +100,37 @@ export default function PaidTopayMrPage() {
   const selectedCount = Object.values(selected).filter(Boolean).length;
   const allSelected = rows.length > 0 && rows.every((r) => selected[r.docketNo]);
 
-  const prepareMr = () => {
+  const [acting, setActing] = useState(false);
+
+  const prepareMr = async () => {
     if (!selectedCount) {
       toast.error("Select at least one docket");
       return;
     }
-    toast.success(`${selectedCount} docket(s) selected for Paid/Topay MR (demo)`);
+    setActing(true);
+    try {
+      const docketNos = Object.entries(selected)
+        .filter(([, v]) => v)
+        .map(([k]) => k);
+      const res = await fetch("/api/finance/paid-topay-mr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docketNos })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Paid/Topay MR failed");
+        return;
+      }
+      toast.success(data.message || `MR generated for ${docketNos.length} docket(s)`);
+      if (data.data?.mrNumber) toast.info(`MR ${data.data.mrNumber}`);
+      setRows((prev) => prev.filter((r) => !docketNos.includes(r.docketNo)));
+      setSelected({});
+    } catch {
+      toast.error("Paid/Topay MR failed");
+    } finally {
+      setActing(false);
+    }
   };
 
   return (
@@ -251,7 +276,8 @@ export default function PaidTopayMrPage() {
             </div>
             <button
               type="button"
-              onClick={prepareMr}
+              disabled={acting || !selectedCount}
+              onClick={() => void prepareMr()}
               className="h-9 px-4 rounded-md bg-[#0171d3] text-white text-sm font-semibold hover:bg-[#015fae]"
             >
               Prepare MR

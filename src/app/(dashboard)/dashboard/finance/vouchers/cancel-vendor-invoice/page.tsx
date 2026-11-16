@@ -50,6 +50,11 @@ export default function CancelVendorInvoicePage() {
   const [vendors, setVendors] = useState<VendorOpt[]>(FALLBACK_VENDORS);
   const [lookupOpen, setLookupOpen] = useState(false);
   const [lookupQuery, setLookupQuery] = useState("");
+  const [step, setStep] = useState<"criteria" | "results" | "confirm">("criteria");
+  const [results, setResults] = useState<any[]>([]);
+  const [selected, setSelected] = useState<any | null>(null);
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetch("/api/vendors")
@@ -93,22 +98,85 @@ export default function CancelVendorInvoicePage() {
     );
   }, [vendors, lookupQuery]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (searchMode === "invoice" && !invoiceNumber.trim()) {
       toast.error("Enter Invoice Number");
       return;
     }
-    // Next cancel step intentionally not enabled — avoids cancelling vendor invoices.
-    const parts = [
-      searchMode === "invoice"
-        ? `Invoice ${invoiceNumber.trim()}`
-        : `Date ${fromDate} → ${toDate}${vendor ? ` · ${vendor}` : ""}`
-    ];
-    toast.info(`${parts[0]}. Cancel confirmation step not enabled (demo).`);
+    setSaving(true);
+    try {
+      if (searchMode === "invoice") {
+        const res = await fetch(
+          `/api/finance/cancel-vendor-invoice?invoiceNo=${encodeURIComponent(invoiceNumber.trim())}`
+        );
+        const data = await res.json();
+        const row = data.data;
+        if (!row) {
+          toast.error("Invoice not found");
+          return;
+        }
+        setResults([row]);
+      } else {
+        const res = await fetch("/api/finance/cancel-vendor-invoice");
+        const data = await res.json();
+        let rows = (data.data || []).filter(
+          (r: any) => String(r.status || "").toLowerCase() !== "cancelled"
+        );
+        if (vendor.trim()) {
+          const q = vendor.trim().toLowerCase();
+          rows = rows.filter(
+            (r: any) =>
+              String(r.payTo || "").toLowerCase().includes(q) ||
+              String(r.party || "").toLowerCase().includes(q)
+          );
+        }
+        rows = rows.filter((r: any) => {
+          const iso = String(r.voucherDateIso || "").slice(0, 10);
+          return (!fromDate || iso >= fromDate) && (!toDate || iso <= toDate);
+        });
+        setResults(rows);
+      }
+      setStep("results");
+    } catch {
+      toast.error("Search failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!selected?.voucherNumber && !selected?.invoiceNo) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/finance/cancel-vendor-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          voucherNumber: selected.voucherNumber,
+          invoiceNo: selected.invoiceNo,
+          reason: reason.trim() || "Vendor invoice cancelled"
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Cancel failed");
+        return;
+      }
+      toast.success(data.message || "Invoice cancelled");
+      setStep("criteria");
+      setSelected(null);
+      setResults([]);
+      setReason("");
+    } catch {
+      toast.error("Cancel failed");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto pb-10">
+      {step === "criteria" && (
       <div className="bg-white border border-slate-300 shadow-sm overflow-hidden">
         <div className="bg-[#0171d3] text-white text-sm font-semibold px-3 py-2 text-center">
           Select Vendor Invoice Payment Criteria
@@ -233,13 +301,128 @@ export default function CancelVendorInvoicePage() {
         <div className="flex justify-center py-4 border-t border-slate-200">
           <button
             type="button"
-            onClick={handleSubmit}
-            className="min-w-[110px] h-9 px-6 rounded-full border border-[#0171d3] text-[#0171d3] bg-white text-[12px] font-semibold hover:bg-blue-50"
+            disabled={saving}
+            onClick={() => void handleSubmit()}
+            className="min-w-[110px] h-9 px-6 rounded-full border border-[#0171d3] text-[#0171d3] bg-white text-[12px] font-semibold hover:bg-blue-50 disabled:opacity-50"
           >
-            Submit
+            {saving ? "..." : "Submit"}
           </button>
         </div>
       </div>
+      )}
+
+      {step === "results" && (
+        <div className="bg-white border border-slate-300 shadow-sm overflow-hidden">
+          <div className="bg-[#0171d3] text-white text-sm font-semibold px-3 py-2 flex items-center justify-between">
+            <span>Select Invoice to Cancel</span>
+            <button
+              type="button"
+              onClick={() => setStep("criteria")}
+              className="text-[11px] font-semibold underline"
+            >
+              Back
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px] border-collapse">
+              <thead>
+                <tr className="bg-slate-50 text-[#0d47a1]">
+                  {["Voucher", "Invoice", "Date", "Vendor", "Amount", ""].map((h) => (
+                    <th key={h} className="border border-slate-200 px-2 py-1.5 text-left">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {results.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-6 text-center text-slate-400">
+                      No invoices found
+                    </td>
+                  </tr>
+                ) : (
+                  results.map((r) => (
+                    <tr key={r.voucherNumber || r.invoiceNo} className="odd:bg-white even:bg-slate-50">
+                      <td className="border border-slate-200 px-2 py-1.5 font-mono text-blue-700">
+                        {r.voucherNumber}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 font-mono">
+                        {r.invoiceNo || r.docRefNo || "—"}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5">{r.voucherDate}</td>
+                      <td className="border border-slate-200 px-2 py-1.5">{r.payTo}</td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right font-mono">
+                        {Number(r.totalAccountedAmount || 0).toLocaleString("en-IN", {
+                          minimumFractionDigits: 2
+                        })}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelected(r);
+                            setStep("confirm");
+                          }}
+                          className="text-rose-600 font-semibold"
+                        >
+                          Cancel
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {step === "confirm" && selected && (
+        <div className="bg-white border border-slate-300 shadow-sm overflow-hidden max-w-xl mx-auto">
+          <div className="bg-[#0171d3] text-white text-sm font-semibold px-3 py-2 text-center">
+            Confirm Cancel
+          </div>
+          <div className="p-4 text-[12px] space-y-2">
+            <p>
+              <span className="font-semibold">Voucher:</span>{" "}
+              <span className="font-mono text-blue-700">{selected.voucherNumber}</span>
+            </p>
+            <p>
+              <span className="font-semibold">Invoice:</span>{" "}
+              {selected.invoiceNo || selected.docRefNo || "—"}
+            </p>
+            <p>
+              <span className="font-semibold">Vendor:</span> {selected.payTo}
+            </p>
+            <label className="flex flex-col gap-1 pt-1">
+              <span className="font-semibold">Reason</span>
+              <input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="h-8 px-2 border border-slate-300 rounded-sm"
+              />
+            </label>
+          </div>
+          <div className="py-4 flex justify-center gap-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setStep("results")}
+              className="min-w-[110px] h-9 px-6 rounded-full border border-slate-300 text-[12px] font-semibold"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void handleCancel()}
+              className="min-w-[110px] h-9 px-6 rounded-full border border-rose-500 text-rose-600 text-[12px] font-semibold hover:bg-rose-50 disabled:opacity-50"
+            >
+              {saving ? "Cancelling..." : "Confirm Cancel"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {lookupOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">

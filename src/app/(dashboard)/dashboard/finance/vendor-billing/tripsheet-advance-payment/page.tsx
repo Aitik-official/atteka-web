@@ -155,8 +155,18 @@ export default function TripSheetAdvancePaymentPage() {
         toast.error(data.error || "Continue failed");
         return;
       }
-      toast.success(data.message || "Continued to TripSheet advance payment");
-      toast.info(`Batch ${data.data?.batchRef || ""} · ${data.data?.count || 0} sheet(s)`);
+      const posted = Number(data.data?.count || 0);
+      if (posted <= 0) {
+        toast.warning(
+          data.message ||
+            "No advance due on selected TripSheets — already paid or not eligible"
+        );
+      } else {
+        toast.success(data.message || "TripSheet advance payment posted");
+        toast.info(`Batch ${data.data?.batchRef || ""} · ${posted} sheet(s)`);
+      }
+      setSelected(new Set());
+      await loadReport();
     } catch {
       toast.error("Continue failed");
     } finally {

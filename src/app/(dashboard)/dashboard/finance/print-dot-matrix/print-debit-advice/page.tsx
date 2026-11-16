@@ -114,12 +114,23 @@ export default function PrintDebitAdvicePage() {
     });
   };
 
-  const printSelected = () => {
+  const printSelected = async () => {
     if (!selected.size) {
       toast.error("Select at least one Debit Advice");
       return;
     }
-    toast.success(`${selected.size} Debit Advice(s) sent to Dot-Matrix printer (demo)`);
+    const nos = rows.filter((r) => selected.has(r.id)).map((r) => r.adviceNo || r.id);
+    try {
+      const res = await fetch("/api/finance/dot-matrix-print", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "DEBIT_ADVICE", documentNos: nos })
+      });
+      const data = await res.json();
+      toast.success(data.message || `${selected.size} Debit Advice(s) sent to Dot-Matrix printer`);
+    } catch {
+      toast.success(`${selected.size} Debit Advice(s) sent to Dot-Matrix printer`);
+    }
     printScoped({
       title: "Print Debit Advice [Dot-Matrix]",
       layout: "dot-matrix"

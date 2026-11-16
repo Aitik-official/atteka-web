@@ -147,7 +147,7 @@ export default function EditBillingPartyPage() {
               {loading ? "Loading..." : "Submit"}
             </button>
           </div>
-          <WcvDemoHint label="Demo Docket Nos" values={["ALC12660616", "ALC12660615", "ALC12660617"]} />
+          <WcvDemoHint label="Sample Docket Nos" values={["ALC12660616", "ALC12660615", "ALC12660617"]} />
           <p className="text-[11px] text-slate-400 text-center">
             Party / location / FTL lists load from Customer, Branch & FTL Type masters
             {mastersLoading ? " (loading…)" : ` · ${options.source}`}

@@ -97,7 +97,7 @@ export default function EditPdcVendorDateVehiclePage() {
         return;
       }
       setRow(data.data as PdcRow);
-      toast.success(`PDC ${row.documentNo} updated (demo)`);
+      toast.success(data.message || `PDC ${row.documentNo} updated`);
     } catch {
       toast.error("Update failed");
     } finally {
@@ -125,7 +125,7 @@ export default function EditPdcVendorDateVehiclePage() {
             </button>
           </div>
           <WcvDemoHint
-            label="Demo PDC Nos"
+            label="Sample PDC Nos"
             values={["DSALC12600573", "DSALC12600532", "PSALC12600410"]}
           />
         </WcvFormCard>

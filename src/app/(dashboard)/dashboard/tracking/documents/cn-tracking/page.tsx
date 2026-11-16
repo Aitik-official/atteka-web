@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { MapPin, Truck, Package, FileText } from "lucide-react";
 import { toast } from "@/lib/toastBus";
 
@@ -34,6 +35,7 @@ const fieldCls =
   "h-8 px-2 text-[12px] border border-[#7eb6e8] rounded-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#0171d3] uppercase font-mono";
 
 export default function CnTrackingPage() {
+  const searchParams = useSearchParams();
   const [docketNo, setDocketNo] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
   const [dnNo, setDnNo] = useState("");
@@ -50,9 +52,11 @@ export default function CnTrackingPage() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!docketNo.trim() && !invoiceNo.trim() && !dnNo.trim()) {
+  const runTrack = async (opts?: { docketNo?: string; invoiceNo?: string; dnNo?: string }) => {
+    const dNo = (opts?.docketNo ?? docketNo).trim();
+    const inv = (opts?.invoiceNo ?? invoiceNo).trim();
+    const dn = (opts?.dnNo ?? dnNo).trim();
+    if (!dNo && !inv && !dn) {
       toast.error("Enter Docket No, Invoice No, or DN No");
       return;
     }
@@ -60,9 +64,9 @@ export default function CnTrackingPage() {
     setSearched(true);
     try {
       const params = new URLSearchParams();
-      if (docketNo.trim()) params.set("docketNo", docketNo.trim());
-      if (invoiceNo.trim()) params.set("invoiceNo", invoiceNo.trim());
-      if (dnNo.trim()) params.set("dnNo", dnNo.trim());
+      if (dNo) params.set("docketNo", dNo);
+      if (inv) params.set("invoiceNo", inv);
+      if (dn) params.set("dnNo", dn);
       const res = await fetch(`/api/tracking/cn?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) {
@@ -79,6 +83,19 @@ export default function CnTrackingPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const q = (searchParams.get("docketNo") || "").trim().toUpperCase();
+    if (!q) return;
+    setDocketNo(q);
+    void runTrack({ docketNo: q });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runTrack();
   };
 
   return (

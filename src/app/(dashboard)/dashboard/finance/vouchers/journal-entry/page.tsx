@@ -289,7 +289,7 @@ export default function JournalEntryPage() {
         toast.error(data.error || "Failed to save journal");
         return;
       }
-      toast.success(`Journal voucher ${data.data?.voucherNumber} saved (demo)`);
+      toast.success(`Journal voucher ${data.data?.voucherNumber} saved`);
       setRows((prev) => [{ srNo: 1, ...data.data }, ...prev.map((r, i) => ({ ...r, srNo: i + 2 }))]);
       setStep("report");
     } catch {

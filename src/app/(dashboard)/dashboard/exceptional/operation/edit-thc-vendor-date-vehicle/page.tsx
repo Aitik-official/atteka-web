@@ -97,7 +97,7 @@ export default function EditThcVendorDateVehiclePage() {
         return;
       }
       setRow(data.data as ThcRow);
-      toast.success(`THC ${row.documentNo} updated (demo)`);
+      toast.success(data.message || `THC ${row.documentNo} updated`);
     } catch {
       toast.error("Update failed");
     } finally {
@@ -125,7 +125,7 @@ export default function EditThcVendorDateVehiclePage() {
             </button>
           </div>
           <WcvDemoHint
-            label="Demo THC Nos"
+            label="Sample THC Nos"
             values={["THCALC12600110", "THCALC12600111", "THCALC12600112"]}
           />
         </WcvFormCard>

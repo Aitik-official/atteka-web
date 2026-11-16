@@ -14,7 +14,7 @@ import {
   Search
 } from "lucide-react";
 import { toast } from "@/lib/toastBus";
-import { printScoped } from "@/lib/printEngine";
+import { escapeHtml, inr, printDocumentSheet, printScoped } from "@/lib/printEngine";
 
 type CnRow = {
   srNo: number;
@@ -264,7 +264,57 @@ export default function ViewPrintCreditNotePage() {
   };
 
   const printRow = (r: CnRow) => {
-    toast.success(`Print ${r.creditNoteNo} (demo)`);
+    const css = `
+      @page { size: A4; margin: 12mm; }
+      body { font-family: Segoe UI, sans-serif; color: #0f172a; margin: 0; font-size: 12px; background: #f8fafc; }
+      .toolbar { position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between; align-items: center; background: #0f172a; color: #fff; padding: 10px 16px; }
+      .toolbar button { border: 0; border-radius: 6px; padding: 7px 14px; font-weight: 700; cursor: pointer; }
+      .toolbar .print { background: #2563eb; color: #fff; }
+      .toolbar .close { background: #334155; color: #fff; }
+      .sheet { width: 210mm; min-height: 297mm; margin: 16px auto; background: #fff; padding: 12mm; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+      .letterhead { display: flex; justify-content: space-between; border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 12px; }
+      .brand { font-size: 20px; font-weight: 900; }
+      .muted { color: #64748b; font-size: 10px; }
+      .doc-title { text-align: right; }
+      .doc-title .tag { display: inline-block; background: #2563eb; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 4px; }
+      .doc-title h1 { margin: 4px 0 0; font-size: 16px; font-family: monospace; }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+      .box { border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; }
+      .label { font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 2px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+      th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; font-size: 11px; }
+      th { background: #f8fafc; }
+      .num { text-align: right; font-family: monospace; }
+      .footer { margin-top: 14px; border-top: 1px dashed #94a3b8; padding-top: 6px; font-size: 9px; color: #64748b; }
+      @media print { .toolbar { display: none !important; } .sheet { margin: 0; box-shadow: none; } }
+    `;
+    const html = `
+      <div class="letterhead">
+        <div>
+          <div class="brand">Ateka Logistics</div>
+          <div class="muted">Credit Note</div>
+        </div>
+        <div class="doc-title">
+          <span class="tag">CN</span>
+          <h1>${escapeHtml(r.creditNoteNo)}</h1>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="box"><div class="label">Credit Note Date</div>${escapeHtml(r.creditNoteDate)}</div>
+        <div class="box"><div class="label">Location</div>${escapeHtml(r.creditNoteLocation)}</div>
+        <div class="box"><div class="label">Against Bill</div>${escapeHtml(r.billNo || "-")}</div>
+        <div class="box"><div class="label">MR No</div>${escapeHtml(r.mrNo || "-")}</div>
+      </div>
+      <table>
+        <thead><tr><th>Particular</th><th class="num">Amount</th></tr></thead>
+        <tbody>
+          <tr><td>Credit Note Amount</td><td class="num"><strong>${inr(r.amount)}</strong></td></tr>
+        </tbody>
+      </table>
+      <div class="footer">Durable Credit Note · ${escapeHtml(r.creditNoteNo)}</div>
+    `;
+    printDocumentSheet(`Credit Note ${r.creditNoteNo}`, css, html, true);
+    toast.success(`Opened print for ${r.creditNoteNo}`);
   };
 
   return (

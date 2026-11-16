@@ -98,7 +98,7 @@ export default function ReassignNextLocationPage() {
         return;
       }
       setDetail(data.data as CnDetail);
-      toast.success(data.message || "Location reassigned (demo)");
+      toast.success(data.message || "Location reassigned");
     } catch {
       toast.error("Submit failed");
     } finally {

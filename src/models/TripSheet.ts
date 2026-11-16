@@ -33,9 +33,20 @@ export interface ITripSheet extends Document {
   advanceAmt: number;
   balanceAmt: number;
   startKm: number;
+  endKm?: number;
   specialInstructions?: string;
   dockets: ITripSheetDocket[];
   status: "PREPARED" | "IN_TRANSIT" | "COMPLETED" | "CANCELLED";
+  /** Exceptional / PDC finance extensions */
+  sheetKind?: "THC" | "PICKUP_PDC" | "DELIVERY_PDC" | "TRIP";
+  manualPdcNo?: string;
+  advancePayableBranch?: string;
+  route?: string;
+  cancelReason?: string;
+  exceptionalRemark?: string;
+  pdcAmount?: number;
+  vendorBillFinalized?: boolean;
+  vendorBillNo?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,13 +88,28 @@ const TripSheetSchema = new Schema<ITripSheet>(
     advanceAmt: { type: Number, default: 0 },
     balanceAmt: { type: Number, default: 0 },
     startKm: { type: Number, default: 0 },
+    endKm: { type: Number, default: 0 },
     specialInstructions: { type: String },
     dockets: { type: [TripSheetDocketSchema], default: [] },
     status: {
       type: String,
       enum: ["PREPARED", "IN_TRANSIT", "COMPLETED", "CANCELLED"],
       default: "PREPARED"
-    }
+    },
+    sheetKind: {
+      type: String,
+      enum: ["THC", "PICKUP_PDC", "DELIVERY_PDC", "TRIP"],
+      default: "TRIP",
+      index: true
+    },
+    manualPdcNo: { type: String, uppercase: true },
+    advancePayableBranch: { type: String, uppercase: true },
+    route: { type: String },
+    cancelReason: { type: String },
+    exceptionalRemark: { type: String },
+    pdcAmount: { type: Number, default: 0 },
+    vendorBillFinalized: { type: Boolean, default: false },
+    vendorBillNo: { type: String, uppercase: true }
   },
   { timestamps: true }
 );

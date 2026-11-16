@@ -113,7 +113,7 @@ export default function OnAccountChequeDepositPage() {
         toast.error(data.error || "Deposit failed");
         return;
       }
-      toast.success(data.message || "Deposited (demo)");
+      toast.success(data.message || "Deposited");
       setRows((prev) => prev.filter((r) => !chequeNos.includes(r.chequeNo)));
       setSelected({});
     } catch {
@@ -363,7 +363,7 @@ export default function OnAccountChequeDepositPage() {
               </table>
             </div>
           </div>
-          <p className="text-[10px] text-slate-500">Deposit is demo-only — no bank posting.</p>
+          <p className="text-[10px] text-slate-500">Deposit posts to replica cheque register.</p>
         </div>
       )}
     </div>

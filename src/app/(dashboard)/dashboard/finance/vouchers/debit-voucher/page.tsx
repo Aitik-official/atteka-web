@@ -204,12 +204,17 @@ export default function DebitVoucherPage() {
   );
   const [form, setForm] = useState(emptyForm);
   const [formMode, setFormMode] = useState<"new" | "edit" | "copy">("new");
+  const [accounts, setAccounts] = useState<{ code: string; name: string; group: string }[]>([]);
+  const [accountBrowseOpen, setAccountBrowseOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/finance/debit-voucher?lists=1")
       .then((r) => r.json())
       .then((d) => {
-        if (d.success) setLists(d.data);
+        if (d.success) {
+          setLists(d.data);
+          if (Array.isArray(d.data?.accounts)) setAccounts(d.data.accounts);
+        }
       })
       .catch(() => {});
   }, []);
@@ -355,11 +360,25 @@ export default function DebitVoucherPage() {
     toast.info(`Copied ${r.voucherNumber} — new voucher draft`);
   };
 
-  const cancelRow = (r: VoucherRow) => {
-    setRows((prev) =>
-      prev.map((x) => (x.voucherNumber === r.voucherNumber ? { ...x, status: "Cancelled" } : x))
-    );
-    toast.success(`${r.voucherNumber} cancelled (demo)`);
+  const cancelRow = async (r: VoucherRow) => {
+    try {
+      const res = await fetch("/api/finance/debit-voucher", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", voucherNumber: r.voucherNumber })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Cancel failed");
+        return;
+      }
+      setRows((prev) =>
+        prev.map((x) => (x.voucherNumber === r.voucherNumber ? { ...x, status: "Cancelled" } : x))
+      );
+      toast.success(data.message || `${r.voucherNumber} cancelled`);
+    } catch {
+      toast.error("Cancel failed");
+    }
   };
 
   const submitVoucher = async () => {
@@ -387,7 +406,7 @@ export default function DebitVoucherPage() {
         toast.error(data.error || "Failed to save voucher");
         return;
       }
-      toast.success(`Debit voucher ${data.data?.voucherNumber} saved (demo)`);
+      toast.success(`Debit voucher ${data.data?.voucherNumber} saved`);
       setRows((prev) => [
         {
           srNo: 1,
@@ -985,7 +1004,7 @@ export default function DebitVoucherPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => toast.info("Account browse (demo)")}
+                    onClick={() => setAccountBrowseOpen(true)}
                     className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-semibold shrink-0"
                   >
                     Browse
@@ -1248,6 +1267,45 @@ export default function DebitVoucherPage() {
             >
               {saving ? "Saving..." : "Submit Voucher"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {accountBrowseOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full border border-slate-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-800">Select Account</h2>
+              <button
+                type="button"
+                onClick={() => setAccountBrowseOpen(false)}
+                className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500"
+              >
+                ×
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto text-xs">
+              {accounts.length === 0 ? (
+                <p className="py-8 text-center text-slate-400">No accounts loaded</p>
+              ) : (
+                accounts.map((a) => (
+                  <button
+                    key={a.code}
+                    type="button"
+                    onClick={() => {
+                      setField("accountCode", a.code);
+                      setField("acDescription", a.name);
+                      setAccountBrowseOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-slate-50"
+                  >
+                    <span className="font-mono font-semibold text-blue-700">{a.code}</span>
+                    <span className="text-slate-700 ml-2">{a.name}</span>
+                    {a.group ? <span className="text-slate-400 ml-2">· {a.group}</span> : null}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

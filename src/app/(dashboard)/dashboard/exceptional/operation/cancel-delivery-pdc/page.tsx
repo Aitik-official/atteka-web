@@ -83,7 +83,7 @@ export default function CancelDeliveryPdcPage() {
         return;
       }
       setRow(data.data as PdcRow);
-      toast.success(`Delivery PDC ${row.documentNo} cancelled (demo)`);
+      toast.success(data.message || `Delivery PDC ${row.documentNo} cancelled`);
     } catch {
       toast.error("Cancel failed");
     } finally {
@@ -111,7 +111,7 @@ export default function CancelDeliveryPdcPage() {
             </button>
           </div>
           <WcvDemoHint
-            label="Demo PDC Nos"
+            label="Sample PDC Nos"
             values={["DSALC12600573", "DSALC12600532", "PSALC12600410"]}
           />
         </WcvFormCard>

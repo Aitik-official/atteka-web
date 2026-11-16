@@ -100,31 +100,17 @@ export async function GET(req: NextRequest) {
     let rows = docs.map(mapDoc);
 
     if (!rows.length) {
-      let demo = DEMO_ROWS;
-      if (cnNo) demo = DEMO_ROWS.filter((r) => r.cnNo.includes(cnNo));
-      else if (from || to) {
-        demo = DEMO_ROWS.filter((r) => {
-          if (from && r.bookingDate < from) return false;
-          if (to && r.bookingDate > to) return false;
-          return true;
-        });
-        if (!demo.length) demo = DEMO_ROWS;
-      }
-      return NextResponse.json({ success: true, data: demo, total: demo.length, source: "demo" });
+      const { ensureExceptionalSeedData } = await import("@/lib/exceptionalOpsEngine");
+      await ensureExceptionalSeedData();
+      const seeded = await Consignment.find(query).sort({ bookingDate: -1 }).limit(300);
+      rows = seeded.map(mapDoc);
     }
 
     return NextResponse.json({ success: true, data: rows, total: rows.length, source: "db" });
-  } catch {
-    let demo = DEMO_ROWS;
-    if (cnNo) demo = DEMO_ROWS.filter((r) => r.cnNo.includes(cnNo));
-    else if (from || to) {
-      demo = DEMO_ROWS.filter((r) => {
-        if (from && r.bookingDate < from) return false;
-        if (to && r.bookingDate > to) return false;
-        return true;
-      });
-      if (!demo.length) demo = DEMO_ROWS;
-    }
-    return NextResponse.json({ success: true, data: demo, total: demo.length, source: "demo" });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || "Failed to load CNs", data: [], total: 0, source: "db" },
+      { status: 500 }
+    );
   }
 }

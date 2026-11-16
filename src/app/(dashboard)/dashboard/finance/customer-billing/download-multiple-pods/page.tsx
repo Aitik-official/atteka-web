@@ -6,8 +6,10 @@ import {
   Calendar,
   ChevronDown,
   Download,
+  ExternalLink,
   LayoutGrid,
-  Table2
+  Table2,
+  X
 } from "lucide-react";
 import { toast } from "@/lib/toastBus";
 
@@ -27,6 +29,24 @@ type Row = {
   consignor: string;
   pkgsNo: number;
   weight: number;
+  podUrl?: string;
+};
+
+type CnDetail = {
+  docketNo: string;
+  bookingDate?: string;
+  fromLocation?: string;
+  toLocation?: string;
+  vehicleNo?: string;
+  status?: string;
+  statusLabel?: string;
+  billingParty?: string;
+  consignorName?: string;
+  consigneeName?: string;
+  billNo?: string;
+  billAmount?: number;
+  podUrl?: string;
+  ewayBillNo?: string;
 };
 
 function toInputDate(d: Date) {
@@ -56,6 +76,9 @@ export default function DownloadMultiplePodsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detail, setDetail] = useState<CnDetail | null>(null);
 
   useEffect(() => {
     fetch("/api/finance/download-multiple-pods?parties=1")
@@ -113,6 +136,59 @@ export default function DownloadMultiplePodsPage() {
 
   const selectedCount = useMemo(() => selected.size, [selected]);
 
+  const openDocketDetail = async (r: Row) => {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetail(null);
+    try {
+      const res = await fetch(`/api/tracking/cn?docketNo=${encodeURIComponent(r.docketNo)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to load CN detail");
+        setDetailOpen(false);
+        return;
+      }
+      const row = (data.data || data.rows || [])[0] || null;
+      if (!row) {
+        // Fall back to list row fields when tracking returns empty
+        setDetail({
+          docketNo: r.docketNo,
+          bookingDate: r.docketDate,
+          fromLocation: r.fromLocation,
+          toLocation: r.toLocation,
+          vehicleNo: r.vehNo,
+          billingParty: r.customer,
+          consignorName: r.consignor,
+          consigneeName: r.consignee,
+          podUrl: r.podUrl || "",
+          statusLabel: "Loaded from POD list"
+        });
+        return;
+      }
+      setDetail({
+        docketNo: row.docketNo || r.docketNo,
+        bookingDate: row.bookingDate || r.docketDate,
+        fromLocation: row.fromLocation || r.fromLocation,
+        toLocation: row.toLocation || r.toLocation,
+        vehicleNo: row.vehicleNo || r.vehNo,
+        status: row.status,
+        statusLabel: row.statusLabel || row.status,
+        billingParty: row.billingParty || r.customer,
+        consignorName: row.consignorName || r.consignor,
+        consigneeName: row.consigneeName || r.consignee,
+        billNo: row.billNo || "",
+        billAmount: Number(row.billAmount || 0),
+        podUrl: row.podUrl || r.podUrl || "",
+        ewayBillNo: row.ewayBillNo || ""
+      });
+    } catch {
+      toast.error("Failed to load CN detail");
+      setDetailOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   const downloadPods = async () => {
     if (!selected.size) {
       toast.error("Select at least one docket");
@@ -125,12 +201,29 @@ export default function DownloadMultiplePodsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: Array.from(selected) })
       });
-      const data = await res.json();
+      const contentType = res.headers.get("Content-Type") || "";
       if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
         toast.error(data.error || "Download failed");
         return;
       }
-      toast.success(data.message || "POD download started (demo)");
+      if (!contentType.includes("application/zip")) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "ZIP not returned");
+        return;
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const match = disposition.match(/filename="?([^"]+)"?/i);
+      const fileName = match?.[1] || `POD_BUNDLE_${Date.now().toString().slice(-8)}.zip`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      const count = res.headers.get("X-POD-Count") || String(selected.size);
+      toast.success(`POD zip downloaded (${count} docket(s))`);
     } catch {
       toast.error("Download failed");
     } finally {
@@ -294,7 +387,8 @@ export default function DownloadMultiplePodsPage() {
                         <button
                           type="button"
                           className="text-[#0171d3] font-semibold hover:underline"
-                          onClick={() => toast.success(`Docket ${r.docketNo} (demo)`)}
+                          onClick={() => void openDocketDetail(r)}
+                          title="Open CN detail"
                         >
                           {r.docketNo}
                         </button>
@@ -319,6 +413,75 @@ export default function DownloadMultiplePodsPage() {
           <div className="px-4 py-2 border-t border-slate-100 text-xs text-slate-500 inline-flex items-center gap-2">
             <LayoutGrid className="w-3.5 h-3.5" />
             {rows.length} docket(s) · {selectedCount} selected
+          </div>
+        </div>
+      )}
+
+      {detailOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-md shadow-xl max-w-lg w-full border border-slate-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-800">
+                CN Detail {detail?.docketNo ? `· ${detail.docketNo}` : ""}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setDetailOpen(false)}
+                className="w-8 h-8 rounded-lg hover:bg-slate-100 inline-flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 text-xs space-y-2">
+              {detailLoading && <p className="text-slate-500">Loading…</p>}
+              {!detailLoading && detail && (
+                <>
+                  {[
+                    ["Docket No", detail.docketNo],
+                    ["Status", detail.statusLabel || detail.status || "-"],
+                    ["From", detail.fromLocation || "-"],
+                    ["To", detail.toLocation || "-"],
+                    ["Vehicle", detail.vehicleNo || "-"],
+                    ["Billing Party", detail.billingParty || "-"],
+                    ["Consignor", detail.consignorName || "-"],
+                    ["Consignee", detail.consigneeName || "-"],
+                    ["Bill No", detail.billNo || "-"],
+                    [
+                      "Bill Amount",
+                      detail.billAmount
+                        ? `₹${Number(detail.billAmount).toLocaleString("en-IN")}`
+                        : "-"
+                    ],
+                    ["E-Way Bill", detail.ewayBillNo || "-"]
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="flex gap-3 border-b border-slate-100 py-1.5">
+                      <span className="w-28 shrink-0 font-semibold text-slate-600">{label}</span>
+                      <span className="text-slate-800 break-all">{value}</span>
+                    </div>
+                  ))}
+                  <div className="pt-3 flex flex-wrap gap-2">
+                    {detail.podUrl ? (
+                      <a
+                        href={detail.podUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="h-8 px-3 rounded-full border border-[#7eb6e8] text-[#0171d3] text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-[#e8f1fb]"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" /> Open POD
+                      </a>
+                    ) : (
+                      <span className="text-slate-500">No POD file attached on this CN</span>
+                    )}
+                    <a
+                      href={`/dashboard/tracking/documents/cn-tracking?docketNo=${encodeURIComponent(detail.docketNo)}`}
+                      className="h-8 px-3 rounded-full border border-slate-200 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-slate-50"
+                    >
+                      Open in CN Tracking
+                    </a>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

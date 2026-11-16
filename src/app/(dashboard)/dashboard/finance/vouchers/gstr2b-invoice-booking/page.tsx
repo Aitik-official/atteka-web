@@ -74,7 +74,7 @@ export default function Gstr2bInvoiceBookingPage() {
         toast.error(data.error || "Booking failed");
         return;
       }
-      toast.success(data.message || "Booked (demo)");
+      toast.success(data.message || "Booked");
       setRows((prev) => prev.filter((r) => !ids.includes(r.id)));
       setSelected({});
     } catch {
@@ -89,7 +89,7 @@ export default function Gstr2bInvoiceBookingPage() {
       <div>
         <h1 className="text-lg font-bold text-[#0171d3]">GSTR2B Invoice Booking</h1>
         <p className="text-[11px] text-slate-500 mt-0.5">
-          Partial layout from available screen — demo invoices only; live GSTR2B sync not wired.
+          Replica booking store — live GSTR2B portal sync not connected.
         </p>
       </div>
 

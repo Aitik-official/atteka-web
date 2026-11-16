@@ -54,6 +54,9 @@ interface ChargeRow {
   codDodCharges: number;
   xtraWtCharges: number;
   serviceCharges: number;
+  /** Editable tax columns on the bill grid */
+  igst: number;
+  cgstSgst: number;
   /** Values keyed by custom column id */
   customCharges: Record<string, number>;
 }
@@ -82,6 +85,8 @@ const emptyCharges = (base: Partial<ChargeRow> = {}): ChargeRow => ({
   codDodCharges: 0,
   xtraWtCharges: 0,
   serviceCharges: 0,
+  igst: 0,
+  cgstSgst: 0,
   ...base,
   customCharges: { ...(base.customCharges || {}) }
 });
@@ -101,6 +106,39 @@ function daysAgoInput(days: number) {
   const d = new Date();
   d.setDate(d.getDate() - days);
   return d.toISOString().slice(0, 10);
+}
+
+const EXTRAS_STORAGE_KEY = "atteka_transport_bill_extras";
+
+type PersistedBillExtras = {
+  customColumns: CustomChargeColumn[];
+  /** Per-docket custom charge amounts so back/forward keeps edits */
+  chargeExtras: Record<string, Record<string, number>>;
+};
+
+function loadPersistedExtras(): PersistedBillExtras {
+  if (typeof window === "undefined") return { customColumns: [], chargeExtras: {} };
+  try {
+    const raw = sessionStorage.getItem(EXTRAS_STORAGE_KEY);
+    if (!raw) return { customColumns: [], chargeExtras: {} };
+    const parsed = JSON.parse(raw) as PersistedBillExtras;
+    return {
+      customColumns: Array.isArray(parsed?.customColumns) ? parsed.customColumns : [],
+      chargeExtras:
+        parsed?.chargeExtras && typeof parsed.chargeExtras === "object" ? parsed.chargeExtras : {}
+    };
+  } catch {
+    return { customColumns: [], chargeExtras: {} };
+  }
+}
+
+function savePersistedExtras(next: PersistedBillExtras) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(EXTRAS_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // ignore quota / private mode
+  }
 }
 
 export default function TransportBillPage() {
@@ -140,8 +178,14 @@ export default function TransportBillPage() {
   const [partyAddress, setPartyAddress] = useState("");
   const [remark, setRemark] = useState("");
   const [chargeRows, setChargeRows] = useState<ChargeRow[]>([]);
-  const [customColumns, setCustomColumns] = useState<CustomChargeColumn[]>([]);
+  const [customColumns, setCustomColumns] = useState<CustomChargeColumn[]>(() =>
+    loadPersistedExtras().customColumns
+  );
+  const [chargeExtras, setChargeExtras] = useState<Record<string, Record<string, number>>>(() =>
+    loadPersistedExtras().chargeExtras
+  );
   const [showCustomColModal, setShowCustomColModal] = useState(false);
+  const [showExpDetailsModal, setShowExpDetailsModal] = useState(false);
   const [draftCustomCols, setDraftCustomCols] = useState<CustomChargeColumn[]>([]);
   const [particularInput, setParticularInput] = useState("Extra Charges");
   const [amountInput, setAmountInput] = useState(0);
@@ -355,31 +399,73 @@ export default function TransportBillPage() {
     setFeedback(null);
     setGeneratedBillNo(null);
 
+    const prevByDocket = new Map(chargeRows.map((r) => [r.docketNo, r]));
+    const persisted = loadPersistedExtras();
+    const cols = customColumns.length ? customColumns : persisted.customColumns;
+    if (!customColumns.length && cols.length) setCustomColumns(cols);
+
     const rows = selectedDockets.map((docketNo) => {
       const c = filteredDockets.find((x) => x.docketNo === docketNo) || allConsignments.find((x) => x.docketNo === docketNo);
-      const freight = Number(c?.financials?.freightAmount) || 0;
-      const loading = Number(c?.financials?.loadingCharge) || 0;
-      const pkgs = Number(c?.packageDetails?.packagesCount) || 0;
-      const wt = Number(c?.packageDetails?.chargedWeight) || 0;
+      const prev = prevByDocket.get(docketNo);
+      const freight = prev ? Number(prev.freight) : Number(c?.financials?.freightAmount) || 0;
+      const loading = prev ? Number(prev.loadingCharges) : Number(c?.financials?.loadingCharge) || 0;
+      const pkgs = prev ? Number(prev.totalPkgs) : Number(c?.packageDetails?.packagesCount) || 0;
+      const wt = prev ? Number(prev.totalWt) : Number(c?.packageDetails?.chargedWeight) || 0;
+      const savedExtras =
+        prev?.customCharges ||
+        chargeExtras[docketNo] ||
+        persisted.chargeExtras[docketNo] ||
+        {};
       const customCharges: Record<string, number> = {};
-      for (const col of customColumns) {
-        customCharges[col.id] = Number(col.defaultAmount) || 0;
+      let customSum = 0;
+      for (const col of cols) {
+        const amt =
+          savedExtras[col.id] !== undefined
+            ? Number(savedExtras[col.id]) || 0
+            : Number(col.defaultAmount) || 0;
+        customCharges[col.id] = amt;
+        customSum += amt;
       }
-      return emptyCharges({
+      const base = prev
+        ? { ...prev, customCharges }
+        : emptyCharges({
+            docketNo,
+            bookingDate: formatDisplayDate(c?.bookingDate),
+            from: c?.fromLocation || "",
+            to: c?.toLocation || "",
+            vehicleNo: c?.vehicleNo || "",
+            rateType: "Fixed",
+            invoiceValue: 0,
+            totalPkgs: pkgs,
+            totalWt: wt,
+            rate: wt > 0 ? Math.round(freight / wt) : freight,
+            freight,
+            loadingCharges: loading,
+            customCharges
+          });
+      const taxable =
+        Number(base.freight || 0) +
+        Number(base.loadingCharges || 0) +
+        Number(base.unloadingCharges || 0) +
+        Number(base.detentionCharges || 0) +
+        Number(base.otherCharges || 0) +
+        Number(base.statisticalCharges || 0) +
+        Number(base.collectionCharges || 0) +
+        Number(base.deliveryCharges || 0) +
+        Number(base.escortCharges || 0) +
+        Number(base.diplomatCharges || 0) +
+        Number(base.codDodCharges || 0) +
+        Number(base.xtraWtCharges || 0) +
+        Number(base.serviceCharges || 0) +
+        customSum;
+      const rowTax = Math.round((taxable * Number(gstPercent || 0)) / 100);
+      return {
+        ...base,
         docketNo,
-        bookingDate: formatDisplayDate(c?.bookingDate),
-        from: c?.fromLocation || "",
-        to: c?.toLocation || "",
-        vehicleNo: c?.vehicleNo || "",
-        rateType: "Fixed",
-        invoiceValue: 0,
-        totalPkgs: pkgs,
-        totalWt: wt,
-        rate: wt > 0 ? Math.round(freight / wt) : freight,
-        freight,
-        loadingCharges: loading,
-        customCharges
-      });
+        customCharges,
+        igst: prev?.igst !== undefined ? Number(prev.igst) || 0 : 0,
+        cgstSgst: prev?.cgstSgst !== undefined ? Number(prev.cgstSgst) || 0 : rowTax
+      };
     });
 
     setChargeRows(rows);
@@ -392,10 +478,41 @@ export default function TransportBillPage() {
     setStep(3);
   };
 
+  const computeRowTaxable = (row: ChargeRow) => {
+    const fixed =
+      Number(row.freight || 0) +
+      Number(row.statisticalCharges || 0) +
+      Number(row.detentionCharges || 0) +
+      Number(row.collectionCharges || 0) +
+      Number(row.deliveryCharges || 0) +
+      Number(row.otherCharges || 0) +
+      Number(row.loadingCharges || 0) +
+      Number(row.unloadingCharges || 0) +
+      Number(row.escortCharges || 0) +
+      Number(row.diplomatCharges || 0) +
+      Number(row.codDodCharges || 0) +
+      Number(row.xtraWtCharges || 0) +
+      Number(row.serviceCharges || 0);
+    const customSum = Object.values(row.customCharges || {}).reduce((acc, v) => acc + (Number(v) || 0), 0);
+    return fixed + customSum;
+  };
+
+  const applyDefaultTax = (row: ChargeRow): ChargeRow => {
+    const rowTax = Math.round((computeRowTaxable(row) * Number(gstPercent || 0)) / 100);
+    // Keep editable tax as CGST/SGST by default (IGST 0)
+    return { ...row, igst: 0, cgstSgst: rowTax };
+  };
+
   const updateCharge = (index: number, field: keyof ChargeRow, value: string | number) => {
     setChargeRows((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [field]: value };
+      const updated = { ...next[index], [field]: value };
+      // Recalc default tax when charge fields change; keep manual tax edits when editing tax itself
+      if (field === "igst" || field === "cgstSgst") {
+        next[index] = updated;
+      } else {
+        next[index] = applyDefaultTax(updated);
+      }
       return next;
     });
   };
@@ -404,10 +521,17 @@ export default function TransportBillPage() {
     setChargeRows((prev) => {
       const next = [...prev];
       const row = next[rowIndex];
-      next[rowIndex] = {
+      const updated = applyDefaultTax({
         ...row,
         customCharges: { ...(row.customCharges || {}), [columnId]: value }
+      });
+      next[rowIndex] = updated;
+      const nextExtras = {
+        ...chargeExtras,
+        [updated.docketNo]: { ...(updated.customCharges || {}) }
       };
+      setChargeExtras(nextExtras);
+      savePersistedExtras({ customColumns, chargeExtras: nextExtras });
       return next;
     });
   };
@@ -417,6 +541,163 @@ export default function TransportBillPage() {
     setParticularInput("Extra Charges");
     setAmountInput(0);
     setShowCustomColModal(true);
+  };
+
+  const openExpDetailsModal = () => {
+    setShowExpDetailsModal(true);
+  };
+
+  const expenseDetailRows = useMemo(() => {
+    return chargeRows.map((row) => {
+      const c =
+        allConsignments.find((x) => x.docketNo === row.docketNo) ||
+        filteredDockets.find((x) => x.docketNo === row.docketNo);
+      const contractAmt = Number(row.freight) || 0;
+      const loadChg = Number(row.loadingCharges) || 0;
+      const unloadChg = Number(row.unloadingCharges) || 0;
+      const detOrigin = Number(row.detentionCharges) || 0;
+      const detDest = 0;
+      const diversionChg = 0;
+      const extraWtChg = Number(row.xtraWtCharges) || 0;
+      const incentive = 0;
+      const idleChg = 0;
+      const voucherPayment = 0;
+      const customCharges: Record<string, number> = {};
+      let customSum = 0;
+      for (const col of customColumns) {
+        const amt = Number(row.customCharges?.[col.id]) || 0;
+        customCharges[col.id] = amt;
+        customSum += amt;
+      }
+      const otherChg =
+        Number(row.otherCharges || 0) +
+        Number(row.statisticalCharges || 0) +
+        Number(row.collectionCharges || 0) +
+        Number(row.deliveryCharges || 0) +
+        Number(row.escortCharges || 0) +
+        Number(row.diplomatCharges || 0) +
+        Number(row.codDodCharges || 0) +
+        Number(row.serviceCharges || 0);
+      const totExp =
+        contractAmt +
+        loadChg +
+        unloadChg +
+        detOrigin +
+        detDest +
+        diversionChg +
+        extraWtChg +
+        incentive +
+        idleChg +
+        voucherPayment +
+        customSum +
+        otherChg;
+      return {
+        cnNumber: row.docketNo,
+        cnDate: row.bookingDate,
+        billingParty: billingParty || c?.billingParty || c?.customerName || "",
+        billNo: generatedBillNo || "",
+        thcPdcNo:
+          c?.thcNo ||
+          c?.pdcNo ||
+          c?.tripsheetNo ||
+          c?.loadingSlipNo ||
+          c?.manifestNo ||
+          "",
+        contractAmt,
+        loadChg,
+        unloadChg,
+        detOrigin,
+        detDest,
+        diversionChg,
+        extraWtChg,
+        incentive,
+        idleChg,
+        voucherPayment,
+        customCharges,
+        otherChg,
+        totExp
+      };
+    });
+  }, [chargeRows, allConsignments, filteredDockets, billingParty, generatedBillNo, customColumns]);
+
+  const expenseTotals = useMemo(() => {
+    const keys = [
+      "contractAmt",
+      "loadChg",
+      "unloadChg",
+      "detOrigin",
+      "detDest",
+      "diversionChg",
+      "extraWtChg",
+      "incentive",
+      "idleChg",
+      "voucherPayment",
+      "otherChg",
+      "totExp"
+    ] as const;
+    const totals: Record<string, number> = {
+      contractAmt: 0,
+      loadChg: 0,
+      unloadChg: 0,
+      detOrigin: 0,
+      detDest: 0,
+      diversionChg: 0,
+      extraWtChg: 0,
+      incentive: 0,
+      idleChg: 0,
+      voucherPayment: 0,
+      otherChg: 0,
+      totExp: 0
+    };
+    for (const col of customColumns) totals[`custom:${col.id}`] = 0;
+    for (const row of expenseDetailRows) {
+      for (const k of keys) totals[k] += Number(row[k]) || 0;
+      for (const col of customColumns) {
+        totals[`custom:${col.id}`] += Number(row.customCharges?.[col.id]) || 0;
+      }
+    }
+    return totals;
+  }, [expenseDetailRows, customColumns]);
+
+  const expenseColCount = 16 + customColumns.length + 1; // fixed + customs + Tot Exp
+
+  const fmtExp = (n: number) =>
+    Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const persistExtras = (
+    cols: CustomChargeColumn[],
+    rows: ChargeRow[],
+    extrasOverride?: Record<string, Record<string, number>>
+  ) => {
+    const nextExtras: Record<string, Record<string, number>> = {
+      ...(extrasOverride || chargeExtras)
+    };
+    for (const row of rows) {
+      nextExtras[row.docketNo] = { ...(row.customCharges || {}) };
+    }
+    setChargeExtras(nextExtras);
+    savePersistedExtras({ customColumns: cols, chargeExtras: nextExtras });
+  };
+
+  const applyCustomColumnsLive = (cols: CustomChargeColumn[]) => {
+    setCustomColumns(cols);
+    setDraftCustomCols(cols.map((c) => ({ ...c })));
+    setChargeRows((prev) => {
+      const nextRows = prev.map((row) => {
+        const nextCustom: Record<string, number> = {};
+        for (const col of cols) {
+          nextCustom[col.id] =
+            row.customCharges?.[col.id] !== undefined
+              ? Number(row.customCharges[col.id]) || 0
+              : chargeExtras[row.docketNo]?.[col.id] !== undefined
+                ? Number(chargeExtras[row.docketNo][col.id]) || 0
+                : Number(col.defaultAmount) || 0;
+        }
+        return applyDefaultTax({ ...row, customCharges: nextCustom });
+      });
+      persistExtras(cols, nextRows);
+      return nextRows;
+    });
   };
 
   const addDraftCustomColumn = () => {
@@ -429,38 +710,32 @@ export default function TransportBillPage() {
       setFeedback({ type: "error", message: `Column "${name}" already exists in the list.` });
       return;
     }
-    setDraftCustomCols((prev) => [
-      ...prev,
-      {
-        id: `cc-${Date.now()}-${prev.length}`,
-        particular: name,
-        defaultAmount: Number(amountInput) || 0
-      }
-    ]);
+    const newCol: CustomChargeColumn = {
+      id: `cc-${Date.now()}-${draftCustomCols.length}`,
+      particular: name,
+      defaultAmount: Number(amountInput) || 0
+    };
+    const nextCols = [...draftCustomCols, newCol];
+    // Save immediately on ADD so going back / closing does not lose extras
+    applyCustomColumnsLive(nextCols);
     setParticularInput("");
     setAmountInput(0);
-    setFeedback(null);
+    setFeedback({
+      type: "success",
+      message: `Extra charge "${name}" saved.`
+    });
+    toast.success(`Extra charge "${name}" saved.`);
   };
 
   const removeDraftCustomColumn = (id: string) => {
-    setDraftCustomCols((prev) => prev.filter((c) => c.id !== id));
+    const nextCols = draftCustomCols.filter((c) => c.id !== id);
+    applyCustomColumnsLive(nextCols);
   };
 
   const saveCustomColumns = () => {
-    setCustomColumns(draftCustomCols);
-    setChargeRows((prev) =>
-      prev.map((row) => {
-        const nextCustom: Record<string, number> = {};
-        for (const col of draftCustomCols) {
-          nextCustom[col.id] =
-            row.customCharges?.[col.id] !== undefined
-              ? Number(row.customCharges[col.id]) || 0
-              : Number(col.defaultAmount) || 0;
-        }
-        return { ...row, customCharges: nextCustom };
-      })
-    );
+    applyCustomColumnsLive(draftCustomCols);
     setShowCustomColModal(false);
+    setShowExpDetailsModal(true);
     setFeedback({
       type: "success",
       message:
@@ -490,15 +765,12 @@ export default function TransportBillPage() {
   };
 
   const subTotal = chargeRows.reduce((acc, r) => acc + rowTotal(r), 0);
-  const isInterState = useMemo(() => {
-    // Simple heuristic: if destination city/state differs from MH defaults treat as IGST
-    const dest = (city || "").toUpperCase();
-    return dest && !["MUMBAI", "PUNE", "NASHIK", "NAGPUR", "THANE", "MAHARASHTRA"].some((s) => dest.includes(s));
-  }, [city]);
-  const taxAmount = Math.round((subTotal * Number(gstPercent || 0)) / 100);
-  const igst = isInterState ? taxAmount : 0;
-  const cgst = isInterState ? 0 : Math.round(taxAmount / 2);
-  const sgst = isInterState ? 0 : taxAmount - cgst;
+  // Editable row tax columns roll up to bill totals
+  const igst = chargeRows.reduce((acc, r) => acc + (Number(r.igst) || 0), 0);
+  const cgstSgstTotal = chargeRows.reduce((acc, r) => acc + (Number(r.cgstSgst) || 0), 0);
+  const cgst = Math.round(cgstSgstTotal / 2);
+  const sgst = cgstSgstTotal - cgst;
+  const taxAmount = igst + cgstSgstTotal;
   const billAmount = subTotal + taxAmount;
 
   const confirmBillGeneration = async () => {
@@ -558,6 +830,13 @@ export default function TransportBillPage() {
         setFilteredDockets((prev) => prev.filter((c) => !billed.has(c.docketNo)));
         setSelectedDockets([]);
         setChargeRows([]);
+        // Keep column definitions; drop per-docket extras for billed CNs only
+        setChargeExtras((prev) => {
+          const next = { ...prev };
+          for (const dn of billed) delete next[dn];
+          savePersistedExtras({ customColumns, chargeExtras: next });
+          return next;
+        });
       } else {
         const msg = data.error || "Bill generation failed.";
         setFeedback({ type: "error", message: msg });
@@ -1105,7 +1384,17 @@ actions={
               <label className="block font-semibold text-slate-700 mb-1">GST %</label>
               <select
                 value={gstPercent}
-                onChange={(e) => setGstPercent(Number(e.target.value))}
+                onChange={(e) => {
+                  const nextPct = Number(e.target.value);
+                  setGstPercent(nextPct);
+                  setChargeRows((prev) =>
+                    prev.map((row) => {
+                      const taxable = computeRowTaxable(row);
+                      const rowTax = Math.round((taxable * nextPct) / 100);
+                      return { ...row, igst: 0, cgstSgst: rowTax };
+                    })
+                  );
+                }}
                 className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white"
               >
                 <option value={0}>0</option>
@@ -1180,7 +1469,6 @@ actions={
                 <tbody className="divide-y divide-slate-100">
                   {chargeRows.map((row, idx) => {
                     const total = rowTotal(row);
-                    const rowTax = Math.round((total * gstPercent) / 100);
                     return (
                       <tr key={row.docketNo} className="hover:bg-slate-50/60">
                         <td className="py-1.5 px-2 font-semibold">{idx + 1}</td>
@@ -1266,8 +1554,26 @@ actions={
                             />
                           </td>
                         ))}
-                        <td className="py-1.5 px-2 font-mono">{isInterState ? rowTax : 0}</td>
-                        <td className="py-1.5 px-2 font-mono">{isInterState ? 0 : rowTax}</td>
+                        <td className="py-1.5 px-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={row.igst}
+                            onChange={(e) => updateCharge(idx, "igst", Number(e.target.value) || 0)}
+                            className="w-16 h-7 px-1 border border-slate-200 rounded font-mono"
+                            title="IGST (editable)"
+                          />
+                        </td>
+                        <td className="py-1.5 px-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={row.cgstSgst}
+                            onChange={(e) => updateCharge(idx, "cgstSgst", Number(e.target.value) || 0)}
+                            className="w-20 h-7 px-1 border border-slate-200 rounded font-mono"
+                            title="CGST/SGST combined (editable)"
+                          />
+                        </td>
                         <td className="py-1.5 px-2 font-mono font-bold text-slate-900">{total.toLocaleString()}</td>
                       </tr>
                     );
@@ -1291,8 +1597,8 @@ actions={
               </div>
               <button
                 type="button"
-                onClick={openCustomColumnModal}
-                className="px-3 py-1.5 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg font-semibold"
+                onClick={openExpDetailsModal}
+                className="px-4 py-1.5 rounded-full border border-[#7eb6e8] bg-[#e8f1fb] text-[#0171d3] text-xs font-semibold hover:bg-[#d7e8f8]"
               >
                 View Exp Details / Custom Columns
               </button>
@@ -1402,6 +1708,216 @@ actions={
         </div>
       )}
 
+      {/* Expense Details popup — View Exp Details / Custom Columns */}
+      {showExpDetailsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-white rounded-md shadow-2xl w-full max-w-[96vw] border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="px-4 pt-3 pb-2 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-[15px] font-semibold text-[#0171d3]">Expense Details</h3>
+                <div className="mt-1 h-0.5 w-36 bg-[#0171d3]" />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExpDetailsModal(false);
+                    openCustomColumnModal();
+                  }}
+                  className="relative h-8 px-3 rounded-full border border-[#7eb6e8] bg-white text-[#0171d3] text-[11px] font-semibold hover:bg-[#e8f1fb]"
+                >
+                  Custom Columns
+                  {customColumns.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#0171d3] text-white text-[10px] font-bold inline-flex items-center justify-center">
+                      {customColumns.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowExpDetailsModal(false)}
+                  className="w-8 h-8 rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 inline-flex items-center justify-center"
+                  title="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="px-3 pb-4 overflow-auto flex-1">
+              <div className="overflow-x-auto border border-slate-200">
+                <table
+                  className="w-full border-collapse text-[11px]"
+                  style={{ minWidth: `${Math.max(1280, 1280 + customColumns.length * 110)}px` }}
+                >
+                  <thead>
+                    <tr className="bg-[#0171d3] text-white">
+                      {[
+                        "CN Number",
+                        "CN Date",
+                        "Billing Party",
+                        "Bill No",
+                        "THC / PDC No",
+                        "Contract Amt",
+                        "Load Chg",
+                        "Unload Chg",
+                        "Detention @ Origin",
+                        "Detention @ Destination",
+                        "Diversion Chg",
+                        "Extra Wt Chg",
+                        "Incentive",
+                        "Idle Chg",
+                        "Voucher Payment",
+                        ...customColumns.map((c) => c.particular),
+                        "Other Chg",
+                        "Tot Exp"
+                      ].map((h) => (
+                        <th
+                          key={h}
+                          className={`border border-[#015fae] px-2 py-1.5 font-semibold whitespace-nowrap text-center ${
+                            customColumns.some((c) => c.particular === h) ? "bg-[#015bb0]" : ""
+                          }`}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expenseDetailRows.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={expenseColCount}
+                          className="border border-slate-200 px-3 py-10 text-center text-slate-500"
+                        >
+                          No expense rows for selected CNs.
+                        </td>
+                      </tr>
+                    ) : (
+                      expenseDetailRows.map((r) => (
+                        <tr key={r.cnNumber} className="odd:bg-white even:bg-slate-50/80">
+                          <td className="border border-slate-200 px-2 py-1.5 text-center font-semibold whitespace-nowrap">
+                            {r.cnNumber}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-center whitespace-nowrap">
+                            {r.cnDate}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-left whitespace-nowrap">
+                            {r.billingParty}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-center whitespace-nowrap">
+                            {r.billNo}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-center whitespace-nowrap">
+                            {r.thcPdcNo}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.contractAmt)}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.loadChg)}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.unloadChg)}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.detOrigin)}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.detDest)}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.diversionChg)}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.extraWtChg)}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.incentive)}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.idleChg)}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.voucherPayment)}
+                          </td>
+                          {customColumns.map((col) => (
+                            <td
+                              key={col.id}
+                              className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap bg-blue-50/40"
+                            >
+                              {fmtExp(r.customCharges?.[col.id] || 0)}
+                            </td>
+                          ))}
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap">
+                            {fmtExp(r.otherChg)}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-1.5 text-right whitespace-nowrap font-semibold">
+                            {fmtExp(r.totExp)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                    <tr className="bg-slate-50 font-semibold">
+                      <td
+                        colSpan={5}
+                        className="border border-slate-200 px-2 py-1.5 text-left whitespace-nowrap"
+                      >
+                        Total :
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.contractAmt)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.loadChg)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.unloadChg)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.detOrigin)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.detDest)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.diversionChg)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.extraWtChg)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.incentive)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.idleChg)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.voucherPayment)}
+                      </td>
+                      {customColumns.map((col) => (
+                        <td
+                          key={col.id}
+                          className="border border-slate-200 px-2 py-1.5 text-right bg-blue-50/40"
+                        >
+                          {fmtExp(expenseTotals[`custom:${col.id}`] || 0)}
+                        </td>
+                      ))}
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.otherChg)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {fmtExp(expenseTotals.totExp)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Custom Column modal — Particular / Amount / ADD */}
       {showCustomColModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
@@ -1470,7 +1986,8 @@ actions={
                     {draftCustomCols.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="py-6 text-center text-slate-400">
-                          No custom columns yet. Enter Particular &amp; Amount, then ADD.
+                          No custom columns yet. Enter Particular &amp; Amount, then ADD (saved
+                          immediately).
                         </td>
                       </tr>
                     ) : (

@@ -161,6 +161,8 @@ export default function VendorBillFinalizationPage() {
       toast.info(
         `Batch ${data.data?.batchRef || ""} · Balance ₹${Number(data.data?.totalBalance || 0).toLocaleString("en-IN")}`
       );
+      setSelected(new Set());
+      await loadReport();
     } catch {
       toast.error("Finalization failed");
     } finally {

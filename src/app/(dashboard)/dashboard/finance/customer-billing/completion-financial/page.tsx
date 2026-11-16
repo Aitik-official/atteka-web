@@ -172,6 +172,10 @@ export default function CompletionFinancialPage() {
   };
 
   const exportExcel = () => {
+    if (!filtered.length) {
+      toast.warning("No rows to export");
+      return;
+    }
     const headers = visibleColList.map((c) => c.label).join(",");
     const lines = filtered.map((r) =>
       visibleColList.map((c) => `"${cellText(r, c.key).replace(/"/g, '""')}"`).join(",")
@@ -180,10 +184,10 @@ export default function CompletionFinancialPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `completion-financial-${fromDate}-to-${toDate}.csv`;
+    a.download = `completion-financial-${fromDate}-to-${toDate}.xls`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Excel (CSV) download started (demo)");
+    toast.success(`Excel exported (${filtered.length} row(s))`);
   };
 
   return (

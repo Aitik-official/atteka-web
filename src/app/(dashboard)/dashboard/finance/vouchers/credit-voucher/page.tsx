@@ -71,6 +71,22 @@ export default function CreditVoucherPage() {
     setTaxableAmount(value);
   };
 
+  const [accountLookupOpen, setAccountLookupOpen] = useState(false);
+  const [accountOptions, setAccountOptions] = useState<
+    { code: string; name: string; group: string }[]
+  >([]);
+
+  const openAccountLookup = async () => {
+    try {
+      const res = await fetch("/api/finance/credit-voucher?accounts=1");
+      const data = await res.json();
+      setAccountOptions(data.data?.accounts || []);
+      setAccountLookupOpen(true);
+    } catch {
+      toast.error("Failed to load accounts");
+    }
+  };
+
   const submitVoucher = async () => {
     if (!receivedFrom.trim()) {
       toast.error("Enter Received From");
@@ -78,10 +94,39 @@ export default function CreditVoucherPage() {
     }
     setSaving(true);
     try {
-      // Demo-only — no persistent ledger posting.
-      await new Promise((r) => setTimeout(r, 350));
-      const voucherNo = `CRALC1${String(Date.now()).slice(-8)}`;
-      toast.success(`Credit voucher ${voucherNo} submitted (demo)`);
+      const res = await fetch("/api/finance/credit-voucher", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          voucherDate,
+          location,
+          receivedFrom,
+          partyCode,
+          entityType,
+          gstNo,
+          panNo,
+          refNo,
+          narration,
+          acDescription,
+          accountCode,
+          amount,
+          taxableAmount,
+          tds,
+          tdsRate,
+          tdsAmount,
+          netPayable,
+          mode,
+          cashBankAccount,
+          chequeNo,
+          chequeDate
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to submit credit voucher");
+        return;
+      }
+      toast.success(data.message || `Credit voucher ${data.data?.voucherNumber} submitted`);
     } catch {
       toast.error("Failed to submit credit voucher");
     } finally {
@@ -230,7 +275,7 @@ export default function CreditVoucherPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => toast.info("Account lookup (demo)")}
+                  onClick={() => void openAccountLookup()}
                   className="h-9 w-9 rounded-md bg-[#5dade2] text-white text-[11px] font-bold shrink-0 hover:bg-[#3498db]"
                   title="Browse account"
                 >
@@ -360,6 +405,45 @@ export default function CreditVoucherPage() {
           </div>
         </div>
       </WcvFormCard>
+
+      {accountLookupOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full border border-slate-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-800">Select Account</h2>
+              <button
+                type="button"
+                onClick={() => setAccountLookupOpen(false)}
+                className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500"
+              >
+                ×
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto text-xs">
+              {accountOptions.length === 0 ? (
+                <p className="py-8 text-center text-slate-400">No accounts loaded</p>
+              ) : (
+                accountOptions.map((a) => (
+                  <button
+                    key={a.code}
+                    type="button"
+                    onClick={() => {
+                      setAccountCode(a.code);
+                      setAcDescription(a.name);
+                      setAccountLookupOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-slate-50"
+                  >
+                    <span className="font-mono font-semibold text-blue-700">{a.code}</span>
+                    <span className="text-slate-700 ml-2">{a.name}</span>
+                    {a.group ? <span className="text-slate-400 ml-2">· {a.group}</span> : null}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

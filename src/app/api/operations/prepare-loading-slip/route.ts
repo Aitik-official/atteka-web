@@ -168,8 +168,18 @@ export async function GET(req: NextRequest) {
   let rows: Row[] = [];
 
   try {
+    const { ensureOpsTripSeeds } = await import("@/lib/operationsPdcEngine");
+    await ensureOpsTripSeeds();
     await connectToDatabase();
-    const list = await TripSheet.find().sort({ createdAt: -1 }).limit(200);
+    const list = await TripSheet.find({
+      $or: [
+        { sheetKind: { $in: ["TRIP", "THC"] } },
+        { tripSheetNo: { $regex: /^(TS|THC)/i } }
+      ],
+      status: { $ne: "CANCELLED" }
+    })
+      .sort({ createdAt: -1 })
+      .limit(200);
     rows = list.flatMap(flattenTrip);
   } catch {
     const mem = Array.isArray(memoryStore.tripSheets) ? memoryStore.tripSheets : [];
@@ -184,21 +194,6 @@ export async function GET(req: NextRequest) {
       if (to && r.docketDate && r.docketDate > to) return false;
       return true;
     });
-  }
-
-  if (!rows.length) {
-    let demo = DEMO_ROWS;
-    if (docketNo) {
-      demo = DEMO_ROWS.filter((r) => r.docketNo.includes(docketNo));
-    } else if (from || to) {
-      demo = DEMO_ROWS.filter((r) => {
-        if (from && r.docketDate < from) return false;
-        if (to && r.docketDate > to) return false;
-        return true;
-      });
-      if (!demo.length) demo = DEMO_ROWS;
-    }
-    return NextResponse.json({ success: true, data: demo, total: demo.length, source: "demo" });
   }
 
   return NextResponse.json({ success: true, data: rows, total: rows.length, source: "db" });

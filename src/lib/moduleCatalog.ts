@@ -210,11 +210,42 @@ export const MODULE_SEARCH_CATALOG: ModuleSearchItem[] = [
   { id: "C686", label: "APIs", code: "C686", route: "/dashboard/admin/apis", group: "Admin" }
 ];
 
-export function searchModules(query: string, limit = 12): ModuleSearchItem[] {
+const GROUP_TO_MODULE: Record<string, string> = {
+  Operations: "operations",
+  Finance: "finance",
+  CRM: "crm",
+  Fleet: "fleet",
+  Tracking: "tracking",
+  Exceptional: "exceptional",
+  Reports: "reports",
+  Admin: "admin",
+  Profile: "operations",
+  Masters: "masters"
+};
+
+export function searchModules(
+  query: string,
+  limit = 12,
+  routeAllowed?: (route: string) => boolean,
+  moduleAllowed?: (moduleKey: string) => boolean
+): ModuleSearchItem[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
 
-  const scored = MODULE_SEARCH_CATALOG.map((item) => {
+  const catalog = MODULE_SEARCH_CATALOG.filter((item) => {
+    const moduleKey = GROUP_TO_MODULE[item.group];
+    if (moduleAllowed && moduleKey && !moduleAllowed(moduleKey)) return false;
+    // Admin-group items must require admin even if route is under /masters
+    if (moduleAllowed && item.group === "Admin" && !moduleAllowed("admin")) return false;
+    if (routeAllowed && !routeAllowed(item.route)) {
+      // Allow admin-linked masters routes when admin module is permitted
+      if (item.group === "Admin" && moduleAllowed?.("admin")) return true;
+      return false;
+    }
+    return true;
+  });
+
+  const scored = catalog.map((item) => {
     const label = item.label.toLowerCase();
     const code = (item.code || "").toLowerCase();
     const group = item.group.toLowerCase();

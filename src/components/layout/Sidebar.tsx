@@ -18,6 +18,7 @@ import {
   Search,
   X
 } from "lucide-react";
+import { useRbac } from "@/components/rbac/RbacProvider";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -27,12 +28,14 @@ interface SidebarProps {
     name: string;
     branchCode?: string;
     operatingLocation?: string;
+    role?: string;
   };
   isMobile?: boolean;
 }
 
 export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
   const pathname = usePathname();
+  const { canPath, canModule, role } = useRbac();
   // Start with all groups collapsed by default so menu isn't stuck open on refresh/login
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [filterQuery, setFilterQuery] = useState("");
@@ -66,10 +69,17 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
     }
   };
 
-  const menuModules = [
+  const menuModules: {
+    id: string;
+    name: string;
+    moduleKey: string;
+    icon: typeof Users2;
+    submodules: { label: string; route: string; code: string }[];
+  }[] = [
     {
       id: "C001",
       name: "Operations",
+      moduleKey: "operations",
       icon: Users2,
       submodules: [
         { label: "Operations Hub", route: "/dashboard/operations", code: "C001" },
@@ -82,6 +92,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
     {
       id: "C002",
       name: "Finance",
+      moduleKey: "finance",
       icon: Landmark,
       submodules: [
         { label: "Finance Hub", route: "/dashboard/finance", code: "C002" },
@@ -98,6 +109,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
     {
       id: "C003",
       name: "CRM",
+      moduleKey: "crm",
       icon: UserCheck,
       submodules: [
         { label: "CRM Hub", route: "/dashboard/crm", code: "C003" },
@@ -111,6 +123,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
     {
       id: "C158",
       name: "Fleet",
+      moduleKey: "fleet",
       icon: Truck,
       submodules: [
         { label: "Fleet Hub", route: "/dashboard/fleet", code: "C158" },
@@ -121,6 +134,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
     {
       id: "C004",
       name: "Tracking",
+      moduleKey: "tracking",
       icon: MapPin,
       submodules: [
         { label: "Tracking Hub", route: "/dashboard/tracking", code: "C004" },
@@ -131,6 +145,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
     {
       id: "C136",
       name: "Exceptional",
+      moduleKey: "exceptional",
       icon: ClipboardCheck,
       submodules: [
         { label: "Exceptional Hub", route: "/dashboard/exceptional", code: "C136" },
@@ -143,6 +158,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
     {
       id: "C006",
       name: "Reports",
+      moduleKey: "reports",
       icon: BarChart2,
       submodules: [
         { label: "Reports Hub", route: "/dashboard/reports", code: "C006" },
@@ -158,6 +174,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
     {
       id: "C007",
       name: "Admin",
+      moduleKey: "admin",
       icon: Settings,
       submodules: [
         { label: "Admin Hub", route: "/dashboard/admin", code: "C007" },
@@ -172,7 +189,22 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
   ];
 
   const q = filterQuery.trim().toLowerCase();
-  const filteredModules = menuModules
+  const roleFilteredModules = menuModules
+    .filter((mod) => canModule(mod.moduleKey))
+    .map((mod) => ({
+      ...mod,
+      // Inside an allowed module, still hide individual links the role cannot open
+      submodules: mod.submodules.filter((sub) => {
+        if (mod.moduleKey === "admin") return canModule("admin");
+        if (mod.moduleKey === "crm" && sub.route.startsWith("/dashboard/masters")) {
+          return canModule("crm") && canPath(sub.route);
+        }
+        return canPath(sub.route);
+      })
+    }))
+    .filter((mod) => mod.submodules.length > 0);
+
+  const filteredModules = roleFilteredModules
     .map((mod) => {
       const matchingSubs = mod.submodules.filter(
         (sub) =>
@@ -237,7 +269,7 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
                   {user?.name || "ANISHA OZARKAR"}
                 </p>
                 <p className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
-                  {user?.userId || "AL002"} • {user?.operatingLocation || "MUMBAI CENTRAL"}
+                  {user?.userId || "AL002"} • {role}
                 </p>
               </div>
             </div>

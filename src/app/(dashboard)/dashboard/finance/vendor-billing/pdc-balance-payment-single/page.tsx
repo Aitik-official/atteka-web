@@ -153,6 +153,10 @@ export default function PdcBalancePaymentSinglePage() {
   };
 
   const exportCsv = (kind: "csv" | "excel") => {
+    if (!filtered.length) {
+      toast.warning("No rows to export");
+      return;
+    }
     const headers = visibleColList.map((c) => c.label).join(",");
     const lines = filtered.map((r) =>
       visibleColList
@@ -163,14 +167,40 @@ export default function PdcBalancePaymentSinglePage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `pdc-balance-payment-single-${fromDate}-to-${toDate}.csv`;
+    a.download = `pdc-balance-payment-single-${fromDate}-to-${toDate}.${kind === "excel" ? "xls" : "csv"}`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`${kind === "excel" ? "Excel" : "CSV"} download started (demo)`);
+    toast.success(`${kind === "excel" ? "Excel" : "CSV"} exported (${filtered.length} row(s))`);
   };
 
-  const openPayment = (r: Row) => {
-    toast.info(`Open balance payment for ${r.pdcNumber} · Balance ₹${Number(r.balanceAmount || 0).toLocaleString("en-IN")} (demo)`);
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  const openPayment = async (r: Row) => {
+    if (payingId) return;
+    setPayingId(r.id);
+    try {
+      const res = await fetch("/api/finance/pdc-balance-payment-single", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: r.id, pdcNumber: r.pdcNumber })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Balance payment failed");
+        return;
+      }
+      toast.success(data.message || `Balance posted for ${r.pdcNumber}`);
+      if (data.data?.batchRef) {
+        toast.info(
+          `Ref ${data.data.batchRef} · ₹${Number(data.data.totalBalance || 0).toLocaleString("en-IN")}`
+        );
+      }
+      await loadReport();
+    } catch {
+      toast.error("Balance payment failed");
+    } finally {
+      setPayingId(null);
+    }
   };
 
   return (
@@ -398,8 +428,9 @@ export default function PdcBalancePaymentSinglePage() {
                     <td className="border border-slate-200 px-2 py-1.5 text-center">
                       <button
                         type="button"
-                        onClick={() => openPayment(r)}
-                        className="h-7 w-7 rounded bg-[#0171d3] text-white inline-flex items-center justify-center hover:bg-[#015fae]"
+                        disabled={payingId === r.id}
+                        onClick={() => void openPayment(r)}
+                        className="h-7 w-7 rounded bg-[#0171d3] text-white inline-flex items-center justify-center hover:bg-[#015fae] disabled:opacity-50"
                         title="Pay Balance"
                       >
                         <ArrowRight className="w-3.5 h-3.5" />

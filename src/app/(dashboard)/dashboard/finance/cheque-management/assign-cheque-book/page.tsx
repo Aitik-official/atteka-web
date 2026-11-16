@@ -48,10 +48,25 @@ export default function AssignChequeBookPage() {
     }
     setSaving(true);
     try {
-      // Demo-only — no cheque book master write.
-      await new Promise((r) => setTimeout(r, 350));
+      const res = await fetch("/api/finance/assign-cheque-book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entryLocation,
+          bankAc,
+          fromSrNo,
+          toSrNo,
+          dateOfIssue
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to assign cheque book");
+        return;
+      }
       toast.success(
-        `Cheque book issued ${fromSrNo}–${toSrNo} (${totalLeaf} leaves) at ${entryLocation} (demo)`
+        data.message ||
+          `Cheque book issued ${fromSrNo}–${toSrNo} (${totalLeaf} leaves) at ${entryLocation}`
       );
       setFromSrNo(0);
       setToSrNo(0);

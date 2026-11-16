@@ -145,12 +145,41 @@ export default function GenerateBillMrRebatePage() {
     });
   };
 
-  const continueMr = () => {
+  const [acting, setActing] = useState(false);
+
+  const continueMr = async () => {
     if (!selectedCount) {
       toast.error("Select at least one bill");
       return;
     }
-    toast.success(`${selectedCount} bill(s) selected for Bill MR with Rebate (demo)`);
+    setActing(true);
+    try {
+      const billNumbers = Object.entries(selected)
+        .filter(([, v]) => v)
+        .map(([k]) => k);
+      const res = await fetch("/api/finance/generate-bill-mr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billNumbers, withRebate: true, rebatePercent: 2 })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Bill MR with rebate failed");
+        return;
+      }
+      toast.success(data.message || `Money Receipt generated for ${billNumbers.length} bill(s)`);
+      if (data.data?.mrNumber) {
+        toast.info(
+          `MR ${data.data.mrNumber} · Rebate ₹${Number(data.data.rebateDiscount || 0).toLocaleString("en-IN")}`
+        );
+      }
+      setRows((prev) => prev.filter((r) => !billNumbers.includes(r.billNumber)));
+      setSelected({});
+    } catch {
+      toast.error("Bill MR with rebate failed");
+    } finally {
+      setActing(false);
+    }
   };
 
   return (
@@ -340,7 +369,8 @@ export default function GenerateBillMrRebatePage() {
             </div>
             <button
               type="button"
-              onClick={continueMr}
+              disabled={acting || !selectedCount}
+              onClick={() => void continueMr()}
               className="h-9 px-4 rounded-md bg-[#0171d3] text-white text-sm font-semibold hover:bg-[#015fae]"
             >
               Prepare MR

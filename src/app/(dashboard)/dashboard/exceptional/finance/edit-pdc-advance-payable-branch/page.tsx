@@ -133,7 +133,7 @@ export default function EditPdcAdvancePayableBranchPage() {
       setSelected(new Set());
       setStep("result");
       if (!(data.data || []).length) {
-        toast.info("No PDC rows for this criteria (demo)");
+        toast.info(data.hint || "No PDC rows for this criteria");
       }
     } catch {
       toast.error("Failed to load PDCs");
@@ -190,7 +190,7 @@ export default function EditPdcAdvancePayableBranchPage() {
       setRows((prev) =>
         prev.map((r) => (updatedMap.has(r.documentNo) ? { ...r, ...updatedMap.get(r.documentNo)! } : r))
       );
-      toast.success(data.message || "Updated (demo)");
+      toast.success(data.message || "Advance payable branch updated");
     } catch {
       toast.error("Update failed");
     } finally {
@@ -314,7 +314,7 @@ export default function EditPdcAdvancePayableBranchPage() {
             </div>
 
             <WcvDemoHint
-              label="Demo PDC Nos"
+              label="Sample PDC Nos"
               values={["DSALC12600573", "DSALC12600532", "PSALC12600410", "DSALC12600601"]}
             />
             <p className="text-[11px] text-slate-400 text-center">

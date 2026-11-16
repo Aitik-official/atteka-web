@@ -128,7 +128,7 @@ export default function EditBillingPartyBranchPoPage() {
         return;
       }
       setDetail(data.data as DocketDetail);
-      toast.success(`Updated ${detail.documentNo} (demo)`);
+      toast.success(data.message || `Updated ${detail.documentNo}`);
     } catch {
       toast.error("Submit failed");
     } finally {
@@ -155,7 +155,7 @@ export default function EditBillingPartyBranchPoPage() {
               {loading ? "Loading..." : "Submit"}
             </button>
           </div>
-          <WcvDemoHint label="Demo Docket Nos" values={["ALC12660616", "ALC12660615", "ALC12660617"]} />
+          <WcvDemoHint label="Sample Docket Nos" values={["ALC12660616", "ALC12660615", "ALC12660617"]} />
         </WcvFormCard>
       )}
 

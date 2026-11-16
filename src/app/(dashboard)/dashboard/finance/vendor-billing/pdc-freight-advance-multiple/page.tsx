@@ -157,8 +157,18 @@ export default function PdcFreightAdvanceMultiplePage() {
         toast.error(data.error || "Continue failed");
         return;
       }
-      toast.success(data.message || "Continued to multiple advance payment");
-      toast.info(`Batch ${data.data?.batchRef || ""} · ${data.data?.count || 0} PDC(s)`);
+      const posted = Number(data.data?.count || 0);
+      if (posted <= 0) {
+        toast.warning(
+          data.message ||
+            "No advance due on selected PDCs — already paid or balance is zero"
+        );
+      } else {
+        toast.success(data.message || "Multiple advance payment posted");
+        toast.info(`Batch ${data.data?.batchRef || ""} · ${posted} PDC(s)`);
+      }
+      setSelected(new Set());
+      await loadReport();
     } catch {
       toast.error("Continue failed");
     } finally {

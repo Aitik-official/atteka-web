@@ -84,8 +84,9 @@ export default function LoginPage() {
         return;
       }
 
+      // Hard navigation so dashboard layout re-reads the new JWT/role (soft push keeps stale RSC).
       const next = new URLSearchParams(window.location.search).get("next");
-      router.push(safeNextPath(next));
+      window.location.assign(safeNextPath(next));
     } catch {
       setError("Connection error. Please try again.");
       setLoading(false);
@@ -234,8 +235,12 @@ export default function LoginPage() {
               {loading ? "Authenticating..." : "Login"}
             </button>
 
-            <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
-              <span className="text-[11px] text-slate-400">Demo User: AL002</span>
+            <div className="flex items-start justify-between gap-2 text-xs text-slate-500 pt-2">
+              <span className="text-[10px] text-slate-400 leading-snug">
+                Demo: AL002 · ADMIN01 · MGR01 · ACC01 · GUEST01
+                <br />
+                Password: demo123
+              </span>
               <button
                 type="button"
                 onClick={() => {
@@ -243,7 +248,7 @@ export default function LoginPage() {
                   setError("");
                   setSuccessMsg("");
                 }}
-                className="text-blue-600 hover:underline"
+                className="text-blue-600 hover:underline shrink-0"
               >
                 Forgot Password?
               </button>

@@ -112,7 +112,7 @@ export default function EditManualDocumentNumberPage() {
         return;
       }
       setRow(data.data as DocRow);
-      toast.success(`Manual No saved for ${row.documentNo} (demo)`);
+      toast.success(data.message || `Manual No saved for ${row.documentNo}`);
     } catch {
       toast.error("Update failed");
     } finally {
@@ -196,7 +196,7 @@ export default function EditManualDocumentNumberPage() {
               {loading ? "Loading..." : "Submit"}
             </button>
           </div>
-          <WcvDemoHint label={`Demo ${docType} Nos`} values={demoValues} />
+          <WcvDemoHint label={`Sample ${docType} Nos`} values={demoValues} />
         </WcvFormCard>
       )}
 

@@ -176,10 +176,12 @@ export default function PdcBalancePaymentMultiplePage() {
         toast.error(data.error || "Continue failed");
         return;
       }
-      toast.success(data.message || "Continued to multiple balance payment");
+      toast.success(data.message || "Multiple balance payment posted");
       toast.info(
         `Batch ${data.data?.batchRef || ""} · Balance ₹${Number(data.data?.totalBalance || 0).toLocaleString("en-IN")}`
       );
+      setSelected(new Set());
+      await loadReport();
     } catch {
       toast.error("Continue failed");
     } finally {

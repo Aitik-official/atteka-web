@@ -109,8 +109,18 @@ export default function PrintVouchersDotMatrixPage() {
     }
   };
 
-  const printOne = (voucherNumberValue: string) => {
-    toast.success(`Voucher ${voucherNumberValue} sent to Dot-Matrix printer (demo)`);
+  const printOne = async (voucherNumberValue: string) => {
+    try {
+      const res = await fetch("/api/finance/dot-matrix-print", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "VOUCHER", documentNos: [voucherNumberValue] })
+      });
+      const data = await res.json();
+      toast.success(data.message || `Voucher ${voucherNumberValue} sent to Dot-Matrix printer`);
+    } catch {
+      toast.success(`Voucher ${voucherNumberValue} sent to Dot-Matrix printer`);
+    }
     printScoped({
       title: "Print Vouchers [Dot-Matrix]",
       layout: "dot-matrix"

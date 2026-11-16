@@ -68,6 +68,23 @@ export default function ViewVendorInvoicePaymentPage() {
   const [lookupQuery, setLookupQuery] = useState("");
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [viewDetail, setViewDetail] = useState<any | null>(null);
+
+  const openView = async (voucherNo: string) => {
+    try {
+      const res = await fetch(
+        `/api/finance/view-vendor-invoice-payment?detail=1&voucherNumber=${encodeURIComponent(voucherNo)}`
+      );
+      const data = await res.json();
+      if (!res.ok || !data.data) {
+        toast.error(data.error || "Payment not found");
+        return;
+      }
+      setViewDetail(data.data);
+    } catch {
+      toast.error("Failed to load payment");
+    }
+  };
 
   useEffect(() => {
     fetch("/api/vendors")
@@ -403,7 +420,7 @@ export default function ViewVendorInvoicePaymentPage() {
                         <td className="border border-slate-200 px-2 py-1.5">
                           <button
                             type="button"
-                            onClick={() => toast.success(`View ${r.voucherNo} (demo)`)}
+                            onClick={() => void openView(r.voucherNo)}
                             className="inline-flex items-center gap-1 text-blue-600 font-semibold"
                           >
                             <Eye className="w-3.5 h-3.5" /> View
@@ -414,6 +431,58 @@ export default function ViewVendorInvoicePaymentPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewDetail && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full border border-slate-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-800">Vendor Payment View</h2>
+              <button
+                type="button"
+                onClick={() => setViewDetail(null)}
+                className="w-8 h-8 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 text-xs space-y-2">
+              <p>
+                <span className="font-semibold">Voucher:</span>{" "}
+                <span className="font-mono text-blue-700">{viewDetail.voucherNumber}</span>
+              </p>
+              <p>
+                <span className="font-semibold">Date:</span> {viewDetail.voucherDate}
+              </p>
+              <p>
+                <span className="font-semibold">Vendor:</span> {viewDetail.payTo}
+              </p>
+              <p>
+                <span className="font-semibold">Amount:</span>{" "}
+                <span className="font-mono">{fmtAmt(Number(viewDetail.totalAccountedAmount || 0))}</span>
+              </p>
+              <p>
+                <span className="font-semibold">Mode:</span>{" "}
+                {viewDetail.modeOfTransaction || viewDetail.voucherType || "—"}
+              </p>
+              <p>
+                <span className="font-semibold">Status:</span> {viewDetail.status || "Paid"}
+              </p>
+              <p>
+                <span className="font-semibold">Narration:</span> {viewDetail.narration || "—"}
+              </p>
+            </div>
+            <div className="px-4 py-3 border-t flex justify-end">
+              <button
+                type="button"
+                onClick={() => setViewDetail(null)}
+                className="h-8 px-3 rounded-lg bg-blue-600 text-white text-xs font-semibold"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

@@ -77,9 +77,29 @@ export default function ContraEntryPage() {
     }
     setSaving(true);
     try {
-      await new Promise((r) => setTimeout(r, 350));
-      const no = voucherNo.trim() || `CNALC1${String(Date.now()).slice(-8)}`;
-      toast.success(`Contra entry ${no} submitted (demo)`);
+      const res = await fetch("/api/finance/contra-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          voucherNo: voucherNo.trim() || undefined,
+          voucherDate,
+          narration,
+          lines: lines.map((l) => ({
+            particular: l.particular,
+            debit: l.debit,
+            credit: l.credit,
+            chequeNo: l.chequeNo,
+            chequeDate: l.chequeDate
+          }))
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to submit contra entry");
+        return;
+      }
+      toast.success(data.message || `Contra entry ${data.data?.voucherNumber} submitted`);
+      if (data.data?.voucherNumber) setVoucherNo(data.data.voucherNumber);
     } catch {
       toast.error("Failed to submit contra entry");
     } finally {

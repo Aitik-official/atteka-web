@@ -228,7 +228,7 @@ export default function ViewBankStatementPage() {
     a.download = `bank-statement-${fromDate}-to-${toDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Excel (CSV) download started (demo)");
+    toast.success("Excel (CSV) download started");
   };
 
   const importStatement = async () => {
@@ -243,7 +243,14 @@ export default function ViewBankStatementPage() {
         toast.error(data.error || "Import failed");
         return;
       }
-      toast.info(data.message || "Import queued (demo)");
+      toast.success(data.message || "Import saved");
+      if (step === "report") {
+        // refresh current view
+        const params = new URLSearchParams({ from: fromDate, to: toDate });
+        const reload = await fetch(`/api/bank/statement?${params.toString()}`);
+        const reloadData = await reload.json();
+        if (reload.ok) setRows(reloadData.data || []);
+      }
     } catch {
       toast.error("Import failed");
     }
@@ -406,7 +413,7 @@ export default function ViewBankStatementPage() {
                 type="button"
                 onClick={() => {
                   printScoped();
-                  toast.info("PDF / Print dialog opened (demo)");
+                  toast.info("PDF / Print dialog opened");
                 }}
                 className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg inline-flex items-center gap-1.5"
               >

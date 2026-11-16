@@ -323,7 +323,7 @@ export default function ViewPrintCnPage() {
               type="button"
               onClick={() => {
                 exportCsv(`view-print-cn-${fromDate}-to-${toDate}.xls`);
-                toast.success("Excel download started (demo)");
+                toast.success("Excel download started");
               }}
               className={btn}
             >
