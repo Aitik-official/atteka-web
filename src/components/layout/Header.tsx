@@ -41,7 +41,7 @@ interface HeaderProps {
 
 const FY_OPTIONS = ["2024-2025", "2025-2026", "2026-2027", "2027-2028"];
 const LOCATION_OPTIONS = [
-  { code: "ALC1", label: "Atteka Logistics - ALC1" },
+  { code: "ALC1", label: "Ateka Logistics - ALC1" },
   { code: "MUM", label: "Mumbai Central - MUM" },
   { code: "PUN", label: "Pune Hub - PUN" },
   { code: "DEL", label: "Delhi Regional - DEL" },
@@ -61,7 +61,7 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
   const [darkMode, setDarkMode] = useState(false);
   const [financialYear, setFinancialYear] = useState(user.financialYear || "2026-2027");
   const [operatingLocation, setOperatingLocation] = useState(
-    user.operatingLocation || "Atteka Logistics - ALC1"
+    user.operatingLocation || "Ateka Logistics - ALC1"
   );
   const [fyModal, setFyModal] = useState(false);
   const [locModal, setLocModal] = useState(false);
@@ -244,7 +244,7 @@ export function Header({ sidebarOpen, setSidebarOpen, user }: HeaderProps) {
   };
 
   return (
-    <header className="h-14 bg-white border-b border-slate-200 sticky top-0 z-40 px-2.5 sm:px-4 md:px-5 flex items-center justify-between shadow-2xs">
+    <header className="w-full h-14 bg-white border-b border-slate-200 sticky top-0 z-40 px-2.5 sm:px-4 md:px-5 flex items-center justify-between shadow-2xs">
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}

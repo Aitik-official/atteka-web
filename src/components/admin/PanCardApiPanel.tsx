@@ -34,7 +34,7 @@ export function PanCardApiPanel({ onBack }: Props) {
       await new Promise((r) => setTimeout(r, 500));
       const mock = {
         panNumber: "AABCA1234F",
-        entityName: "ATTEKA LOGISTICS PRIVATE LIMITED",
+        entityName: "ATEKA LOGISTICS PRIVATE LIMITED",
         status: "OPERATIVE & VERIFIED",
         category: "COMPANY",
         fileName: file.name

@@ -141,7 +141,7 @@ export default function DriverMobileEPODPage() {
             <Truck className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-extrabold text-sm tracking-tight leading-none">Atteka Driver EPOD</h1>
+            <h1 className="font-extrabold text-sm tracking-tight leading-none">Ateka Driver EPOD</h1>
             <span className="text-[10px] text-emerald-400 font-mono font-medium">Vehicle MH-04-GP-1928 &bull; Online</span>
           </div>
         </div>

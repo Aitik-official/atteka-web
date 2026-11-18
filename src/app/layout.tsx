@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Atteka Logistics ERP - WebCoreVision Replica",
-  description: "Enterprise Logistics Management System - Greenfield Replica",
+  title: "Ateka Logistics ERP",
+  description: "Enterprise Logistics Management System",
 };
 
 export const viewport: Viewport = {

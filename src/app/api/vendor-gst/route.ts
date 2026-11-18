@@ -43,7 +43,7 @@ const FALLBACK_VENDOR_GST = [
   {
     _id: "vgst-019",
     partyCode: "V00019",
-    partyName: "WEBCOREVISION PRIVATE LIMITED",
+    partyName: "ATEKA LOGISTICS TECH SOLUTIONS",
     gstNo: "27AABCW1234D1Z5",
     panNo: "AABCW1234D",
     stateCode: "27",

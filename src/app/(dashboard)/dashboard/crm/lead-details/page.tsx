@@ -54,7 +54,7 @@ export default function LeadDetailsHubPage() {
             </div>
 
             <p className="text-xs text-slate-600 mb-3">
-              Direct inbox scanner for quotation requests and freight queries sent to <span className="font-mono font-semibold text-slate-800">inquiries@atteka.com</span>.
+              Direct inbox scanner for quotation requests and freight queries sent to <span className="font-mono font-semibold text-slate-800">inquiries@ateka.com</span>.
             </p>
 
             <div className="flex justify-between items-center mb-3">

@@ -138,8 +138,7 @@ export default function LoginPage() {
               unoptimized
             />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Atteka Logistics ERP</h1>
-          <p className="text-xs text-slate-500 mt-1">WebCoreVision Transport Management System</p>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Ateka Logistics ERP</h1>
         </div>
 
         {error && (
@@ -311,7 +310,7 @@ export default function LoginPage() {
 
         <div className="mt-8 pt-4 border-t border-slate-100 text-center">
           <p className="text-[11px] text-slate-400 font-medium">
-            WebCoreVision TMS &copy; {new Date().getFullYear()}
+            Ateka Logistics &copy; {new Date().getFullYear()}
           </p>
         </div>
       </div>

@@ -177,7 +177,7 @@ export default function DashboardHome() {
       <div className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[#0171d3]">
-            Atteka Logistics ERP
+            Ateka Logistics ERP
           </p>
           <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight mt-0.5">
             Home

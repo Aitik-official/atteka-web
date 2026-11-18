@@ -137,7 +137,7 @@ export function WcvRibbonHeader({
         <div>
           <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">{title}</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            {subtitle || "Atteka Logistics ERP • Enterprise Configuration Hub"}
+            {subtitle || "Ateka Logistics ERP • Enterprise Configuration Hub"}
           </p>
         </div>
       </div>

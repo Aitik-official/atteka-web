@@ -91,7 +91,7 @@ export default function PrintDocketPage() {
         <div key={copyType} className={`border-2 border-slate-800 p-4 rounded-sm ${idx > 0 ? "mt-6 pt-6 border-t-2" : ""}`}>
           <div className="flex justify-between items-start border-b border-slate-400 pb-2 mb-2">
             <div>
-              <h1 className="text-base font-bold tracking-wider">ATTEKA LOGISTICS PRIVATE LIMITED</h1>
+              <h1 className="text-base font-bold tracking-wider">ATEKA LOGISTICS PRIVATE LIMITED</h1>
               <p className="text-[10px]">FLEET & CORRIDOR TRANSPORT MANAGEMENT SYSTEM • GSTIN: 27AABCA1234F1Z5</p>
               <p className="text-[10px]">Head Office: Mumbai Central Hub, Maharashtra</p>
             </div>

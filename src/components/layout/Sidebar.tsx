@@ -401,11 +401,11 @@ export function Sidebar({ isOpen, onClose, user, isMobile }: SidebarProps) {
       <div className="p-2 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between text-[11px] text-slate-400 font-bold px-3">
         {isOpen ? (
           <>
-            <span className="text-[10px] font-semibold text-slate-500">WebCoreVision TMS</span>
-            <span className="font-mono text-emerald-600 font-bold text-xs">WCV</span>
+            <span className="text-[10px] font-semibold text-slate-500">Ateka Logistics ERP</span>
+            <span className="font-mono text-emerald-600 font-bold text-xs">AL</span>
           </>
         ) : (
-          <span className="mx-auto font-mono text-emerald-600 font-bold text-xs">WCV</span>
+          <span className="mx-auto font-mono text-emerald-600 font-bold text-xs">AL</span>
         )}
       </div>
     </aside>

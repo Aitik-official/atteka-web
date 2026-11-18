@@ -106,7 +106,7 @@ export default function BookingSummaryPage() {
           const list = (b.data || [])
             .map((x: any) => {
               const code = String(x.branchCode || x.code || "").trim().toUpperCase();
-              const name = String(x.branchName || x.name || "Atteka Logistics").trim();
+              const name = String(x.branchName || x.name || "Ateka Logistics").trim();
               if (!code) return null;
               return { code, label: `${name}-${code}` };
             })

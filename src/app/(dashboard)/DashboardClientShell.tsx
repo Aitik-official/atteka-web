@@ -111,8 +111,8 @@ export function DashboardClientShell({
     <RbacProvider role={user?.role || "OPERATOR"}>
       <ToastProvider>
         <div className="min-h-screen bg-[#f4f5f7] flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
-          {/* Top Header */}
-          <div data-print-hide>
+          {/* Top Header - Sticky */}
+          <div data-print-hide className="sticky top-0 z-40">
             <Header
               sidebarOpen={sidebarOpen}
               setSidebarOpen={handleToggleSidebar}
@@ -175,7 +175,7 @@ export function DashboardClientShell({
                 <span>Online</span>
               </div>
 
-              <div className="flex items-center gap-1 font-medium hidden xs:flex">
+              <div className="hidden xs:flex items-center gap-1 font-medium">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
                 <span>F.Y: {footerFy}</span>
               </div>
