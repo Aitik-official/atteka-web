@@ -4,6 +4,11 @@ import {
   listAdvancePayablePdcs,
   updateAdvancePayableBranch
 } from "@/lib/exceptionalOpsEngine";
+import {
+  getBillForRemarkAddress,
+  listGstOptionsForBill,
+  updateBillRemarkAddress
+} from "@/lib/billRemarkAddressEngine";
 
 export async function GET(req: NextRequest) {
   const gate = await requireApiSession(req, RBAC.anyAuth);
@@ -11,6 +16,32 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const slug = String(searchParams.get("slug") || "").trim();
+
+  // —— Change Remark & Bill Address ——
+  if (slug === "edit-bill-remark-and-bill-address") {
+    const billNo = String(searchParams.get("billNo") || searchParams.get("billNumber") || "")
+      .trim()
+      .toUpperCase();
+    if (!billNo) {
+      return NextResponse.json({ error: "Enter Bill No." }, { status: 400 });
+    }
+    try {
+      if (searchParams.get("gstOptions") === "1") {
+        const options = await listGstOptionsForBill(billNo);
+        return NextResponse.json({ success: true, count: options.length, data: options, source: "db" });
+      }
+      const bill = await getBillForRemarkAddress(billNo);
+      if (!bill) {
+        return NextResponse.json({ error: `Bill ${billNo} not found` }, { status: 404 });
+      }
+      return NextResponse.json({ success: true, data: bill, source: (bill as any).source || "db" });
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error?.message || "Failed to load bill" },
+        { status: Number(error?.status) || 500 }
+      );
+    }
+  }
 
   if (slug !== "edit-pdc-advance-payable-branch") {
     return NextResponse.json({ error: "Unknown exceptional finance module" }, { status: 404 });
@@ -92,6 +123,26 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const slug = String(body.slug || "").trim();
+
+    if (slug === "edit-bill-remark-and-bill-address") {
+      const updated = await updateBillRemarkAddress({
+        billNumber: body.billNumber || body.billNo,
+        remark: body.remark,
+        billAddress: body.billAddress ?? body.partyAddress,
+        customerGstin: body.customerGstin ?? body.gstin,
+        destinationAddress: body.destinationAddress,
+        city: body.city,
+        pinCode: body.pinCode ?? body.pincode
+      });
+      return NextResponse.json({
+        success: true,
+        message: `Bill ${updated.billNumber} remark & address updated — print will show new details`,
+        data: updated,
+        source: (updated as any).source || "db",
+        isMemoryStore: Boolean((updated as any).isMemoryStore)
+      });
+    }
+
     const documentNos: string[] = Array.isArray(body.documentNos)
       ? body.documentNos.map((n: string) => String(n).trim().toUpperCase()).filter(Boolean)
       : [];
@@ -122,8 +173,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || "Failed to update advance payable branch" },
-      { status: 500 }
+      { error: error?.message || "Failed to update" },
+      { status: Number(error?.status) || 500 }
     );
   }
 }

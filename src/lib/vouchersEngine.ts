@@ -2,6 +2,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { FinanceVoucher, FinanceVoucherKind } from "@/models/FinanceVoucher";
 import { Vendor } from "@/models/Vendor";
 import { LedgerEntry } from "@/models/LedgerEntry";
+import { businessLineConfig } from "@/lib/businessLines";
 
 function toIso(d?: Date | string | null) {
   if (!d) return "";
@@ -19,26 +20,46 @@ function toLabel(iso: string) {
 export const VOUCHER_MASTERS = {
   debitTypes: ["Cash Payment", "Bank Payment", "Journal Debit", "Petty Cash"],
   journalTypes: ["Manual Journal", "Adjustment", "Provision", "Rectification"],
-  locations: ["ALC1", "ALC2", "PUNE", "NASHIK"],
+  locations: ["ALC1", "ALC2", "ARC1", "ARC2", "PUNE", "NASHIK"],
   projects: ["General", "Fleet Ops", "Branch Capex"],
   interestAccounts: ["Interest Expense", "Bank Charges", "Other Interest"],
   tdsSections: ["194C", "194H", "194I", "194J", "194Q"],
-  cashBankAccounts: ["Cash in Hand - ALC1", "HDFC Bank - Ops", "ICICI Bank - Current"],
-  modes: ["Cash", "Cheque", "NEFT", "RTGS", "UPI"],
+  cashBankAccounts: [
+    "CASH - Cash on Hand",
+    "HDFC - HDFC Bank Operating A/c",
+    "INDUSIND - INDUSIND BANK ATEKA",
+    "DCB - DCB BANK ATEKA"
+  ],
+  modes: ["Cash", "Cheque", "NEFT", "RTGS", "UPI", "DD"],
   viewTypes: ["Journal", "Debit", "Credit", "Contra", "Bank Payment", "Vendor Invoice", "Vendor Payment"],
+  accountGroups: ["ALL", "ASSET", "EXPENSES", "INCOME", "LIABILITIES"] as const,
   accounts: [
-    { code: "CASH001", name: "Cash in Hand - ALC1", group: "Cash & Bank" },
-    { code: "BANK001", name: "HDFC Bank - Ops", group: "Cash & Bank" },
-    { code: "BANK002", name: "ICICI Bank - Current", group: "Cash & Bank" },
-    { code: "EXP100", name: "Freight Expense", group: "Expenses" },
-    { code: "EXP200", name: "Toll & Parking", group: "Expenses" },
-    { code: "EXP300", name: "Office Expense", group: "Expenses" },
-    { code: "INC100", name: "Freight Income", group: "Income" },
-    { code: "PARTY01", name: "Sundry Creditors Control", group: "Liabilities" },
-    { code: "PARTY02", name: "Sundry Debtors Control", group: "Assets" },
-    { code: "TDS001", name: "TDS Payable", group: "Liabilities" }
+    { code: "CASH", name: "Cash on Hand", group: "ASSET" },
+    { code: "HDFC", name: "HDFC Bank Operating A/c", group: "ASSET" },
+    { code: "INDUSIND", name: "INDUSIND BANK ATEKA", group: "ASSET" },
+    { code: "DCB", name: "DCB BANK ATEKA", group: "ASSET" },
+    { code: "PARTY02", name: "Sundry Debtors Control", group: "ASSET" },
+    { code: "GSTIN", name: "GST Input Tax Credit", group: "ASSET" },
+    { code: "EXP100", name: "Freight Expense", group: "EXPENSES" },
+    { code: "EXP200", name: "Toll & Parking", group: "EXPENSES" },
+    { code: "EXP300", name: "Office Expense", group: "EXPENSES" },
+    { code: "EXP400", name: "Diesel / Fuel Expense", group: "EXPENSES" },
+    { code: "EXP500", name: "Driver / Staff Expense", group: "EXPENSES" },
+    { code: "EXP600", name: "Repair & Maintenance", group: "EXPENSES" },
+    { code: "INC100", name: "Freight Income", group: "INCOME" },
+    { code: "INC200", name: "Other Income", group: "INCOME" },
+    { code: "PARTY01", name: "Sundry Creditors Control", group: "LIABILITIES" },
+    { code: "TDS001", name: "TDS Payable", group: "LIABILITIES" },
+    { code: "GSTOUT", name: "GST Output Tax Payable", group: "LIABILITIES" }
   ]
 };
+
+/** Debit voucher no: DV + ALC126/ARC126 + sequence (e.g. DVARC12603080) */
+export function nextDebitVoucherNumber(branch?: string | null) {
+  const series = businessLineConfig(branch).docketPrefix; // ALC126 | ARC126
+  const seq = Date.now().toString().slice(-5);
+  return `DV${series}${seq}`.toUpperCase();
+}
 
 async function ensureVoucherSeeds() {
   await connectToDatabase();
@@ -70,17 +91,17 @@ async function ensureVoucherSeeds() {
     const party = parties[i % parties.length];
     const prefix =
       kind === "DEBIT"
-        ? "DVALC1"
+        ? "DVALC126"
         : kind === "CREDIT"
-          ? "CRALC1"
+          ? "CRALC126"
           : kind === "JOURNAL"
-            ? "JVALC1"
+            ? "JVALC126"
             : kind === "CONTRA"
-              ? "CNALC1"
+              ? "CNALC126"
               : kind === "VENDOR_INVOICE"
-                ? "VIALC1"
-                : "VPALC1";
-    const voucherNumber = `${prefix}${String(26082000 + i)}`;
+                ? "VIALC126"
+                : "VPALC126";
+    const voucherNumber = `${prefix}${String(26082000 + i).slice(-5)}`;
     await FinanceVoucher.updateOne(
       { voucherNumber },
       {
@@ -105,7 +126,13 @@ async function ensureVoucherSeeds() {
           narration: `BEING ${kind} ENTRY FOR ${party}`,
           status: "Active",
           preparedBy: "AL002",
-          entryBy: "AL002"
+          entryBy: "AL002",
+          modeOfTransaction:
+            kind === "CREDIT" || (kind === "DEBIT" && i % 4 !== 1) ? "Cash" : "NEFT",
+          cashBankAccount:
+            kind === "CREDIT" || (kind === "DEBIT" && i % 4 !== 1)
+              ? "CASH - Cash on Hand"
+              : "HDFC - HDFC Bank Operating A/c"
         }
       },
       { upsert: true }
@@ -155,22 +182,39 @@ async function postSimpleLedger(opts: {
   branch: string;
   narration: string;
   kind: FinanceVoucherKind;
+  modeOfTransaction?: string;
+  cashBankAccount?: string;
 }) {
   const amt = Number(opts.amount || 0);
   if (amt <= 0) return;
+  // Only cash-moving voucher kinds hit Cash & Bank statement
+  if (!["DEBIT", "CREDIT", "VENDOR_PAYMENT", "CONTRA"].includes(opts.kind)) return;
+
+  const { resolveCashBankCode, cashBankAccountMeta, COA } = await import("@/lib/booksEngine");
+  const mode = String(opts.modeOfTransaction || "").toUpperCase();
+  const rawAcct = String(opts.cashBankAccount || "").trim();
+  const isCash =
+    mode === "CASH" ||
+    (/CASH|PETTY/i.test(rawAcct) && !/(HDFC|INDUSIND|DCB|INDB)/i.test(rawAcct));
+  const bankCode = isCash
+    ? COA.CASH.code
+    : resolveCashBankCode(rawAcct || (mode && mode !== "CASH" ? mode : "HDFC"));
+  const bank = cashBankAccountMeta(bankCode);
+
   const entryNumber = `JRN-${opts.voucherNumber}`;
   const date = new Date();
+  const isInflow = opts.kind === "CREDIT";
   const lines = [
     {
       entryNumber,
       entryDate: date,
       referenceType: "JOURNAL" as const,
       referenceId: opts.voucherNumber,
-      accountCode: opts.kind === "CREDIT" ? "PARTY02" : "EXP100",
-      accountName: opts.kind === "CREDIT" ? `Debtors - ${opts.party}` : `Expense - ${opts.party}`,
-      accountGroup: opts.kind === "CREDIT" ? "Assets" : "Expenses",
-      debit: opts.kind === "CREDIT" ? 0 : amt,
-      credit: opts.kind === "CREDIT" ? amt : 0,
+      accountCode: isInflow ? "DEBTORS" : "EXP100",
+      accountName: isInflow ? `Debtors - ${opts.party}` : `Expense - ${opts.party}`,
+      accountGroup: isInflow ? "Current Assets" : "Direct Expenses",
+      debit: isInflow ? 0 : amt,
+      credit: isInflow ? amt : 0,
       narration: opts.narration,
       branchCode: opts.branch || "ALC1",
       financialYear: "2026-2027"
@@ -180,11 +224,11 @@ async function postSimpleLedger(opts: {
       entryDate: date,
       referenceType: "JOURNAL" as const,
       referenceId: opts.voucherNumber,
-      accountCode: "CASH001",
-      accountName: "Cash in Hand - ALC1",
-      accountGroup: "Cash & Bank",
-      debit: opts.kind === "CREDIT" ? amt : 0,
-      credit: opts.kind === "CREDIT" ? 0 : amt,
+      accountCode: bank.code,
+      accountName: bank.name,
+      accountGroup: bank.group,
+      debit: isInflow ? amt : 0,
+      credit: isInflow ? 0 : amt,
       narration: opts.narration,
       branchCode: opts.branch || "ALC1",
       financialYear: "2026-2027"
@@ -209,18 +253,52 @@ export async function listVendorsForVouchers() {
       return rows.map((v: any) => {
         const code = String(v.vendorCode || v.code || "").trim();
         const name = String(v.name || v.vendorName || "Vendor").trim();
-        return { code, name, label: code ? `${code} - ${name}` : name };
+        return { code, name, label: code ? `${code} - ${name}` : name, entity: "Vendor" as const };
       });
     }
   } catch {
     /* fallback */
   }
   return [
-    { code: "VND0001", name: "ATLAS SPARES TRADING", label: "VND0001 - ATLAS SPARES TRADING" },
-    { code: "VND0002", name: "METRO TYRE SUPPLIES", label: "VND0002 - METRO TYRE SUPPLIES" },
-    { code: "VND0003", name: "COASTAL FUEL AGENCY", label: "VND0003 - COASTAL FUEL AGENCY" },
-    { code: "VND0004", name: "GATEWAY WORKSHOP SERVICES", label: "VND0004 - GATEWAY WORKSHOP SERVICES" }
+    { code: "VND0001", name: "ATLAS SPARES TRADING", label: "VND0001 - ATLAS SPARES TRADING", entity: "Vendor" as const },
+    { code: "VND0002", name: "METRO TYRE SUPPLIES", label: "VND0002 - METRO TYRE SUPPLIES", entity: "Vendor" as const },
+    { code: "VND0003", name: "COASTAL FUEL AGENCY", label: "VND0003 - COASTAL FUEL AGENCY", entity: "Vendor" as const },
+    { code: "VND0004", name: "GATEWAY WORKSHOP SERVICES", label: "VND0004 - GATEWAY WORKSHOP SERVICES", entity: "Vendor" as const }
   ];
+}
+
+export async function listPaidToMaster() {
+  const vendors = await listVendorsForVouchers();
+  const parties: { code: string; name: string; label: string; entity: "Vendor" | "Customer" | "Staff" }[] =
+    vendors.map((v) => ({ ...v, entity: "Vendor" as const }));
+
+  try {
+    const { Customer } = await import("@/models/Customer");
+    await connectToDatabase();
+    const customers = await Customer.find().sort({ customerCode: 1 }).limit(80).lean();
+    for (const c of customers as any[]) {
+      const code = String(c.customerCode || c.code || "").trim();
+      const name = String(c.customerName || c.name || "Customer").trim();
+      if (!name) continue;
+      parties.push({
+        code,
+        name,
+        label: code ? `${code} - ${name}` : name,
+        entity: "Customer"
+      });
+    }
+  } catch {
+    /* optional */
+  }
+
+  // Staff master (static replica list)
+  const staff = [
+    { code: "STF001", name: "ANISHA OZARKAR", label: "STF001 - ANISHA OZARKAR", entity: "Staff" as const },
+    { code: "STF002", name: "AL002 ADMINISTRATOR", label: "STF002 - AL002 ADMINISTRATOR", entity: "Staff" as const },
+    { code: "STF003", name: "VIJAY MORE", label: "STF003 - VIJAY MORE", entity: "Staff" as const }
+  ];
+  parties.push(...staff);
+  return parties;
 }
 
 export async function listVouchers(filters: {
@@ -323,26 +401,32 @@ export async function createVoucher(input: {
   preparedBy?: string;
 }) {
   await ensureVoucherSeeds();
+  const branchHint = input.branch || "ALC1";
+  const lineSeries = businessLineConfig(branchHint).docketPrefix; // ALC126 | ARC126
   const prefix =
     input.kind === "DEBIT"
-      ? "DVALC1"
+      ? `DV${lineSeries}`
       : input.kind === "CREDIT"
-        ? "CRALC1"
+        ? `CR${lineSeries}`
         : input.kind === "JOURNAL"
-          ? "JVALC1"
+          ? `JV${lineSeries}`
           : input.kind === "CONTRA"
-            ? "CNALC1"
+            ? `CN${lineSeries}`
             : input.kind === "VENDOR_INVOICE"
-              ? "VIALC1"
+              ? `VI${lineSeries}`
               : input.kind === "VENDOR_PAYMENT"
-                ? "VPALC1"
+                ? `VP${lineSeries}`
                 : input.kind === "DEBIT_NOTE"
-                  ? "DNALC1"
-                  : "G2BALC1";
+                  ? `DN${lineSeries}`
+                  : `G2B${lineSeries}`;
 
-  const voucherNumber = (
-    input.voucherNumber?.trim() || `${prefix}${Date.now().toString().slice(-8)}`
-  ).toUpperCase();
+  let voucherNumber = (input.voucherNumber?.trim() || `${prefix}${Date.now().toString().slice(-5)}`).toUpperCase();
+  // Ensure debit vouchers always carry DV before ALC/ARC series
+  if (input.kind === "DEBIT" && !voucherNumber.startsWith("DV")) {
+    voucherNumber = voucherNumber.startsWith("ALC") || voucherNumber.startsWith("ARC")
+      ? `DV${voucherNumber}`
+      : nextDebitVoucherNumber(branchHint);
+  }
 
   const amount = Number(input.netPayable ?? input.amount ?? input.taxableAmount ?? 0);
   const party = String(input.payTo || input.party || "").trim() || "GENERAL";
@@ -387,7 +471,9 @@ export async function createVoucher(input: {
     party,
     branch: doc.branch,
     narration: doc.narration || "",
-    kind: input.kind
+    kind: input.kind,
+    modeOfTransaction: doc.modeOfTransaction || input.modeOfTransaction || "",
+    cashBankAccount: doc.cashBankAccount || input.cashBankAccount || ""
   });
 
   return mapListRow(doc);

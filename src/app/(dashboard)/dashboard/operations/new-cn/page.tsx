@@ -138,6 +138,8 @@ export default function NewConsignmentPage() {
   const [docketPage, setDocketPage] = useState(1);
   const [docketPageSize, setDocketPageSize] = useState(10);
   const [docketStatusFilter, setDocketStatusFilter] = useState<"ALL" | "AVAILABLE" | "USED">("ALL");
+  /** Logistics = ALC* dockets ; Road Carrier = ARC* dockets */
+  const [docketBusinessLine, setDocketBusinessLine] = useState<"LOGISTICS" | "ROAD_CARRIER">("LOGISTICS");
 
   // Fetch Master Data (Customers, Branches, Vehicles, Docket Numbers) from Admin / Masters
   useEffect(() => {
@@ -214,11 +216,13 @@ export default function NewConsignmentPage() {
     return "AVAILABLE";
   };
 
-  const loadAvailableDockets = async () => {
+  const loadAvailableDockets = async (line: "LOGISTICS" | "ROAD_CARRIER" = docketBusinessLine) => {
     setLoadingDockets(true);
     try {
-      // Load full master pool (available + used) so used numbers stay visible
-      const res = await fetch("/api/docket-numbers?includeSeries=1");
+      // Load stock for selected business line (ALC vs ARC)
+      const res = await fetch(
+        `/api/docket-numbers?includeSeries=1&seriesKey=${encodeURIComponent(line)}`
+      );
       const data = await res.json();
       if (data.success) {
         const list = [...(data.data || [])].sort(
@@ -462,18 +466,23 @@ export default function NewConsignmentPage() {
       const res = await fetch("/api/docket-numbers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "generate", count: 1 })
+        body: JSON.stringify({
+          action: "generate",
+          count: 1,
+          seriesKey: docketBusinessLine
+        })
       });
       const data = await res.json();
       if (res.ok && data.success) {
         const created = Array.isArray(data.data) ? data.data[0] : data.data;
-        await loadAvailableDockets();
+        await loadAvailableDockets(docketBusinessLine);
         if (created?.docketNo) {
           setSelectedMasterDocket(created.docketNo);
         }
+        const tag = docketBusinessLine === "ROAD_CARRIER" ? "ARC" : "ALC";
         setFeedback({
           type: "success",
-          message: `Docket ${created?.docketNo || ""} generated from master series. Select it below to link & finalize.`
+          message: `${tag} docket ${created?.docketNo || ""} generated. Select it below to link & finalize.`
         });
       } else {
         setFeedback({ type: "error", message: data.error || "Failed to generate docket from master." });
@@ -1708,14 +1717,42 @@ actions={
               <div>
                 <h2 className="text-sm font-bold tracking-tight">Assign Docket Number</h2>
                 <p className="text-[11px] text-emerald-100">
-                  Stock from Admin / Masters • Generate or select a number, then link to finalize this CN
+                  Logistics uses <strong>ALC</strong> • Road Carrier uses <strong>ARC</strong> • then link to finalize
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              <div className="inline-flex rounded-lg overflow-hidden border border-white/30 text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDocketBusinessLine("LOGISTICS");
+                    setSelectedMasterDocket(null);
+                    void loadAvailableDockets("LOGISTICS");
+                  }}
+                  className={`px-2.5 py-1.5 ${
+                    docketBusinessLine === "LOGISTICS" ? "bg-white text-emerald-800" : "bg-white/10 text-white"
+                  }`}
+                >
+                  ALC Logistics
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDocketBusinessLine("ROAD_CARRIER");
+                    setSelectedMasterDocket(null);
+                    void loadAvailableDockets("ROAD_CARRIER");
+                  }}
+                  className={`px-2.5 py-1.5 ${
+                    docketBusinessLine === "ROAD_CARRIER" ? "bg-white text-emerald-800" : "bg-white/10 text-white"
+                  }`}
+                >
+                  ARC Road Carrier
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={loadAvailableDockets}
+                onClick={() => loadAvailableDockets(docketBusinessLine)}
                 disabled={loadingDockets}
                 className="px-3 py-1.5 text-xs bg-white/15 hover:bg-white/25 rounded-lg font-semibold cursor-pointer"
               >
@@ -1728,7 +1765,7 @@ actions={
                 className="px-3 py-1.5 text-xs bg-white text-emerald-800 hover:bg-emerald-50 rounded-lg font-bold inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Generate Docket
+                Generate {docketBusinessLine === "ROAD_CARRIER" ? "ARC" : "ALC"}
               </button>
               <button
                 type="button"

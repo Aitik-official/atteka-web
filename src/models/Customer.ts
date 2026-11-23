@@ -52,7 +52,7 @@ const CustomerSchema = new Schema<ICustomer>(
     creditPeriod: { type: Number, default: 30 },
     contract: { type: String, default: "Standard" },
     skipPod: { type: Boolean, default: false },
-    billFormat: { type: String, default: "E-Invoice Bill Formate" },
+    billFormat: { type: String, default: "Ateka Bill Format" },
     address: { type: String, default: "" },
     city: { type: String, default: "" },
     state: { type: String, default: "" },

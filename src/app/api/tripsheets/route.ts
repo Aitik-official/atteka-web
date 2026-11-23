@@ -90,13 +90,39 @@ function applyMemoryUpdates(payload: any, dockets: any[], docketNos: string[]) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const tripSheetNo = (searchParams.get("tripSheetNo") || searchParams.get("tripsheetNo") || "")
+    .trim()
+    .toUpperCase();
+  const vehicleNo = (searchParams.get("vehicleNo") || "").trim().toUpperCase();
+
   try {
     await connectToDatabase();
-    const list = await TripSheet.find().sort({ createdAt: -1 }).limit(100);
+    const q: any = {};
+    if (tripSheetNo) {
+      q.$or = [
+        { tripSheetNo },
+        { manualTripSheetNo: tripSheetNo },
+        { manualPdcNo: tripSheetNo }
+      ];
+    }
+    if (vehicleNo) q.vehicleNo = vehicleNo;
+    const list = await TripSheet.find(q).sort({ createdAt: -1 }).limit(tripSheetNo ? 20 : 100);
     return NextResponse.json({ success: true, count: list.length, data: list });
   } catch {
-    const list = Array.isArray(memoryStore.tripSheets) ? memoryStore.tripSheets : [];
+    let list = Array.isArray(memoryStore.tripSheets) ? memoryStore.tripSheets : [];
+    if (tripSheetNo) {
+      list = list.filter(
+        (t: any) =>
+          String(t.tripSheetNo || "").toUpperCase() === tripSheetNo ||
+          String(t.manualTripSheetNo || "").toUpperCase() === tripSheetNo ||
+          String(t.manualPdcNo || "").toUpperCase() === tripSheetNo
+      );
+    }
+    if (vehicleNo) {
+      list = list.filter((t: any) => String(t.vehicleNo || "").toUpperCase() === vehicleNo);
+    }
     return NextResponse.json({
       success: true,
       count: list.length,

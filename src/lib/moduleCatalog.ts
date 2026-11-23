@@ -139,6 +139,14 @@ export const MODULE_SEARCH_CATALOG: ModuleSearchItem[] = [
     group: "Exceptional",
     keywords: ["fin", "pdc", "advance", "payable branch", "assign advance"]
   },
+  {
+    id: "C132R",
+    label: "Edit Bill Remark and Bill Address",
+    code: "C132",
+    route: "/dashboard/exceptional/finance/edit-bill-remark-and-bill-address",
+    group: "Exceptional",
+    keywords: ["fin", "bill remark", "bill address", "change remark", "gst"]
+  },
   { id: "C520", label: "Bank Reconciliation Statment", code: "C520", route: "/dashboard/exceptional/brs", group: "Exceptional" },
   { id: "C588", label: "Company Vechicle Exceptional", code: "C588", route: "/dashboard/exceptional/vehicle", group: "Exceptional" },
   {

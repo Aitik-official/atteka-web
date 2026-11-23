@@ -33,6 +33,13 @@ export const DOC_TYPE_OPTIONS: MasterOption[] = [
 
 /** Demo masters used when APIs return empty / offline. */
 export const FALLBACK_VENDOR_OPTIONS: MasterOption[] = [
+  {
+    value: "ARC001: ATEKA ROAD CARRIER",
+    label: "ARC001: ATEKA ROAD CARRIER",
+    code: "ARC001",
+    name: "ATEKA ROAD CARRIER",
+    meta: { businessLine: "ROAD_CARRIER", branch: "ARC1" }
+  },
   { value: "V00001: COMPANY VEHICLE", label: "V00001: COMPANY VEHICLE", code: "V00001", name: "COMPANY VEHICLE" },
   { value: "V00002: METRO HAULAGE PARTNERS", label: "V00002: METRO HAULAGE PARTNERS", code: "V00002", name: "METRO HAULAGE PARTNERS" },
   { value: "V00006: S.P LOGISTICS", label: "V00006: S.P LOGISTICS", code: "V00006", name: "S.P LOGISTICS" },

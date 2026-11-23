@@ -4,6 +4,7 @@ import { CustomerBill } from "@/models/CustomerBill";
 import { Consignment } from "@/models/Consignment";
 import { MoneyReceipt } from "@/models/MoneyReceipt";
 import { ensureOpsTripSeeds } from "@/lib/operationsPdcEngine";
+import { postMoneyReceiptLedger } from "@/lib/booksEngine";
 
 function toIso(d?: Date | string | null) {
   if (!d) return "";
@@ -189,6 +190,10 @@ async function ensureCustomerBillingSeeds() {
       const cgst = Number((freight * 0.09).toFixed(2));
       const sgst = Number((freight * 0.09).toFixed(2));
       const billNumber = `BLALC${String(12605000 + i)}`;
+      const docketNo = `ALC${String(12608000 + i)}`;
+      const from = ["BHIWANDI", "MUMBAI", "PUNE", "NASHIK"][i % 4];
+      const to = ["RANCHI+PATNA+GUWAHATI", "DELHI", "BANGALORE", "AHMEDABAD"][i % 4];
+      const vehicleNo = ["MH46DC5186", "MH04CK9988", "MH12AB4455", "MH46BM1234"][i % 4];
       await CustomerBill.updateOne(
         { billNumber },
         {
@@ -198,10 +203,30 @@ async function ensureCustomerBillingSeeds() {
             customerCode: cust.customerCode,
             customerName: cust.name,
             customerGstin: cust.gstin,
+            partyAddress: [cust.address, cust.state, cust.pinCode].filter(Boolean).join(", "),
+            city: cust.state || "MUMBAI",
+            sacCode: "996511",
+            gstPercent: 18,
             billingBranch: "ALC1",
             collectionBranch: "ALC1",
             billType: i % 4 === 0 ? "Supplementary" : "Freight",
-            consignments: [`ALC${String(12608000 + i)}`],
+            billFormat: "Ateka Bill Format",
+            remark: "OK",
+            consignments: [docketNo],
+            lineItems: [
+              {
+                docketNo,
+                bookingDate: d,
+                from,
+                to,
+                vehicleNo,
+                freight,
+                totalPkgs: 1 + (i % 6),
+                totalWt: 2000 + i * 350,
+                rateType: "Fixed",
+                particulars: `${from} To ${to}`
+              }
+            ],
             totalFreight: freight,
             taxAmount: cgst + sgst,
             cgst,
@@ -572,18 +597,30 @@ export async function listBillsForMr(filters: {
 
   return bills.map((b) => {
     const iso = toIso(b.billDate);
+    const freight = Number(b.totalFreight || 0);
+    const gst = Number(b.taxAmount || 0);
+    const total = Number(b.grandTotal || freight + gst);
     return {
       billNumber: b.billNumber,
       manualBillNumber: b.billNumber,
       billingBranch: `${b.billingBranch || "ALC1"} : Ateka Logistics`,
+      branchCode: b.billingBranch || "ALC1",
       partyCode: b.customerCode,
       partyName: `${b.customerCode} : ${b.customerName}`,
+      customerCode: b.customerCode,
+      customerName: b.customerName,
+      partyAddress: b.partyAddress || "",
       billType: b.billType || "Freight",
-      billAmount: Number(b.grandTotal || 0),
-      unadjustedAmount: Number(b.grandTotal || 0),
+      freightAmount: freight,
+      gstAmount: gst,
+      billAmount: total,
+      pendingAmount: total,
+      unadjustedAmount: total,
       generationDate: toLabel(iso),
       generationDateIso: iso,
-      dueDate: ""
+      billDateLabel: toLabel(iso),
+      dueDate: "",
+      consignments: Array.isArray(b.consignments) ? b.consignments : []
     };
   });
 }
@@ -593,6 +630,20 @@ export async function generateBillMr(body: {
   billNumbers?: string[];
   withRebate?: boolean;
   rebatePercent?: number;
+  mrDate?: string;
+  mrBranch?: string;
+  manualMrPrefix?: string;
+  manualMrNo?: string;
+  tdsType?: string;
+  tdsRate?: number;
+  billLines?: Array<Record<string, any>>;
+  payment?: Record<string, any>;
+  deductionLines?: Array<Record<string, any>>;
+  docketLines?: Array<Record<string, any>>;
+  partyCode?: string;
+  partyName?: string;
+  partyAddress?: string;
+  remark?: string;
 }) {
   await ensureCustomerBillingSeeds();
   const nos = (body.billNumbers || body.ids || []).map((s) => String(s).trim().toUpperCase()).filter(Boolean);
@@ -601,31 +652,81 @@ export async function generateBillMr(body: {
   const bills = await CustomerBill.find({ billNumber: { $in: nos } });
   if (!bills.length) throw Object.assign(new Error("No matching bills found"), { status: 404 });
 
-  const rebatePct = body.withRebate ? Number(body.rebatePercent || 2) : 0;
+  const billLines = Array.isArray(body.billLines) ? body.billLines : [];
+  const rebatePct = body.withRebate && !billLines.length ? Number(body.rebatePercent || 2) : 0;
+
   let total = 0;
   let rebate = 0;
+  let tds = 0;
   const allocated = bills.map((b) => {
-    const amt = Number(b.grandTotal || 0);
-    const reb = Number(((amt * rebatePct) / 100).toFixed(2));
+    const line = billLines.find(
+      (l) => String(l.billNumber || "").toUpperCase() === String(b.billNumber).toUpperCase()
+    );
+    const amt = Number(line?.pendingAmount ?? line?.billAmount ?? b.grandTotal ?? 0);
+    const reb = Number(line?.freightRebate ?? (rebatePct ? (amt * rebatePct) / 100 : 0));
+    const tdsAmt = Number(line?.tds || 0);
     total += amt;
     rebate += reb;
-    return { billNumber: b.billNumber, amount: amt, rebate: reb };
+    tds += tdsAmt;
+    return {
+      billNumber: b.billNumber,
+      amount: Number(amt.toFixed(2)),
+      rebate: Number(reb.toFixed(2))
+    };
   });
 
-  const mrNumber = `MR/ALC1/${Date.now().toString().slice(-7)}`;
+  const collectedFromLines = billLines.reduce(
+    (s, l) => s + Number(l.netRecdAmount || 0),
+    0
+  );
+  const collectedFromPayment = Number(body.payment?.collectedAmount || body.payment?.chequeAmount || 0);
+  const totalReceived =
+    collectedFromPayment ||
+    collectedFromLines ||
+    Number((total - rebate - tds).toFixed(2));
+
+  const seq = Date.now().toString().slice(-5);
+  const branch = String(body.mrBranch || bills[0].billingBranch || "ALC1")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .slice(0, 4)
+    .toUpperCase() || "ALC1";
+  const mrNumber =
+    body.manualMrPrefix && body.manualMrNo
+      ? `MR${String(body.manualMrPrefix).toUpperCase()}${String(body.manualMrNo).padStart(5, "0")}`
+      : `MR${branch}126${seq}`;
+
   const party = bills[0];
+  const modeRaw = String(body.payment?.mode || "NEFT").toUpperCase();
+  const paymentMode = ["CHEQUE", "NEFT", "RTGS", "CASH", "ONLINE", "DD"].includes(modeRaw)
+    ? modeRaw
+    : "NEFT";
+
   const mr = await MoneyReceipt.create({
     mrNumber,
-    mrDate: new Date(),
-    customerCode: party.customerCode,
-    customerName: party.customerName,
+    mrDate: body.mrDate ? new Date(body.mrDate) : new Date(),
+    customerCode: body.partyCode || party.customerCode,
+    customerName: (body.partyName || party.customerName || "").replace(/^[^:]+:\s*/, ""),
     allocatedBills: allocated,
-    paymentMode: "NEFT",
-    referenceNumber: `MRREF${Date.now().toString().slice(-8)}`,
-    totalReceived: Number((total - rebate).toFixed(2)),
-    tdsDeducted: 0,
+    paymentMode,
+    referenceNumber:
+      String(body.payment?.chequeNeftNo || "").trim() ||
+      `MRREF${Date.now().toString().slice(-8)}`,
+    totalReceived: Number(totalReceived.toFixed(2)),
+    tdsDeducted: Number(tds.toFixed(2)),
     rebateDiscount: Number(rebate.toFixed(2)),
-    remarks: body.withRebate ? "Bill MR with Rebate" : "Bill MR"
+    remarks: body.remark || (body.withRebate ? "Bill MR with Rebate" : "Bill MR"),
+    meta: {
+      withRebate: Boolean(body.withRebate),
+      mrBranch: body.mrBranch || branch,
+      manualMrNo: `${body.manualMrPrefix || ""}${body.manualMrNo || ""}`,
+      tdsType: body.tdsType || "",
+      tdsRate: Number(body.tdsRate || 0),
+      partyAddress: body.partyAddress || party.partyAddress || "",
+      billLines,
+      payment: body.payment || {},
+      deductionLines: body.deductionLines || [],
+      docketLines: body.docketLines || []
+    }
   });
 
   await CustomerBill.updateMany(
@@ -633,11 +734,29 @@ export async function generateBillMr(body: {
     { $set: { status: "PAID", mrsNo: mr.mrNumber, mrsDate: mr.mrDate } }
   );
 
+  // Post cash/bank book — appears on Cash & Bank Transaction Statement
+  try {
+    await postMoneyReceiptLedger({
+      mrNumber: mr.mrNumber,
+      customerName: mr.customerName,
+      amountReceived: mr.totalReceived,
+      tdsDeduction: mr.tdsDeducted,
+      mode: paymentMode,
+      branchCode: body.mrBranch || branch,
+      depositedAccount: String(body.payment?.depositedAccount || ""),
+      mrDate: mr.mrDate,
+      chequeNo: String(body.payment?.chequeNeftNo || mr.referenceNumber || "")
+    });
+  } catch {
+    // non-fatal — MR is already saved
+  }
+
   return {
     mrNumber: mr.mrNumber,
     count: allocated.length,
     totalReceived: mr.totalReceived,
     rebateDiscount: mr.rebateDiscount,
+    tdsDeducted: mr.tdsDeducted,
     billNumbers: allocated.map((a) => a.billNumber),
     message: `Money Receipt ${mr.mrNumber} generated for ${allocated.length} bill(s)`
   };
@@ -714,10 +833,29 @@ export async function generatePaidTopayMr(docketNos: string[]) {
     totalReceived: Number(total.toFixed(2)),
     tdsDeducted: 0,
     rebateDiscount: 0,
-    remarks: "Paid/Topay MR"
+    remarks: "Paid/Topay MR",
+    meta: {
+      mrBranch: "ALC1",
+      payment: { mode: "CASH", depositedAccount: "CASH" }
+    }
   });
 
   await Consignment.updateMany({ docketNo: { $in: nos } }, { $set: { status: "BILLED" } });
+
+  try {
+    await postMoneyReceiptLedger({
+      mrNumber: mr.mrNumber,
+      customerName: mr.customerName,
+      amountReceived: mr.totalReceived,
+      tdsDeduction: 0,
+      mode: "CASH",
+      branchCode: "ALC1",
+      depositedAccount: "CASH",
+      mrDate: mr.mrDate
+    });
+  } catch {
+    // non-fatal
+  }
 
   return {
     mrNumber: mr.mrNumber,
@@ -958,20 +1096,24 @@ export async function listMoneyReceipts(filters: {
 
   return rows.map((r, idx) => {
     const iso = toIso(r.mrDate);
+    const meta = (r as any).meta || {};
     return {
       srNo: idx + 1,
       mrNo: r.mrNumber,
       mrDate: toLabel(iso),
       mrDateIso: iso,
+      customerCode: r.customerCode,
       customerName: r.customerName,
-      mrLocation: "ALC1",
+      mrLocation: String(meta.mrBranch || "ALC1"),
       mrAmount: Number(r.totalReceived || 0) + Number(r.rebateDiscount || 0) + Number(r.tdsDeducted || 0),
       deduction: Number(r.tdsDeducted || 0) + Number(r.rebateDiscount || 0),
       netAmount: Number(r.totalReceived || 0),
       billNumber: r.allocatedBills?.[0]?.billNumber || "",
       paymentMode: r.paymentMode,
       referenceNumber: r.referenceNumber,
-      allocatedBills: r.allocatedBills || []
+      remarks: r.remarks || "",
+      allocatedBills: r.allocatedBills || [],
+      meta
     };
   });
 }

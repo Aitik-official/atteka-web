@@ -109,20 +109,40 @@ export interface MockDocketNumber {
 }
 
 const seedDocketNumbers = (): MockDocketNumber[] => {
-  const prefix = "ALC126";
   const list: MockDocketNumber[] = [];
   for (let i = 10; i <= 25; i++) {
     list.push({
-      _id: `dn-${i}`,
-      docketNo: `${prefix}${String(i).padStart(4, "0")}`,
-      seriesPrefix: prefix,
+      _id: `dn-alc-${i}`,
+      docketNo: `ALC126${String(i).padStart(4, "0")}`,
+      seriesPrefix: "ALC126",
       sequenceNo: i,
       branchCode: "ALC1",
       status: "AVAILABLE",
       createdAt: new Date().toISOString()
     });
   }
+  for (let i = 10; i <= 25; i++) {
+    list.push({
+      _id: `dn-arc-${i}`,
+      docketNo: `ARC126${String(i).padStart(4, "0")}`,
+      seriesPrefix: "ARC126",
+      sequenceNo: i,
+      branchCode: "ARC1",
+      status: "AVAILABLE",
+      createdAt: new Date().toISOString()
+    });
+  }
   return list;
+};
+
+type MemDocketSeries = {
+  seriesKey: string;
+  prefix: string;
+  padLength: number;
+  nextSequence: number;
+  branchCode: string;
+  isActive: boolean;
+  description: string;
 };
 
 class MemoryStore {
@@ -150,15 +170,66 @@ class MemoryStore {
   companyVouchers: any[] = [];
   bpclTransactions: any[] = [];
   docketNumbers: MockDocketNumber[] = seedDocketNumbers();
-  docketSeries = {
-    seriesKey: "DEFAULT",
+  /** @deprecated use getDocketSeries — kept for older callers */
+  docketSeries: MemDocketSeries = {
+    seriesKey: "LOGISTICS",
     prefix: "ALC126",
     padLength: 4,
     nextSequence: 26,
     branchCode: "ALC1",
     isActive: true,
-    description: "Primary CN / Docket stationery series"
+    description: "Logistics CN / Docket stationery series"
   };
+  docketSeriesMap: Record<string, MemDocketSeries> = {
+    LOGISTICS: {
+      seriesKey: "LOGISTICS",
+      prefix: "ALC126",
+      padLength: 4,
+      nextSequence: 26,
+      branchCode: "ALC1",
+      isActive: true,
+      description: "Logistics CN / Docket stationery series"
+    },
+    ROAD_CARRIER: {
+      seriesKey: "ROAD_CARRIER",
+      prefix: "ARC126",
+      padLength: 4,
+      nextSequence: 26,
+      branchCode: "ARC1",
+      isActive: true,
+      description: "Road Carrier CN / Docket stationery series"
+    }
+  };
+
+  ensureDocketSeries() {
+    if (!this.docketSeriesMap.LOGISTICS) {
+      this.docketSeriesMap.LOGISTICS = { ...this.docketSeries, seriesKey: "LOGISTICS", prefix: "ALC126", branchCode: "ALC1" };
+    }
+    if (!this.docketSeriesMap.ROAD_CARRIER) {
+      this.docketSeriesMap.ROAD_CARRIER = {
+        seriesKey: "ROAD_CARRIER",
+        prefix: "ARC126",
+        padLength: 4,
+        nextSequence: 26,
+        branchCode: "ARC1",
+        isActive: true,
+        description: "Road Carrier CN / Docket stationery series"
+      };
+    }
+    // Keep legacy pointer in sync with logistics
+    this.docketSeries = this.docketSeriesMap.LOGISTICS;
+  }
+
+  getDocketSeries(seriesKey = "LOGISTICS") {
+    this.ensureDocketSeries();
+    const key = String(seriesKey || "LOGISTICS").toUpperCase() === "ROAD_CARRIER" ? "ROAD_CARRIER" : "LOGISTICS";
+    return this.docketSeriesMap[key];
+  }
+
+  listDocketSeries() {
+    this.ensureDocketSeries();
+    return [this.docketSeriesMap.LOGISTICS, this.docketSeriesMap.ROAD_CARRIER];
+  }
 
   addConsignment(c: any) {
     const record = { ...c, _id: `c-${Date.now()}` };
@@ -185,17 +256,18 @@ class MemoryStore {
     return this.docketNumbers.filter((d) => d.status === status);
   }
 
-  generateDocketNumbers(count = 1) {
+  generateDocketNumbers(count = 1, seriesKey = "LOGISTICS") {
+    const series = this.getDocketSeries(seriesKey);
     const created: MockDocketNumber[] = [];
     for (let i = 0; i < count; i++) {
-      const seq = this.docketSeries.nextSequence++;
-      const docketNo = `${this.docketSeries.prefix}${String(seq).padStart(this.docketSeries.padLength, "0")}`;
+      const seq = series.nextSequence++;
+      const docketNo = `${series.prefix}${String(seq).padStart(series.padLength, "0")}`;
       const record: MockDocketNumber = {
         _id: `dn-${Date.now()}-${seq}`,
         docketNo,
-        seriesPrefix: this.docketSeries.prefix,
+        seriesPrefix: series.prefix,
         sequenceNo: seq,
-        branchCode: this.docketSeries.branchCode,
+        branchCode: series.branchCode,
         status: "AVAILABLE",
         createdAt: new Date().toISOString()
       };

@@ -109,7 +109,26 @@ const SAMPLE_DOCS: AdvanceDoc[] = [
 ];
 
 const VOUCHER_TYPES = ["--Select--", "Advance", "Diesel", "Toll", "Parking", "Other"];
-const PAYMENT_ACCOUNTS = ["--Select--", "CASH", "BANK / NEFT", "CHEQUE", "PETTY CASH"];
+const PAYMENT_ACCOUNTS = [
+  "--Select--",
+  "BPCL",
+  "BPCL - Highway Retail Outlet",
+  "BPCL - Ranjangaon Pump",
+  "BPCL - Kalamboli Pump",
+  "HPCL - Diesel Pump",
+  "IOCL - Indian Oil Pump",
+  "Indian Oil - Depot Road",
+  "Reliance Petroleum",
+  "Nayara Energy",
+  "Shell Diesel Pump",
+  "Essar Petrol Pump",
+  "Local Diesel Pump - Pune",
+  "Local Diesel Pump - Nashik",
+  "CASH",
+  "BANK / NEFT",
+  "CHEQUE",
+  "PETTY CASH"
+];
 const PAY_TO_DRIVER = ["--Select--", "Yes", "No"];
 
 export default function CompanyAdvancePaymentEntryPage() {
@@ -125,9 +144,9 @@ export default function CompanyAdvancePaymentEntryPage() {
   const [results, setResults] = useState<AdvanceDoc[]>([]);
   const [selected, setSelected] = useState<AdvanceDoc | null>(null);
   const [openKm, setOpenKm] = useState(0);
-  const [voucherType, setVoucherType] = useState("--Select--");
+  const [voucherType, setVoucherType] = useState("Diesel");
   const [voucherDate, setVoucherDate] = useState(toInputDate(new Date()));
-  const [paymentAccount, setPaymentAccount] = useState("--Select--");
+  const [paymentAccount, setPaymentAccount] = useState("BPCL");
   const [paymentToDriver, setPaymentToDriver] = useState("--Select--");
   const [amount, setAmount] = useState<string>("");
   const [advanceRecovery, setAdvanceRecovery] = useState(0);
@@ -136,6 +155,17 @@ export default function CompanyAdvancePaymentEntryPage() {
   const [paidBy] = useState("ANISHA OZARKAR");
   const [voucherLines, setVoucherLines] = useState<VoucherLine[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const clearEntryFields = (keepOpenKm = 0) => {
+    setOpenKm(keepOpenKm);
+    setVoucherType("Diesel");
+    setVoucherDate(toInputDate(new Date()));
+    setPaymentAccount("BPCL");
+    setPaymentToDriver("--Select--");
+    setAmount("");
+    setAdvanceRecovery(0);
+    setAmountPaid(0);
+  };
 
   useEffect(() => {
     fetch("/api/vehicles")
@@ -273,15 +303,42 @@ export default function CompanyAdvancePaymentEntryPage() {
     }
 
     setSelected(enriched);
-    setOpenKm(enriched.openKm || 0);
-    setVoucherType("--Select--");
-    setVoucherDate(toInputDate(new Date()));
-    setPaymentAccount("--Select--");
-    setPaymentToDriver("--Select--");
-    setAmount("");
-    setAdvanceRecovery(0);
-    setAmountPaid(0);
-    setVoucherLines([]);
+    clearEntryFields(enriched.openKm || 0);
+
+    // Load prior voucher lines for this tripsheet (multiple entries during a trip)
+    try {
+      const params = new URLSearchParams();
+      if (enriched.tripsheetNo) params.set("documentNo", enriched.tripsheetNo);
+      const res = await fetch(`/api/fleet/advance-payments?${params.toString()}`);
+      const data = await res.json();
+      const prior: VoucherLine[] = (data.data || [])
+        .filter(
+          (d: any) =>
+            String(d.tripsheetNo || "").toUpperCase() === enriched.tripsheetNo.toUpperCase() ||
+            String(d.vehicleNo || "").toUpperCase() === enriched.vehicleNo.toUpperCase()
+        )
+        .map((d: any) => {
+          const remark = String(d.remark || "");
+          const typeMatch = remark.split("|")[0]?.trim();
+          const amt = Number(d.amount) || 0;
+          const iso = d.documentDate ? toInputDate(new Date(d.documentDate)) : toInputDate(new Date());
+          return {
+            voucherNumber: String(d.documentNo || `VCH-${Date.now().toString().slice(-6)}`),
+            voucherDate: iso,
+            voucherType: typeMatch && typeMatch !== "Advance" ? typeMatch : "Diesel",
+            qty: 1,
+            rate: amt,
+            openingKm: Number(d.openKm ?? 0) || 0,
+            closingKm: Number(d.openKm ?? 0) || 0,
+            totalKm: 0,
+            amount: amt
+          } as VoucherLine;
+        });
+      setVoucherLines(prior);
+    } catch {
+      setVoucherLines([]);
+    }
+
     setStep("entry");
   };
 
@@ -291,39 +348,24 @@ export default function CompanyAdvancePaymentEntryPage() {
   );
 
   const buildVoucherLine = (): VoucherLine | null => {
-    const amt = Number(amount) || 0;
+    const amt = Number(amountPaid) || Number(amount) || 0;
     if (!amt || voucherType === "--Select--") return null;
+    const opening = Number(openKm) || 0;
     return {
-      voucherNumber: voucherLines[0]?.voucherNumber || `VCH-${Date.now().toString().slice(-6)}`,
-      voucherDate: voucherDate,
+      voucherNumber: `VCH-${Date.now().toString().slice(-6)}`,
+      voucherDate,
       voucherType,
       qty: 1,
       rate: amt,
-      openingKm: Number(openKm) || 0,
-      closingKm: Number(openKm) || 0,
+      openingKm: opening,
+      closingKm: opening,
       totalKm: 0,
       amount: amt
     };
   };
 
-  const syncVoucherLine = () => {
-    const line = buildVoucherLine();
-    if (!line) return;
-    setVoucherLines([line]);
-    if (!amountPaid) setAmountPaid(line.amount);
-  };
-
   const saveAdvance = async () => {
     if (!selected) return;
-    const line = buildVoucherLine();
-    const lines = line ? [line] : voucherLines;
-    if (line) setVoucherLines(lines);
-    const payAmt =
-      Number(amountPaid) || lines.reduce((s, l) => s + (Number(l.amount) || 0), 0) || Number(amount) || 0;
-    if (!payAmt || payAmt <= 0) {
-      toast.error("Enter Amount / Amount Paid");
-      return;
-    }
     if (voucherType === "--Select--") {
       toast.error("Select Voucher Type");
       return;
@@ -332,21 +374,35 @@ export default function CompanyAdvancePaymentEntryPage() {
       toast.error("Select Payment Account");
       return;
     }
+    const line = buildVoucherLine();
+    if (!line) {
+      toast.error("Enter Amount / Amount Paid");
+      return;
+    }
+    const payAmt = line.amount;
     setSaving(true);
     try {
-      const payMode =
-        /cash/i.test(paymentAccount) ? "CASH" : /cheque/i.test(paymentAccount) ? "CHEQUE" : "BANK";
+      const payMode = /cash/i.test(paymentAccount)
+        ? "CASH"
+        : /cheque/i.test(paymentAccount)
+          ? "CHEQUE"
+          : /bpcl|hpcl|iocl|oil|diesel|pump|nayara|shell|essar|reliance|petroleum/i.test(
+                paymentAccount
+              )
+            ? "FUEL"
+            : "BANK";
       const res = await fetch("/api/fleet/advance-payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          documentNo: line.voucherNumber,
           tripsheetNo: selected.tripsheetNo,
           vehicleNo: selected.vehicleNo,
           driverName: selected.driverName,
           branch: selected.branch,
           payMode,
           amount: payAmt,
-          remark: `${voucherType} | Recovery ${advanceRecovery} | Op.Bal ${opBal} | Paid By ${paidBy}`,
+          remark: `${voucherType} | ${paymentAccount} | Recovery ${advanceRecovery} | Op.Bal ${opBal} | Paid By ${paidBy}`,
           status: "PAID",
           preparedBy: paidBy,
           fromLocation: selected.fromLocation,
@@ -358,7 +414,7 @@ export default function CompanyAdvancePaymentEntryPage() {
           paymentToDriver,
           advanceRecovery,
           amountPaid: payAmt,
-          voucherLines: lines
+          voucherLines: [line]
         })
       });
       const data = await res.json();
@@ -366,24 +422,29 @@ export default function CompanyAdvancePaymentEntryPage() {
         toast.error(data.error || "Failed to save advance payment");
         return;
       }
-      const savedNo = data.data?.documentNo || selected.documentNo;
-      await fetch("/api/bank/payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          beneficiaryName: selected.driverName || selected.vehicleNo,
-          accountNumber: "CASH-COUNTER",
-          ifscCode: payMode === "CASH" ? "CASH0000001" : "INDB0000001",
-          amount: payAmt,
-          remarks: `Company Advance ${savedNo} / ${selected.vehicleNo} / ${voucherType}`
-        })
-      });
-      toast.document(`Company advance saved for ${selected.vehicleNo}`, {
-        title: data.isMemoryStore ? "Advance (Memory)" : "Advance Payment",
-        code: savedNo
-      });
-      setStep("filter");
-      setSelected(null);
+      const savedNo = data.data?.documentNo || line.voucherNumber;
+      const savedLine: VoucherLine = { ...line, voucherNumber: savedNo };
+
+      // Append to table — keep prior rows; multiple entries per trip
+      setVoucherLines((prev) => [...prev, savedLine]);
+
+      if (payMode === "CASH" || payMode === "BANK" || payMode === "CHEQUE") {
+        await fetch("/api/bank/payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            beneficiaryName: selected.driverName || selected.vehicleNo,
+            accountNumber: "CASH-COUNTER",
+            ifscCode: payMode === "CASH" ? "CASH0000001" : "INDB0000001",
+            amount: payAmt,
+            remarks: `Company Advance ${savedNo} / ${selected.vehicleNo} / ${voucherType} / ${paymentAccount}`
+          })
+        }).catch(() => {});
+      }
+
+      toast.success(`${voucherType} entry ${savedNo} added`);
+      // Clear fields for next entry on the same trip
+      clearEntryFields(Number(openKm) || selected.openKm || 0);
     } catch {
       toast.error("Failed to save advance payment");
     } finally {
@@ -729,8 +790,11 @@ export default function CompanyAdvancePaymentEntryPage() {
               <input
                 type="number"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                onBlur={syncVoucherLine}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  const n = Number(e.target.value) || 0;
+                  if (n > 0) setAmountPaid(n);
+                }}
                 className="h-8 w-full max-w-[160px] px-2 border border-slate-300 rounded-sm font-mono"
               />,
               "",
@@ -785,31 +849,36 @@ export default function CompanyAdvancePaymentEntryPage() {
                 </tr>
               </thead>
               <tbody>
-                {(voucherLines.length ? voucherLines : [{} as VoucherLine]).map((l, idx) => (
-                  <tr key={idx} className="odd:bg-white even:bg-slate-50">
-                    <td className="border border-slate-200 px-2 py-1.5 font-mono">{l.voucherNumber || ""}</td>
-                    <td className="border border-slate-200 px-2 py-1.5">
-                      {l.voucherDate ? formatDisplayDate(l.voucherDate) : ""}
-                    </td>
-                    <td className="border border-slate-200 px-2 py-1.5">{l.voucherType || ""}</td>
-                    <td className="border border-slate-200 px-2 py-1.5 text-right">{l.qty ?? ""}</td>
-                    <td className="border border-slate-200 px-2 py-1.5 text-right">
-                      {l.rate != null && l.voucherNumber ? Number(l.rate).toFixed(2) : ""}
-                    </td>
-                    <td className="border border-slate-200 px-2 py-1.5 text-right">
-                      {l.voucherNumber ? l.openingKm : ""}
-                    </td>
-                    <td className="border border-slate-200 px-2 py-1.5 text-right">
-                      {l.voucherNumber ? l.closingKm : ""}
-                    </td>
-                    <td className="border border-slate-200 px-2 py-1.5 text-right">
-                      {l.voucherNumber ? l.totalKm : ""}
-                    </td>
-                    <td className="border border-slate-200 px-2 py-1.5 text-right font-mono">
-                      {l.voucherNumber ? Number(l.amount || 0).toFixed(2) : ""}
+                {voucherLines.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={9}
+                      className="border border-slate-200 px-3 py-6 text-center text-slate-400"
+                    >
+                      No entries yet — submit to add Diesel / Advance lines for this trip
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  voucherLines.map((l) => (
+                    <tr key={l.voucherNumber} className="odd:bg-white even:bg-slate-50">
+                      <td className="border border-slate-200 px-2 py-1.5 font-mono">{l.voucherNumber}</td>
+                      <td className="border border-slate-200 px-2 py-1.5">
+                        {l.voucherDate ? formatDisplayDate(l.voucherDate) : ""}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5">{l.voucherType}</td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">{l.qty}</td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">
+                        {Number(l.rate).toFixed(2)}
+                      </td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">{l.openingKm}</td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">{l.closingKm}</td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right">{l.totalKm}</td>
+                      <td className="border border-slate-200 px-2 py-1.5 text-right font-mono">
+                        {Number(l.amount || 0).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))
+                )}
                 <tr className="bg-slate-100">
                   <td colSpan={8} className="border border-slate-200 px-2 py-1.5 text-right font-semibold">
                     Total

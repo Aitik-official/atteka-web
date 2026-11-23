@@ -78,7 +78,21 @@ export async function POST(req: NextRequest) {
     const data = await generateBillMr({
       billNumbers,
       withRebate: Boolean(body.withRebate),
-      rebatePercent: Number(body.rebatePercent || 0) || undefined
+      rebatePercent: Number(body.rebatePercent || 0) || undefined,
+      mrDate: body.mrDate,
+      mrBranch: body.mrBranch,
+      manualMrPrefix: body.manualMrPrefix,
+      manualMrNo: body.manualMrNo,
+      tdsType: body.tdsType,
+      tdsRate: body.tdsRate,
+      billLines: body.billLines,
+      payment: body.payment,
+      deductionLines: body.deductionLines,
+      docketLines: body.docketLines,
+      partyCode: body.partyCode,
+      partyName: body.partyName,
+      partyAddress: body.partyAddress,
+      remark: body.remark
     });
     return NextResponse.json({
       success: true,

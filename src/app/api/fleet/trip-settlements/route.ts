@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { TripSettlement } from "@/models/TripSettlement";
 import { memoryStore } from "@/lib/memoryStore";
+import {
+  finalizeTripSettlement,
+  getSettlementDetail,
+  listPendingTripsForSettlement
+} from "@/lib/tripSettlementEngine";
 
 function parseDate(value?: string | null) {
   if (!value) return null;
@@ -14,9 +19,46 @@ export async function GET(req: NextRequest) {
   const documentNo = (searchParams.get("documentNo") || "").trim().toUpperCase();
   const vehicleNo = (searchParams.get("vehicleNo") || "").trim().toUpperCase();
   const status = (searchParams.get("status") || "").trim().toUpperCase();
-  const from = parseDate(searchParams.get("from"));
-  const to = parseDate(searchParams.get("to"));
+  const pending = searchParams.get("pending") === "1" || searchParams.get("mode") === "pending";
+  const detail = searchParams.get("detail") === "1";
+  const tripsheetNo = (searchParams.get("tripsheetNo") || documentNo || "").trim().toUpperCase();
+  const from = searchParams.get("from") || "";
+  const to = searchParams.get("to") || "";
 
+  // Settle screen detail: tripsheet header + company advance lines
+  if (detail && tripsheetNo) {
+    try {
+      const data = await getSettlementDetail(tripsheetNo);
+      if (!data) {
+        return NextResponse.json({ error: `Tripsheet ${tripsheetNo} not found` }, { status: 404 });
+      }
+      return NextResponse.json({ success: true, data, source: "db" });
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message || "Failed to load settlement detail" }, { status: 500 });
+    }
+  }
+
+  // Search list: open trips awaiting settlement
+  if (pending || !status) {
+    try {
+      const data = await listPendingTripsForSettlement({
+        documentNo,
+        vehicleNo,
+        from,
+        to
+      });
+      return NextResponse.json({
+        success: true,
+        count: data.length,
+        data,
+        source: "db"
+      });
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message || "Failed to load pending trips" }, { status: 500 });
+    }
+  }
+
+  // Explicit settled / historical list (view-print)
   try {
     await connectToDatabase();
     const query: any = {};
@@ -28,11 +70,13 @@ export async function GET(req: NextRequest) {
     }
     if (vehicleNo && vehicleNo !== "SHOW ALL") query.vehicleNo = vehicleNo;
     if (status) query.status = status;
-    if (from || to) {
+    const fromDt = parseDate(from);
+    const toDt = parseDate(to);
+    if (fromDt || toDt) {
       query.documentDate = {};
-      if (from) query.documentDate.$gte = from;
-      if (to) {
-        const end = new Date(to);
+      if (fromDt) query.documentDate.$gte = fromDt;
+      if (toDt) {
+        const end = new Date(toDt);
         end.setHours(23, 59, 59, 999);
         query.documentDate.$lte = end;
       }
@@ -64,78 +108,21 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const vehicleNo = String(body.vehicleNo || "").trim().toUpperCase();
-    const tripsheetNo = String(body.tripsheetNo || body.documentNo || "").trim().toUpperCase();
-    if (!vehicleNo) {
-      return NextResponse.json({ error: "Vehicle No is required" }, { status: 400 });
-    }
-    if (!tripsheetNo) {
-      return NextResponse.json({ error: "Tripsheet / Document No is required" }, { status: 400 });
-    }
-
-    const grossFreight = Number(body.grossFreight) || 0;
-    const advancePaid = Number(body.advancePaid) || 0;
-    const dieselExpense = Number(body.dieselExpense) || 0;
-    const tollExpense = Number(body.tollExpense) || 0;
-    const unloadingLabor = Number(body.unloadingLabor) || 0;
-    const otherExpense = Number(body.otherExpense) || 0;
-    const netPayable =
-      body.netPayable !== undefined
-        ? Number(body.netPayable)
-        : grossFreight - advancePaid - dieselExpense - tollExpense - unloadingLabor - otherExpense;
-
-    const documentNo =
-      String(body.documentNo || "").trim().toUpperCase() || tripsheetNo;
-
-    const record: any = {
-      documentNo,
-      tripsheetNo,
-      documentDate: body.documentDate ? new Date(body.documentDate) : new Date(),
-      vehicleNo,
-      driverName: String(body.driverName || "").trim(),
-      branch: String(body.branch || "ALC1").trim(),
-      route: String(body.route || "").trim(),
-      grossFreight,
-      advancePaid,
-      dieselExpense,
-      tollExpense,
-      unloadingLabor,
-      otherExpense,
-      netPayable,
-      remark: String(body.remark || "").trim(),
-      status: String(body.status || "SETTLED").toUpperCase(),
-      preparedBy: String(body.preparedBy || "ANISHA OZARKAR").trim()
-    };
-
-    try {
-      await connectToDatabase();
-      const saved = await TripSettlement.findOneAndUpdate(
-        { documentNo },
-        { $set: record },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-      return NextResponse.json(
-        { success: true, message: "Trip settlement saved", data: saved, source: "mongodb" },
-        { status: 201 }
-      );
-    } catch (err: any) {
-      const memory = { ...record, _id: `tsl-${Date.now()}`, createdAt: new Date().toISOString() };
-      const idx = memoryStore.tripSettlements.findIndex(
-        (d) => String(d.documentNo || "").toUpperCase() === documentNo
-      );
-      if (idx >= 0) memoryStore.tripSettlements[idx] = { ...memoryStore.tripSettlements[idx], ...memory };
-      else memoryStore.tripSettlements.unshift(memory);
-      return NextResponse.json(
-        {
-          success: true,
-          message: "Trip settlement saved (Memory Store — Mongo unavailable)",
-          data: memory,
-          isMemoryStore: true
-        },
-        { status: 201 }
-      );
-    }
+    const result = await finalizeTripSettlement(body);
+    return NextResponse.json(
+      {
+        success: true,
+        message: result.isMemoryStore
+          ? "Trip settlement finalized (Memory Store — Mongo unavailable)"
+          : "Trip settlement finalized",
+        data: result.saved,
+        isMemoryStore: result.isMemoryStore || false,
+        source: result.isMemoryStore ? "memory" : "mongodb"
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const status = Number(error?.status) || 500;
+    return NextResponse.json({ error: error.message || "Failed to finalize trip settlement" }, { status });
   }
 }

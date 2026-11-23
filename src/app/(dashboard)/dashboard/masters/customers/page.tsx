@@ -76,7 +76,7 @@ const INITIAL_FORM: CustomerFormData = {
   creditPeriod: 30,
   contract: "Standard",
   skipPod: false,
-  billFormat: "E-Invoice Bill Formate",
+  billFormat: "Ateka Bill Format",
   address: "",
   city: "",
   pinCode: "",
@@ -226,7 +226,7 @@ export default function CustomerMasterPage() {
       creditPeriod: cust.creditPeriod || 30,
       contract: cust.contract || "Standard",
       skipPod: Boolean(cust.skipPod),
-      billFormat: cust.billFormat || "E-Invoice Bill Formate",
+      billFormat: cust.billFormat || "Ateka Bill Format",
       address: cust.address || "",
       city: cust.city || "",
       pinCode: cust.pinCode || cust.pincode || "",
@@ -577,6 +577,8 @@ actions={
                     onChange={(e) => handleInputChange("billFormat", e.target.value)}
                     className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium text-slate-700"
                   >
+                    <option value="Ateka Bill Format">Ateka Bill Format</option>
+                    <option value="Ateka Road Carrier Bill Format">Ateka Road Carrier Bill Format</option>
                     <option value="E-Invoice Bill Formate">E-Invoice Bill Formate</option>
                     <option value="Standard Bill Format">Standard Bill Format</option>
                     <option value="Thermal Format">Thermal Format</option>
@@ -954,7 +956,7 @@ actions={
 
                     {/* Bill Format */}
                     <td className="py-2.5 px-3.5 text-slate-700 text-[11px]">
-                      {c.billFormat || "E-Invoice Bill Formate"}
+                      {c.billFormat || "Ateka Bill Format"}
                     </td>
 
                     {/* Active */}
@@ -1062,7 +1064,7 @@ actions={
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-500">Bill Format:</span>
-                  <span className="font-semibold text-slate-800">{dashboardCustomer.billFormat || "E-Invoice Bill Formate"}</span>
+                  <span className="font-semibold text-slate-800">{dashboardCustomer.billFormat || "Ateka Bill Format"}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-500">Primary Contact & Phone:</span>

@@ -165,7 +165,7 @@ export default function TransportBillPage() {
 
   // Step 3 bill fields
   const [manualBillNo, setManualBillNo] = useState("");
-  const [billFormat, setBillFormat] = useState("E-Invoice Bill Formate");
+  const [billFormat, setBillFormat] = useState("Ateka Bill Format");
   const [partyBillingAddress, setPartyBillingAddress] = useState("");
   const [gstin, setGstin] = useState("");
   const [destinationAddress, setDestinationAddress] = useState("");
@@ -398,6 +398,12 @@ export default function TransportBillPage() {
 
     setFeedback(null);
     setGeneratedBillNo(null);
+
+    // ARC dockets → Road Carrier bill format; ALC → Logistics Ateka format (unless customer already set a specific format)
+    const arcHeavy = selectedDockets.filter((dn) => /^ARC/i.test(String(dn))).length;
+    if (arcHeavy > 0 && arcHeavy >= selectedDockets.length / 2) {
+      setBillFormat("Ateka Road Carrier Bill Format");
+    }
 
     const prevByDocket = new Map(chargeRows.map((r) => [r.docketNo, r]));
     const persisted = loadPersistedExtras();
@@ -1330,6 +1336,8 @@ actions={
                 onChange={(e) => setBillFormat(e.target.value)}
                 className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white"
               >
+                <option value="Ateka Bill Format">Ateka Bill Format</option>
+                <option value="Ateka Road Carrier Bill Format">Ateka Road Carrier Bill Format</option>
                 <option value="E-Invoice Bill Formate">E-Invoice Bill Formate</option>
                 <option value="Standard Bill Format">Standard Bill Format</option>
                 <option value="Thermal Format">Thermal Format</option>

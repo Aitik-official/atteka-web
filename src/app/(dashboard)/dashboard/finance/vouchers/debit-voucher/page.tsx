@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Ban,
   Calendar,
+  CheckCircle2,
   ChevronDown,
   Copy,
   FileText,
@@ -32,6 +33,13 @@ type VoucherRow = {
   status: "Active" | "Cancelled";
 };
 
+type PaidToParty = {
+  code: string;
+  name: string;
+  label: string;
+  entity: "Vendor" | "Customer" | "Staff";
+};
+
 type Lists = {
   voucherTypes: string[];
   locations: string[];
@@ -40,9 +48,15 @@ type Lists = {
   tdsSections: string[];
   cashBankAccounts: string[];
   modes: string[];
+  accountGroups: string[];
+  paidToParties: PaidToParty[];
+  predictedVoucherNo?: string;
 };
 
 type EntityType = "Vendor" | "Customer" | "Staff" | "";
+type AccountGroup = "ALL" | "ASSET" | "EXPENSES" | "INCOME" | "LIABILITIES";
+const ACCOUNT_GROUPS: AccountGroup[] = ["ALL", "ASSET", "EXPENSES", "INCOME", "LIABILITIES"];
+const PAID_TO_OTHER = "__OTHER__";
 
 const COLS = [
   { key: "srNo", label: "Sr No" },
@@ -186,7 +200,9 @@ export default function DebitVoucherPage() {
     interestAccounts: [],
     tdsSections: [],
     cashBankAccounts: [],
-    modes: ["Cash", "Cheque", "NEFT"]
+    modes: ["Cash", "Cheque", "NEFT"],
+    accountGroups: ACCOUNT_GROUPS,
+    paidToParties: []
   });
   const [rows, setRows] = useState<VoucherRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -206,13 +222,30 @@ export default function DebitVoucherPage() {
   const [formMode, setFormMode] = useState<"new" | "edit" | "copy">("new");
   const [accounts, setAccounts] = useState<{ code: string; name: string; group: string }[]>([]);
   const [accountBrowseOpen, setAccountBrowseOpen] = useState(false);
+  const [accountBrowseStep, setAccountBrowseStep] = useState<"groups" | "list">("groups");
+  const [selectedGroups, setSelectedGroups] = useState<AccountGroup[]>(["ALL"]);
+  const [paidToSelect, setPaidToSelect] = useState("");
+  const [successModal, setSuccessModal] = useState<{ voucherNumber: string; row: VoucherRow } | null>(
+    null
+  );
 
   useEffect(() => {
     fetch("/api/finance/debit-voucher?lists=1")
       .then((r) => r.json())
       .then((d) => {
         if (d.success) {
-          setLists(d.data);
+          setLists({
+            voucherTypes: d.data.voucherTypes || [],
+            locations: d.data.locations || [],
+            projects: d.data.projects || [],
+            interestAccounts: d.data.interestAccounts || [],
+            tdsSections: d.data.tdsSections || [],
+            cashBankAccounts: d.data.cashBankAccounts || [],
+            modes: d.data.modes || ["Cash", "Cheque", "NEFT"],
+            accountGroups: d.data.accountGroups || ACCOUNT_GROUPS,
+            paidToParties: d.data.paidToParties || [],
+            predictedVoucherNo: d.data.predictedVoucherNo
+          });
           if (Array.isArray(d.data?.accounts)) setAccounts(d.data.accounts);
         }
       })
@@ -320,11 +353,44 @@ export default function DebitVoucherPage() {
   };
 
   const setField = <K extends keyof ReturnType<typeof emptyForm>>(key: K, value: ReturnType<typeof emptyForm>[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      // Voucher Date and Document Date stay in sync
+      if (key === "voucherDate") next.documentDate = value as string;
+      if (key === "documentDate") next.voucherDate = value as string;
+      return next;
+    });
+  };
+
+  const applyPaidToMaster = (value: string) => {
+    setPaidToSelect(value);
+    if (!value) {
+      setFieldClear("paidTo", "");
+      setField("partyCode", "");
+      setField("entityType", "");
+      return;
+    }
+    if (value === PAID_TO_OTHER) {
+      setFieldClear("paidTo", "");
+      setField("partyCode", "");
+      return;
+    }
+    const party = lists.paidToParties.find((p) => p.label === value || p.code === value);
+    if (party) {
+      setFieldClear("paidTo", party.name);
+      setField("partyCode", party.code);
+      setField("entityType", party.entity);
+    } else {
+      setFieldClear("paidTo", value);
+    }
   };
 
   const openNew = () => {
-    setForm(emptyForm());
+    const base = emptyForm();
+    if (lists.predictedVoucherNo) base.predictedVoucherNo = lists.predictedVoucherNo;
+    if (lists.locations[0]) base.location = lists.locations[0];
+    setForm(base);
+    setPaidToSelect("");
     setFormMode("new");
     setStep("form");
   };
@@ -334,27 +400,38 @@ export default function DebitVoucherPage() {
       ...emptyForm(),
       predictedVoucherNo: r.voucherNumber,
       voucherDate: r.voucherDateIso,
+      documentDate: r.voucherDateIso,
       location: r.branch,
       documentNo: r.docRefNo,
       paidTo: r.payTo,
       narration: r.narration,
       baseAmount: r.totalAccountedAmount
     });
+    const match = lists.paidToParties.find(
+      (p) => p.name.toLowerCase() === r.payTo.toLowerCase() || p.label.toLowerCase().includes(r.payTo.toLowerCase())
+    );
+    setPaidToSelect(match ? match.label : PAID_TO_OTHER);
     setFormMode("edit");
     setStep("form");
   };
 
   const openCopy = (r: VoucherRow) => {
+    const today = toInputDate(new Date());
     setForm({
       ...emptyForm(),
-      predictedVoucherNo: "",
-      voucherDate: toInputDate(new Date()),
+      predictedVoucherNo: lists.predictedVoucherNo || "",
+      voucherDate: today,
+      documentDate: today,
       location: r.branch,
       documentNo: "",
       paidTo: r.payTo,
       narration: r.narration,
       baseAmount: r.totalAccountedAmount
     });
+    const match = lists.paidToParties.find(
+      (p) => p.name.toLowerCase() === r.payTo.toLowerCase() || p.label.toLowerCase().includes(r.payTo.toLowerCase())
+    );
+    setPaidToSelect(match ? match.label : PAID_TO_OTHER);
     setFormMode("copy");
     setStep("form");
     toast.info(`Copied ${r.voucherNumber} — new voucher draft`);
@@ -418,21 +495,64 @@ export default function DebitVoucherPage() {
         toast.error(data.error || "Failed to save voucher");
         return;
       }
-      toast.success(`Debit voucher ${data.data?.voucherNumber} saved`);
+      const saved: VoucherRow = {
+        srNo: 1,
+        voucherNumber: data.data?.voucherNumber || "",
+        voucherDate: data.data?.voucherDate || form.voucherDate,
+        voucherDateIso: data.data?.voucherDateIso || form.voucherDate,
+        voucherType: data.data?.voucherType || form.modeOfTransaction,
+        docRefNo: data.data?.docRefNo || form.documentNo,
+        branch: data.data?.branch || form.location,
+        payTo: data.data?.payTo || form.paidTo,
+        totalAccountedAmount: Number(data.data?.totalAccountedAmount ?? taxSync.netPayable),
+        narration: data.data?.narration || form.narration,
+        status: "Active"
+      };
       setFieldErrors({});
-      setRows((prev) => [
-        {
-          srNo: 1,
-          ...data.data
-        },
-        ...prev.map((r, i) => ({ ...r, srNo: i + 2 }))
-      ]);
-      setStep("report");
+      setRows((prev) => [saved, ...prev.map((r, i) => ({ ...r, srNo: i + 2 }))]);
+      setSuccessModal({ voucherNumber: saved.voucherNumber, row: saved });
+      // Refresh predicted no for next voucher
+      fetch("/api/finance/debit-voucher?lists=1")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.data?.predictedVoucherNo) {
+            setLists((prev) => ({ ...prev, predictedVoucherNo: d.data.predictedVoucherNo }));
+          }
+        })
+        .catch(() => {});
     } catch {
       toast.error("Failed to save voucher");
     } finally {
       setSaving(false);
     }
+  };
+
+  const filteredAccounts = useMemo(() => {
+    if (selectedGroups.includes("ALL") || selectedGroups.length === 0) return accounts;
+    return accounts.filter((a) =>
+      selectedGroups.some((g) => String(a.group || "").toUpperCase().includes(g))
+    );
+  }, [accounts, selectedGroups]);
+
+  const toggleGroup = (g: AccountGroup) => {
+    if (g === "ALL") {
+      setSelectedGroups(["ALL"]);
+      return;
+    }
+    setSelectedGroups((prev) => {
+      const withoutAll = prev.filter((x) => x !== "ALL");
+      if (withoutAll.includes(g)) {
+        const next = withoutAll.filter((x) => x !== g);
+        return next.length ? next : ["ALL"];
+      }
+      return [...withoutAll, g];
+    });
+  };
+
+  const openAccountBrowse = () => {
+    setSelectedGroups(["ALL"]);
+    setAccountBrowseStep("groups");
+    setAccountBrowseOpen(true);
   };
 
   const exportExcel = () => {
@@ -849,7 +969,7 @@ export default function DebitVoucherPage() {
                 <input
                   type="date"
                   value={form.voucherDate}
-                  onChange={(e) => setField("voucherDate", e.target.value)}
+                  onChange={(e) => setFieldClear("voucherDate", e.target.value)}
                   className={fieldCls}
                 />
               </div>
@@ -859,7 +979,24 @@ export default function DebitVoucherPage() {
                 </label>
                 <select
                   value={form.location}
-                  onChange={(e) => setFieldClear("location", e.target.value)}
+                  onChange={(e) => {
+                    const loc = e.target.value;
+                    setFieldClear("location", loc);
+                    if (loc && formMode === "new") {
+                      fetch(`/api/finance/debit-voucher?lists=1&branch=${encodeURIComponent(loc)}`)
+                        .then((r) => r.json())
+                        .then((d) => {
+                          if (d.data?.predictedVoucherNo) {
+                            setField("predictedVoucherNo", d.data.predictedVoucherNo);
+                            setLists((prev) => ({
+                              ...prev,
+                              predictedVoucherNo: d.data.predictedVoucherNo
+                            }));
+                          }
+                        })
+                        .catch(() => {});
+                    }
+                  }}
                   className={`${fieldCls} ${fieldErrors.location ? fieldErrCls : ""}`}
                   aria-invalid={!!fieldErrors.location}
                 >
@@ -902,20 +1039,40 @@ export default function DebitVoucherPage() {
                 <input
                   type="date"
                   value={form.documentDate}
-                  onChange={(e) => setField("documentDate", e.target.value)}
+                  onChange={(e) => setFieldClear("documentDate", e.target.value)}
                   className={fieldCls}
                 />
+                <p className="mt-0.5 text-[10px] text-slate-400">Kept same as Voucher Date</p>
               </div>
               <div>
                 <label className={labelCls}>
                   Paid To <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  value={form.paidTo}
-                  onChange={(e) => setFieldClear("paidTo", e.target.value)}
+                <select
+                  value={paidToSelect}
+                  onChange={(e) => applyPaidToMaster(e.target.value)}
                   className={`${fieldCls} ${fieldErrors.paidTo ? fieldErrCls : ""}`}
                   aria-invalid={!!fieldErrors.paidTo}
-                />
+                >
+                  <option value="">-- Select from master --</option>
+                  {lists.paidToParties.map((p) => (
+                    <option key={`${p.entity}-${p.code || p.label}`} value={p.label}>
+                      {p.label} ({p.entity})
+                    </option>
+                  ))}
+                  <option value={PAID_TO_OTHER}>Other (type manually)</option>
+                </select>
+                {paidToSelect === PAID_TO_OTHER || (!paidToSelect && form.paidTo) ? (
+                  <input
+                    value={form.paidTo}
+                    onChange={(e) => setFieldClear("paidTo", e.target.value)}
+                    placeholder="Enter Paid To name"
+                    className={`${fieldCls} mt-1.5 ${fieldErrors.paidTo ? fieldErrCls : ""}`}
+                  />
+                ) : null}
+                {paidToSelect && paidToSelect !== PAID_TO_OTHER ? (
+                  <p className="mt-1 text-[11px] text-slate-500 font-semibold">{form.paidTo}</p>
+                ) : null}
                 {fieldErrors.paidTo ? (
                   <p className="mt-1 text-[11px] text-rose-600">{fieldErrors.paidTo}</p>
                 ) : null}
@@ -995,7 +1152,7 @@ export default function DebitVoucherPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setAccountBrowseOpen(true)}
+                    onClick={openAccountBrowse}
                     className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-semibold shrink-0"
                   >
                     Browse
@@ -1269,39 +1426,125 @@ export default function DebitVoucherPage() {
       )}
 
       {accountBrowseOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full border border-slate-200 overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800">Select Account</h2>
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-sm shadow-xl w-full max-w-sm border border-slate-300 overflow-hidden">
+            <div className="px-3 py-2 border-b border-slate-200 bg-slate-100 text-[12px] font-semibold text-slate-700 flex items-center justify-between">
+              <span>{accountBrowseStep === "groups" ? "Select the Groups" : "Select Account"}</span>
               <button
                 type="button"
                 onClick={() => setAccountBrowseOpen(false)}
-                className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500"
+                className="w-7 h-7 hover:bg-slate-200 text-slate-500"
               >
                 ×
               </button>
             </div>
-            <div className="max-h-80 overflow-y-auto text-xs">
-              {accounts.length === 0 ? (
-                <p className="py-8 text-center text-slate-400">No accounts loaded</p>
-              ) : (
-                accounts.map((a) => (
+
+            {accountBrowseStep === "groups" ? (
+              <div className="p-4 space-y-3">
+                <div className="space-y-2 text-[13px] text-slate-800">
+                  {ACCOUNT_GROUPS.map((g) => (
+                    <label key={g} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedGroups.includes(g) || (g !== "ALL" && selectedGroups.includes("ALL"))}
+                        onChange={() => toggleGroup(g)}
+                        className="accent-[#0171d3]"
+                      />
+                      <span className="font-medium">{g}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="border-t border-slate-200 pt-3 flex justify-center">
                   <button
-                    key={a.code}
                     type="button"
-                    onClick={() => {
-                      setField("accountCode", a.code);
-                      setField("acDescription", a.name);
-                      setAccountBrowseOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-slate-50"
+                    onClick={() => setAccountBrowseStep("list")}
+                    className="min-w-[100px] h-8 px-4 rounded-full bg-[#0171d3] text-white text-xs font-semibold hover:bg-[#015fae]"
                   >
-                    <span className="font-mono font-semibold text-blue-700">{a.code}</span>
-                    <span className="text-slate-700 ml-2">{a.name}</span>
-                    {a.group ? <span className="text-slate-400 ml-2">· {a.group}</span> : null}
+                    Submit
                   </button>
-                ))
-              )}
+                </div>
+              </div>
+            ) : (
+              <div className="max-h-80 overflow-y-auto text-xs">
+                <div className="px-3 py-2 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setAccountBrowseStep("groups")}
+                    className="text-[#0171d3] font-semibold"
+                  >
+                    ← Groups
+                  </button>
+                  <span className="text-slate-500">
+                    {selectedGroups.includes("ALL") ? "ALL" : selectedGroups.join(", ")}
+                  </span>
+                </div>
+                {filteredAccounts.length === 0 ? (
+                  <p className="py-8 text-center text-slate-400">No accounts in selected groups</p>
+                ) : (
+                  filteredAccounts.map((a) => (
+                    <button
+                      key={a.code}
+                      type="button"
+                      onClick={() => {
+                        setField("accountCode", a.code);
+                        setField("acDescription", a.name);
+                        setAccountBrowseOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-slate-50"
+                    >
+                      <span className="font-mono font-semibold text-blue-700">{a.code}</span>
+                      <span className="text-slate-700 ml-2">{a.name}</span>
+                      {a.group ? <span className="text-slate-400 ml-2">· {a.group}</span> : null}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {successModal && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/45 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 px-6 py-7 text-center">
+            <div className="mx-auto w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900">Voucher Generated</h2>
+            <p className="text-sm text-slate-600 mt-1">Debit Voucher has been generated successfully.</p>
+            <p className="mt-4 text-sm text-slate-700">
+              Voucher No.:{" "}
+              <span
+                className="font-mono font-bold text-[#0171d3] select-all cursor-text"
+                title="Select and copy"
+              >
+                {successModal.voucherNumber}
+              </span>
+            </p>
+            <p className="text-[11px] text-slate-400 mt-1">Select the voucher no. to copy into Excel</p>
+            <p className="mt-5 text-sm font-medium text-slate-800">Do you want to pass the copy entry now?</p>
+            <div className="mt-4 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const row = successModal.row;
+                  setSuccessModal(null);
+                  openCopy(row);
+                }}
+                className="min-w-[88px] h-9 px-4 rounded-md bg-[#0171d3] text-white text-sm font-semibold hover:bg-[#015fae]"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSuccessModal(null);
+                  setStep("report");
+                }}
+                className="min-w-[88px] h-9 px-4 rounded-md bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700"
+              >
+                No
+              </button>
             </div>
           </div>
         </div>

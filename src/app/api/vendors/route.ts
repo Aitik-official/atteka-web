@@ -3,7 +3,31 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Vendor } from "@/models/Vendor";
 import { memoryStore } from "@/lib/memoryStore";
 
+/** Own Road Carrier line — distinct from Ateka Logistics */
+const ATEKA_ROAD_CARRIER = {
+  _id: "v-arc-001",
+  vendorCode: "ARC001",
+  name: "ATEKA ROAD CARRIER",
+  vendorType: "OWN Company vehicle",
+  pan: "AABCA1234R",
+  gstNo: "27AABCA1234R1Z1",
+  accountNo: "201038123456",
+  ifscCode: "INDB0000123",
+  bankName: "INDUSIND BANK",
+  bankAccountName: "ATEKA ROAD CARRIER",
+  locationName: "Ateka Road Carrier - ARC1",
+  contactPerson: "ATEKA ROAD CARRIER",
+  phone: "9876500001",
+  city: "KALAMBOLI",
+  remark:
+    "Own Road Carrier business line (ARC). Separate from Ateka Logistics (ALC) — do not treat as the same entity.",
+  isActive: true,
+  approvalStatus: "APPROVED",
+  tdsApplicable: true
+};
+
 const FALLBACK_VENDORS = [
+  ATEKA_ROAD_CARRIER,
   {
     _id: "v-046",
     vendorCode: "V00046",
@@ -160,7 +184,23 @@ function ensureMemory() {
   if (!Array.isArray((memoryStore as any).vendorsList) || (memoryStore as any).vendorsList.length === 0) {
     (memoryStore as any).vendorsList = [...FALLBACK_VENDORS];
   }
-  return (memoryStore as any).vendorsList as any[];
+  const mem = (memoryStore as any).vendorsList as any[];
+  const hasArc = mem.some(
+    (v) =>
+      String(v.vendorCode || "").toUpperCase() === "ARC001" ||
+      /ATEKA ROAD CARRIER/i.test(String(v.name || ""))
+  );
+  if (!hasArc) mem.unshift({ ...ATEKA_ROAD_CARRIER });
+  return mem;
+}
+
+async function ensureAtekaRoadCarrierInDb() {
+  const { _id, ...payload } = ATEKA_ROAD_CARRIER;
+  await Vendor.updateOne(
+    { $or: [{ vendorCode: "ARC001" }, { name: /^ATEKA ROAD CARRIER$/i }] },
+    { $setOnInsert: payload },
+    { upsert: true }
+  );
 }
 
 function nextVendorCode(list: { vendorCode?: string }[]) {
@@ -295,6 +335,14 @@ export async function GET(req: NextRequest) {
         { pan: { $regex: search, $options: "i" } },
         { gstNo: { $regex: search, $options: "i" } }
       ];
+    }
+
+    if (!status && !search) {
+      try {
+        await ensureAtekaRoadCarrierInDb();
+      } catch {
+        // ignore seed errors
+      }
     }
 
     let vendors = await Vendor.find(query).sort({ name: 1 });

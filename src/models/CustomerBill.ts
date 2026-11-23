@@ -9,6 +9,7 @@ export interface ICustomerBill extends Document {
   partyAddress?: string;
   destinationAddress?: string;
   city?: string;
+  pinCode?: string;
   sacCode?: string;
   gstPercent?: number;
   collectionBranch?: string;
@@ -33,6 +34,9 @@ export interface ICustomerBill extends Document {
   cgst?: number;
   sgst?: number;
   grandTotal: number;
+  /** Road Carrier / freight bill advances (shown on ARC print format) */
+  advanceAmount?: number;
+  balanceAmount?: number;
   irnDetails?: {
     irn: string;
     ackNo: string;
@@ -55,6 +59,7 @@ const CustomerBillSchema = new Schema<ICustomerBill>(
     partyAddress: { type: String },
     destinationAddress: { type: String },
     city: { type: String },
+    pinCode: { type: String },
     sacCode: { type: String, default: "996511" },
     gstPercent: { type: Number, default: 5 },
     collectionBranch: { type: String },
@@ -64,7 +69,7 @@ const CustomerBillSchema = new Schema<ICustomerBill>(
     dateFrom: { type: String },
     dateTo: { type: String },
     billType: { type: String, default: "Freight Bill" },
-    billFormat: { type: String, default: "E-Invoice Bill Formate" },
+    billFormat: { type: String, default: "Ateka Bill Format" },
     topsheetNo: { type: String },
     mrsNo: { type: String },
     mrsDate: { type: Date },
@@ -79,6 +84,8 @@ const CustomerBillSchema = new Schema<ICustomerBill>(
     cgst: { type: Number, default: 0 },
     sgst: { type: Number, default: 0 },
     grandTotal: { type: Number, required: true },
+    advanceAmount: { type: Number, default: 0 },
+    balanceAmount: { type: Number, default: 0 },
     irnDetails: {
       irn: { type: String },
       ackNo: { type: String },

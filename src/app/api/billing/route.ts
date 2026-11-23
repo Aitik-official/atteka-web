@@ -8,6 +8,61 @@ import { RBAC, requireApiSession } from "@/lib/rbac";
 
 const SAMPLE_BILLS = [
   {
+    billNumber: "BLALC12600384",
+    billDate: new Date("2026-08-29"),
+    customerCode: "P000002",
+    customerName: "EXPEDITORS INTERNATIONAL (INDIA) PRIVATE LIMITED",
+    customerGstin: "27AAACE1795K2ZC",
+    partyAddress:
+      "501 TECHNIPLEX - I OFF. VEER SAVARKAR FLYOVER S.V ROAD GOREGOAN (WEST) MUMBAI, MAHARASHTRA-400062",
+    city: "MUMBAI",
+    sacCode: "996511",
+    gstPercent: 18,
+    billingBranch: "ALC1",
+    billType: "Freight Bill",
+    billFormat: "E-Invoice Bill Formate",
+    remark: "OK",
+    consignments: ["ALC12600403"],
+    lineItems: [
+      {
+        docketNo: "ALC12600403",
+        bookingDate: "19 Aug 2026",
+        from: "BHIWANDI",
+        to: "RANCHI+PATNA+GUWAHATI",
+        vehicleNo: "MH46DC5186",
+        freight: 176800,
+        totalPkgs: 1,
+        totalWt: 9000,
+        actualWt: 9000,
+        chargedWt: 9000,
+        rateType: "Fixed",
+        ftlType: "",
+        invoiceNo: "ALC12600403",
+        ewayBillNo: "-",
+        poNo: "-",
+        shipmentNo: "-",
+        consignorName: "EXPEDITORS INTERNATIONAL (INDIA) PRIVATE LIMITED",
+        consigneeName: "EXPEDITORS INTERNATIONAL (INDIA) PRIVATE LIMITED",
+        particulars: "AS PER INVOICE"
+      }
+    ],
+    totalFreight: 176800,
+    taxAmount: 31824,
+    cgst: 15912,
+    sgst: 15912,
+    igst: 0,
+    grandTotal: 208624,
+    preparedBy: "ANISHA OZARKAR",
+    irnDetails: {
+      irn: "f5a1f54e5619775c18070ca94f86f9c255ebacebb9f010798e2dc28b93a9cc0d",
+      ackNo: "122654425528886",
+      ackDate: new Date("2026-09-02"),
+      status: "ACT",
+      isSimulated: true
+    },
+    status: "GENERATED"
+  },
+  {
     billNumber: "BLALC12600586",
     billDate: new Date("2026-11-02"),
     customerCode: "P000002",
@@ -33,7 +88,7 @@ const SAMPLE_BILLS = [
         totalPkgs: 12,
         totalWt: 2400,
         rateType: "FTL",
-        particulars: "AS PER INVOICE"
+        particulars: "MUMBAI To DELHI"
       }
     ],
     totalFreight: 100000,
@@ -164,6 +219,18 @@ export async function GET() {
         // ignore seed races / schema extras
       }
       bills = await CustomerBill.find().sort({ createdAt: -1 });
+    } else {
+      // Keep the reference e-invoice demo bill fresh for View / Print demos
+      try {
+        await CustomerBill.updateOne(
+          { billNumber: SAMPLE_BILLS[0].billNumber },
+          { $set: SAMPLE_BILLS[0] },
+          { upsert: true }
+        );
+        bills = await CustomerBill.find().sort({ createdAt: -1 });
+      } catch {
+        // ignore
+      }
     }
     if (bills.length === 0) {
       return NextResponse.json({ success: true, data: SAMPLE_BILLS, isFallback: true });
@@ -273,7 +340,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const billNumber = (manualBillNo && String(manualBillNo).trim()) || `TBILL-${Date.now().toString().slice(-6)}`;
+    const arcCount = docketNos.filter((dn: string) => /^ARC/i.test(dn)).length;
+    const isRoadCarrier =
+      /road\s*carrier/i.test(String(billFormat || "")) ||
+      (arcCount > 0 && arcCount >= docketNos.length / 2);
+
+    const autoPrefix = isRoadCarrier ? "BLARC126" : "BLALC126";
+    const billNumber =
+      (manualBillNo && String(manualBillNo).trim()) ||
+      `${autoPrefix}${Date.now().toString().slice(-5)}`;
+
+    const resolvedFormat =
+      billFormat ||
+      (isRoadCarrier ? "Ateka Road Carrier Bill Format" : "Ateka Bill Format");
 
     const billRecord: any = {
       billNumber: String(billNumber).toUpperCase(),
@@ -286,8 +365,8 @@ export async function POST(req: NextRequest) {
       city: city || "",
       sacCode: sacCode || "996511",
       gstPercent: Number(gstPercent) || 5,
-      collectionBranch: collectionBranch || "ALC1",
-      billingBranch: billingBranch || "ALC1",
+      collectionBranch: collectionBranch || (isRoadCarrier ? "ARC1" : "ALC1"),
+      billingBranch: billingBranch || (isRoadCarrier ? "ARC1" : "ALC1"),
       gstBranch: gstBranch || "",
       remark: remark || "",
       dateFrom: dateFrom || undefined,
@@ -297,7 +376,14 @@ export async function POST(req: NextRequest) {
       lineItems: lineItems || [],
       customChargeColumns: Array.isArray(customChargeColumns) ? customChargeColumns : [],
       billType: "Freight Bill",
-      billFormat: billFormat || "E-Invoice Bill Formate",
+      billFormat: resolvedFormat,
+      advanceAmount: Number(body.advanceAmount ?? body.advanceAmt ?? 0) || 0,
+      balanceAmount:
+        Number(body.balanceAmount) ||
+        Math.max(
+          0,
+          (Number(grandTotal) || 0) - (Number(body.advanceAmount ?? body.advanceAmt ?? 0) || 0)
+        ),
       preparedBy: preparedBy || "ANISHA OZARKAR",
       totalFreight: Number(totalFreight) || 0,
       taxAmount: Number(taxAmount) || 0,

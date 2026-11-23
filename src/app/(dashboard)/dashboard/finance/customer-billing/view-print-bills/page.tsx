@@ -571,7 +571,7 @@ actions={
                             <td className="py-2.5 px-3">
                               <button
                                 type="button"
-                                onClick={() => printCustomerBill(b, billFormat)}
+                                onClick={() => void printCustomerBill(b, billFormat)}
                                 className="text-blue-700 font-mono font-semibold hover:underline inline-flex items-center gap-1"
                               >
                                 <Download className="w-3 h-3" />
@@ -601,7 +601,7 @@ actions={
                   <div className="font-mono">₹{Number(b.grandTotal || 0).toLocaleString()}</div>
                   <button
                     type="button"
-                    onClick={() => printCustomerBill(b, billFormat)}
+                    onClick={() => void printCustomerBill(b, billFormat)}
                     className="mt-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[11px] font-bold"
                   >
                     Print PDF

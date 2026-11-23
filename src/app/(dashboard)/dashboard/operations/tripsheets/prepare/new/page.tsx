@@ -60,6 +60,8 @@ export default function PrepareLoadingSlipPage() {
   const [vendorCode, setVendorCode] = useState("Auto");
   const [vehicleNo, setVehicleNo] = useState("");
   const [vehicleType, setVehicleType] = useState("");
+  /** Type of Vehicle auto-fills from master only once; user may change freely after */
+  const [vehicleTypeLinkedOnce, setVehicleTypeLinkedOnce] = useState(false);
   const [pickupLocation, setPickupLocation] = useState("");
   const [deliveryLocation, setDeliveryLocation] = useState("");
   const [driverName, setDriverName] = useState("");
@@ -194,10 +196,10 @@ export default function PrepareLoadingSlipPage() {
   const handleVehicleSelect = (val: string) => {
     setVehicleNo(val);
     const match = vehicles.find((v) => v.vehicleNumber === val);
-    if (match) {
-      if (match.vehicleType) setVehicleType(match.vehicleType);
-      if (match.driverName) setDriverName(match.driverName);
-      if (match.driverPhone) setDriverMobile(match.driverPhone);
+    // Do not bind driver to vehicle — same vehicle may have different drivers per trip
+    if (match?.vehicleType && !vehicleTypeLinkedOnce) {
+      setVehicleType(match.vehicleType);
+      setVehicleTypeLinkedOnce(true);
     }
   };
 
@@ -471,7 +473,10 @@ actions={
             <label className="block font-semibold text-slate-700 mb-1">Type of Vehicle</label>
             <select
               value={vehicleType}
-              onChange={(e) => setVehicleType(e.target.value)}
+              onChange={(e) => {
+                setVehicleType(e.target.value);
+                setVehicleTypeLinkedOnce(true);
+              }}
               className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white"
             >
               <option value="">--select--</option>

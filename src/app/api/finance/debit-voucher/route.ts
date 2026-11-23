@@ -5,7 +5,9 @@ import {
   cancelVoucher,
   createVoucher,
   listAccounts,
-  listVouchers
+  listPaidToMaster,
+  listVouchers,
+  nextDebitVoucherNumber
 } from "@/lib/vouchersEngine";
 
 function parseIso(s: string | null, fallback: string) {
@@ -27,6 +29,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     if (searchParams.get("lists") === "1") {
+      const branch = (searchParams.get("branch") || (gate.session as any)?.branchCode || "ALC1").toString();
       return NextResponse.json({
         success: true,
         data: {
@@ -37,7 +40,10 @@ export async function GET(req: NextRequest) {
           tdsSections: VOUCHER_MASTERS.tdsSections,
           cashBankAccounts: VOUCHER_MASTERS.cashBankAccounts,
           modes: VOUCHER_MASTERS.modes,
-          accounts: await listAccounts()
+          accountGroups: VOUCHER_MASTERS.accountGroups,
+          accounts: await listAccounts(),
+          paidToParties: await listPaidToMaster(),
+          predictedVoucherNo: nextDebitVoucherNumber(branch)
         },
         source: "db"
       });
@@ -79,14 +85,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: result.message, data: result, source: "db" });
     }
 
+    const branch = String(body.location || body.branch || gate.session.branchCode || "ALC1");
+    const predicted = String(body.predictedVoucherNo || body.voucherNumber || "").trim().toUpperCase();
+    const voucherNumber =
+      predicted && predicted.startsWith("DV")
+        ? predicted
+        : nextDebitVoucherNumber(branch);
+
+    const mode = String(body.modeOfTransaction || "Cash").trim();
+    const modeUp = mode.toUpperCase();
+    let cashBankAccount = String(body.cashBankAccount || "").trim();
+    if (!cashBankAccount || cashBankAccount === "--Select--") {
+      cashBankAccount =
+        modeUp === "CASH" ? "CASH - Cash on Hand" : "HDFC - HDFC Bank Operating A/c";
+    }
+    const voucherType =
+      modeUp === "CASH"
+        ? "Cash Payment"
+        : /cheque/i.test(mode)
+          ? "Cheque Payment"
+          : "Bank Payment";
+
     const row = await createVoucher({
       kind: "DEBIT",
-      voucherNumber: body.predictedVoucherNo || body.voucherNumber,
-      voucherType: body.modeOfTransaction || body.voucherType || "Cash Payment",
-      voucherDate: body.voucherDate,
-      branch: body.location || body.branch || "ALC1",
+      voucherNumber,
+      voucherType: body.voucherType || voucherType,
+      voucherDate: body.voucherDate || body.documentDate,
+      branch,
       payTo: body.paidTo || body.payTo,
       party: body.paidTo || body.payTo,
+      partyCode: body.partyCode,
       amount: Number(body.baseAmount || body.amount || 0),
       taxableAmount: Number(body.taxableAmount || body.baseAmount || 0),
       tdsAmount: Number(body.tdsAmount || 0),
@@ -95,14 +123,17 @@ export async function POST(req: NextRequest) {
       sgst: Number(body.sgst || 0),
       netPayable: Number(body.netPayable || body.taxableAmount || body.baseAmount || 0),
       documentNo: body.documentNo,
-      narration: body.narration,
-      modeOfTransaction: body.modeOfTransaction,
-      cashBankAccount: body.cashBankAccount,
+      narration: body.narration || body.acDescription || "",
+      modeOfTransaction: mode,
+      cashBankAccount,
       chequeNo: body.chequeNo,
       chequeDate: body.chequeDate,
       gstNo: body.gstNo,
       panNo: body.panNo,
-      payload: body
+      accounts: body.accountCode
+        ? [{ code: body.accountCode, name: body.acDescription || body.accountCode }]
+        : [],
+      payload: { ...body, cashBankAccount, modeOfTransaction: mode }
     });
 
     return NextResponse.json({

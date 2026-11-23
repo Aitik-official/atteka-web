@@ -1,5 +1,17 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
+export const MR_PAYMENT_MODES = [
+  "DD",
+  "CHEQUE",
+  "NEFT",
+  "RTGS",
+  "CASH",
+  "ONLINE",
+  "Cheque",
+  "Cash",
+  "Online"
+] as const;
+
 export interface IMoneyReceipt extends Document {
   mrNumber: string;
   mrDate: Date;
@@ -10,12 +22,14 @@ export interface IMoneyReceipt extends Document {
     amount: number;
     rebate: number;
   }[];
-  paymentMode: "CHEQUE" | "NEFT" | "RTGS" | "CASH" | "ONLINE";
+  paymentMode: string;
   referenceNumber: string;
   totalReceived: number;
   tdsDeducted: number;
   rebateDiscount: number;
   remarks?: string;
+  /** Extra rebate / payment / docket capture from Bill MR With Rebate flow */
+  meta?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,16 +47,27 @@ const MoneyReceiptSchema = new Schema<IMoneyReceipt>(
         rebate: { type: Number, default: 0 }
       }
     ],
-    paymentMode: { type: String, enum: ["CHEQUE", "NEFT", "RTGS", "CASH", "ONLINE"], default: "NEFT" },
+    paymentMode: {
+      type: String,
+      enum: [...MR_PAYMENT_MODES],
+      default: "NEFT"
+    },
     referenceNumber: { type: String, required: true },
     totalReceived: { type: Number, required: true },
     tdsDeducted: { type: Number, default: 0 },
     rebateDiscount: { type: Number, default: 0 },
-    remarks: { type: String }
+    remarks: { type: String },
+    meta: { type: Schema.Types.Mixed }
   },
   { timestamps: true }
 );
 
-export const MoneyReceipt: Model<IMoneyReceipt> =
-  mongoose.models.MoneyReceipt || mongoose.model<IMoneyReceipt>("MoneyReceipt", MoneyReceiptSchema);
+// Hot-reload: drop cached model so enum updates (e.g. DD) take effect
+if (mongoose.models.MoneyReceipt) {
+  delete mongoose.models.MoneyReceipt;
+}
 
+export const MoneyReceipt: Model<IMoneyReceipt> = mongoose.model<IMoneyReceipt>(
+  "MoneyReceipt",
+  MoneyReceiptSchema
+);

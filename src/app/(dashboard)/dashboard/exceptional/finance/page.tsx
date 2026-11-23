@@ -66,9 +66,9 @@ const CARDS: CardDef[] = [
   },
   {
     title: "Edit Bill Remark and Bill Address",
+    description: "Change remark, bill address & GST for print",
     icon: Edit3,
-    unavailable: true,
-    unavailableReason: "Bill remark override screen not built"
+    href: "/dashboard/exceptional/finance/edit-bill-remark-and-bill-address"
   },
   {
     title: "Edit Bill Amount",
